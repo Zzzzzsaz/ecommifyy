@@ -1,34 +1,79 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+.app-container {
+  min-height: 100vh;
+  max-width: 1280px;
+  margin: 0 auto;
+  position: relative;
+  background-color: #0f0f1a;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.content-area {
+  padding-bottom: 80px;
+  min-height: 100vh;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+/* Animations */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
 }
 
-.App-link {
-    color: #61dafb;
+.pulse-glow {
+  animation: pulse-glow 2s infinite;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Button hover effects */
+.btn-press {
+  transition: transform 0.1s ease;
+}
+.btn-press:active {
+  transform: scale(0.95);
+}
+
+/* Shop tab active glow */
+.shop-tab-active {
+  position: relative;
+}
+.shop-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+}
+
+/* Day card hover */
+.day-card {
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.day-card:hover {
+  background-color: rgba(45, 45, 68, 0.5);
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+/* Kanban column */
+.kanban-col {
+  min-height: 200px;
+}
+
+/* Chat bubble */
+.chat-bubble-user {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+}
+.chat-bubble-assistant {
+  background-color: #1a1a2e;
+  border: 1px solid #2d2d44;
+}
+
+/* Pin button */
+.pin-btn {
+  transition: background-color 0.1s ease, transform 0.1s ease;
+}
+.pin-btn:hover {
+  background-color: rgba(99, 102, 241, 0.15);
+}
+.pin-btn:active {
+  transform: scale(0.92);
+  background-color: rgba(99, 102, 241, 0.25);
 }
