@@ -1,0 +1,147 @@
+{
+  "identity": {
+    "name": "Ecommify Campaign Calculator",
+    "tone": "Cyber-Tactical, High-Precision, Dark Mode Elite",
+    "persona": "E1 - The Anti-AI Designer",
+    "vision": "A mobile-first command center for e-commerce elites. Dark, focused, and data-dense."
+  },
+  "typography": {
+    "headings": {
+      "family": "Barlow Condensed, sans-serif",
+      "weights": ["600", "700"],
+      "usage": "Page titles, big metrics, shop names",
+      "google_font_url": "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap"
+    },
+    "body": {
+      "family": "Inter, sans-serif",
+      "weights": ["400", "500", "600"],
+      "usage": "General text, inputs, small labels"
+    },
+    "numbers": {
+      "family": "Inter, sans-serif",
+      "feature_settings": "\"tnum\" (tabular nums)",
+      "usage": "All currency and analytics data"
+    }
+  },
+  "colors": {
+    "theme": "dark",
+    "palette": {
+      "background": "#0f0f1a",
+      "card": "#1a1a2e",
+      "border": "#2d2d44",
+      "primary": "#6366f1",
+      "primary_foreground": "#ffffff",
+      "secondary": "#2d2d44",
+      "secondary_foreground": "#94a3b8",
+      "muted": "#1a1a2e",
+      "muted_foreground": "#94a3b8",
+      "accent": "#6366f1",
+      "destructive": "#ef4444",
+      "success": "#10b981",
+      "warning": "#f59e0b",
+      "pink": "#ec4899",
+      "text_heading": "#ffffff",
+      "text_body": "#94a3b8"
+    },
+    "gradients": {
+      "login_bg": "radial-gradient(circle at top center, #1a1a2e 0%, #0f0f1a 100%)",
+      "active_tab": "linear-gradient(180deg, rgba(99, 102, 241, 0.1) 0%, rgba(99, 102, 241, 0) 100%)"
+    }
+  },
+  "spacing_layout": {
+    "mobile_first": true,
+    "container_padding": "p-4 md:p-8",
+    "card_padding": "p-5",
+    "grid_gap": "gap-4",
+    "radius": {
+      "card": "rounded-xl",
+      "button": "rounded-lg",
+      "input": "rounded-lg"
+    },
+    "nav_height": "h-16"
+  },
+  "components": {
+    "navigation": {
+      "type": "bottom-tab-bar",
+      "items": ["Dashboard", "Zadania", "Sklepy", "AI", "Więcej"],
+      "style": "Fixed bottom, backdrop-blur-xl, border-t border-[#2d2d44] bg-[#0f0f1a]/90"
+    },
+    "login": {
+      "type": "pin-pad",
+      "style": "Centered grid of circular or large rectangular buttons. minimalistic."
+    },
+    "dashboard": {
+      "structure": "Tabs (Shops) -> Month Nav -> KPI Cards -> Daily List",
+      "kpi_cards": "Minimalist, big numbers, trend indicator small below."
+    },
+    "kanban": {
+      "columns": ["Do Zrobienia", "W Trakcie", "Zrobione"],
+      "card_style": "Flat #1a1a2e bg, left colored border for priority."
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-md bg-opacity-80",
+    "borders": "1px solid #2d2d44 (subtle)",
+    "shadows": "shadow-none (flat tech look) or shadow-2xl for floating elements like modals",
+    "micro_interactions": "Active scale-95 on buttons, smooth fade-in for page transitions"
+  },
+  "image_urls": {
+    "logo": {
+      "url": "https://customer-assets.emergentagent.com/job_d80f261d-499e-4117-b40a-11f7363e88f3/artifacts/gvqot30h_ecommify%20logo.png",
+      "alt": "Ecommify Logo"
+    },
+    "users": [
+      {
+        "name": "Kacper",
+        "url": "https://images.unsplash.com/photo-1770452603217-89b4f03e8271?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwyfHxwcm9mZXNzaW9uYWwlMjBtYWxlJTIwcG9ydHJhaXQlMjBzdHVkaW8lMjBsaWdodGluZ3xlbnwwfHx8fDE3NzA2ODA0NzR8MA&ixlib=rb-4.1.0&q=85",
+        "role": "Admin"
+      },
+      {
+        "name": "Szymon",
+        "url": "https://images.unsplash.com/photo-1765776830139-72b2184dae5a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzR8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBtYWxlJTIwcG9ydHJhaXQlMjBzdHVkaW8lMjBsaWdodGluZ3xlbnwwfHx8fDE3NzA2ODA0NzR8MA&ixlib=rb-4.1.0&q=85",
+        "role": "Member"
+      }
+    ],
+    "icons": {
+      "tiktok": "https://images.unsplash.com/photo-1762340273332-89b40f2868ab?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxNzV8MHwxfHNlYXJjaHwyfHx0aWt0b2slMjBhcHAlMjBsb2dvJTIwbWluaW1hbHxlbnwwfHx8fDE3NzA2ODA0ODR8MA&ixlib=rb-4.1.0&q=85"
+    }
+  },
+  "instructions_to_main_agent": {
+    "setup": [
+      "Add 'Barlow Condensed' to index.html from Google Fonts.",
+      "Install 'framer-motion' for transitions if not present.",
+      "Configure 'tailwind.config.js' with the custom colors defined in 'colors' section."
+    ],
+    "implementation_rules": [
+      "Use 'lucide-react' for all UI icons.",
+      "Ensure all currency values (PLN) are formatted with 'toLocaleString' and use tabular-nums.",
+      "The layout must be responsive. On Desktop, the bottom nav should possibly switch to a Sidebar or Top bar, or remain as a 'Mobile App on Web' feel if requested (user said 'Mobile-first'). Strict to mobile-first usually implies keeping the app-like feel.",
+      "Use 'recharts' for any trend lines in the Dashboard.",
+      "Use 'sonner' for all notifications.",
+      "Data-Test-IDs are MANDATORY for all interactive elements (buttons, inputs, cards)."
+    ],
+    "files_to_create_or_modify": {
+      "tailwind.config.js": "Update colors and radius.",
+      "index.css": "Add base styles for html/body to force dark mode background.",
+      "components/ui": "Customize Shadcn components to remove excessive rounding and use the border color #2d2d44."
+    }
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "You MUST NOT apply universal transition. Eg: 'transition: all'. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms.",
+    "You MUST NOT center align the app container, ie do not add '.App { text-align: center; }' in the css file. This disrupts the human natural reading flow of text.",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style.",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Main agent relies on these image URLs. Missing categories = main agent will use placeholder text which is FORBIDDEN.",
+    "Prioritize using pre-existing components from src/components/ui when applicable.",
+    "Components MUST use named exports (export const ComponentName = ...).",
+    "Pages MUST use default exports (export default function PageName() {...}).",
+    "Use 'sonner' for toasts."
+  ]
+}
