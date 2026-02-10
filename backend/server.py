@@ -712,17 +712,49 @@ async def get_receipts(shop_id: Optional[int] = None, year: Optional[int] = None
 @api_router.post("/receipts")
 async def create_receipt(r: ReceiptCreate):
     count = await db.receipts.count_documents({"date": {"$regex": f"^{r.date[:7]}"}})
-    number = f"PAR/{r.date[:4]}/{r.date[5:7]}/{count + 1:03d}"
+    month_num = r.date[5:7]
+    year_str = r.date[:4]
+    number = f"{count + 1}/{month_num}/{year_str}/P"
     company = await db.company_settings.find_one({}, {"_id": 0}) or {}
     items_c = []
-    total_n = 0
+    total_b = 0
     for it in r.items:
-        n = round(it.get("netto_price", 0) * it.get("quantity", 1), 2)
-        v = round(n * 0.23, 2)
-        items_c.append({"description": it.get("description", ""), "quantity": it.get("quantity", 1), "netto_price": it.get("netto_price", 0), "netto": n, "vat": v, "brutto": round(n + v, 2)})
-        total_n += n
-    total_v = round(total_n * 0.23, 2)
-    doc = {"id": str(uuid.uuid4()), "receipt_number": number, "date": r.date, "shop_id": r.shop_id, "items": items_c, "total_netto": round(total_n, 2), "vat_rate": 23, "vat_amount": total_v, "total_brutto": round(total_n + total_v, 2), "company_data": company, "created_at": datetime.now(timezone.utc).isoformat()}
+        qty = it.get("quantity", 1)
+        brutto_unit = round(it.get("brutto_price", it.get("netto_price", 0) * 1.23), 2)
+        brutto_line = round(brutto_unit * qty, 2)
+        netto_line = round(brutto_line / 1.23, 2)
+        vat_line = round(brutto_line - netto_line, 2)
+        items_c.append({
+            "description": it.get("description", ""),
+            "quantity": qty,
+            "brutto_unit": brutto_unit,
+            "brutto": brutto_line,
+            "netto": netto_line,
+            "vat": vat_line,
+            "netto_price": round(brutto_unit / 1.23, 2),
+        })
+        total_b += brutto_line
+    total_n = round(total_b / 1.23, 2)
+    total_v = round(total_b - total_n, 2)
+    now_str = datetime.now(timezone.utc).strftime("%H:%M:%S")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "receipt_number": number,
+        "date": r.date,
+        "time": now_str,
+        "shop_id": r.shop_id,
+        "order_id": None,
+        "items": items_c,
+        "total_netto": round(total_n, 2),
+        "vat_rate": 23,
+        "vat_amount": round(total_v, 2),
+        "total_brutto": round(total_b, 2),
+        "company_data": company,
+        "payment_gateway": "",
+        "payment_method": "",
+        "transaction_id": "",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
     await db.receipts.insert_one(doc)
     doc.pop("_id", None)
     return doc
