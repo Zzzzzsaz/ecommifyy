@@ -352,14 +352,18 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
     best = max(active, key=lambda x: x["profit"])["date"] if active else None
     forecast = round((total_income / today_num) * days_in_month, 2) if total_income > 0 and today_num > 0 else 0
 
+    target = app_s.get("target_revenue", 250000)
+    split = max(app_s.get("profit_split", 2), 1)
+
     return {
         "year": year, "month": month,
         "total_income": round(total_income, 2), "total_ads": round(total_ads, 2),
         "total_netto": total_netto, "total_profit": total_profit,
-        "profit_per_person": round(total_profit / 2, 2), "roi": roi,
-        "target": 250000, "progress": round(min(total_income / 250000 * 100, 100), 2) if total_income > 0 else 0,
+        "profit_per_person": round(total_profit / split, 2), "roi": roi,
+        "target": target, "progress": round(min(total_income / max(target, 1) * 100, 100), 2) if total_income > 0 else 0,
         "streak": streak, "best_day": best, "forecast": forecast,
-        "days": sorted(days.values(), key=lambda x: x["date"])
+        "days": sorted(days.values(), key=lambda x: x["date"]),
+        "settings": {"target_revenue": target, "profit_split": split, "vat_rate": app_s.get("vat_rate", 23)}
     }
 
 # ===== TASKS =====
