@@ -98,4 +98,9 @@ export const api = {
   sendChat: (data) => axios.post(`${API}/chat`, data),
   getChatHistory: (params) => axios.get(`${API}/chat-history`, { params }),
   clearChatHistory: (shopId) => axios.delete(`${API}/chat-history?shop_id=${shopId}`),
+
+  getProducts: (params) => axios.get(`${API}/products`, { params }),
+  createProduct: (data) => axios.post(`${API}/products`, data),
+  updateProduct: (id, data) => axios.put(`${API}/products/${id}`, data),
+  deleteProduct: (id) => axios.delete(`${API}/products/${id}`),
 };
