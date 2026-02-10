@@ -86,6 +86,41 @@ export default function Dashboard({ user, shops = [], appSettings = {}, onNaviga
     setReminders((p) => p.filter((r) => r.id !== id));
   };
 
+  const refreshProducts = async () => {
+    const r = await api.getProducts();
+    setProducts(r.data);
+  };
+
+  const saveProduct = async () => {
+    if (!productForm.name) { toast.error("Podaj nazwe produktu"); return; }
+    try {
+      if (editingProduct) {
+        await api.updateProduct(editingProduct.id, productForm);
+        toast.success("Produkt zaktualizowany!");
+      } else {
+        await api.createProduct(productForm);
+        toast.success("Produkt dodany!");
+      }
+      await refreshProducts();
+      setShowAddProduct(false);
+      setEditingProduct(null);
+      setProductForm({ name: "", sku: "", price: 0, extra_payment: 0, shop_id: shops[0]?.id || 1, category: "" });
+    } catch (e) { toast.error("Blad zapisu produktu"); }
+  };
+
+  const deleteProduct = async (id) => {
+    if (!window.confirm("Usunac produkt?")) return;
+    await api.deleteProduct(id);
+    await refreshProducts();
+    toast.success("Produkt usuniety");
+  };
+
+  const openEditProduct = (p) => {
+    setProductForm({ name: p.name, sku: p.sku || "", price: p.price || 0, extra_payment: p.extra_payment || 0, shop_id: p.shop_id, category: p.category || "" });
+    setEditingProduct(p);
+    setShowAddProduct(true);
+  };
+
   const TARGET = appSettings.target_revenue || 250000;
   const rank = getRank(stats?.total_income || 0);
   const nextRank = getNextRank(stats?.total_income || 0);
