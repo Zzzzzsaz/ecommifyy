@@ -968,6 +968,57 @@ async def fulfillment_reminder_check():
         "show_reminder": current_day >= 15 and waiting_count > 0,
     }
 
+# ===== PRODUCTS =====
+class ProductCreate(BaseModel):
+    name: str
+    sku: str = ""
+    price: float = 0
+    extra_payment: float = 0
+    shop_id: int
+    category: str = ""
+    description: str = ""
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    sku: Optional[str] = None
+    price: Optional[float] = None
+    extra_payment: Optional[float] = None
+    shop_id: Optional[int] = None
+    category: Optional[str] = None
+    description: Optional[str] = None
+
+@api_router.get("/products")
+async def get_products(shop_id: Optional[int] = None):
+    q = {}
+    if shop_id and shop_id > 0: q["shop_id"] = shop_id
+    return await db.products.find(q, {"_id": 0}).sort("name", 1).to_list(10000)
+
+@api_router.post("/products")
+async def create_product(p: ProductCreate):
+    doc = {
+        "id": str(uuid.uuid4()),
+        "name": p.name, "sku": p.sku, "price": round(p.price, 2),
+        "extra_payment": round(p.extra_payment, 2), "shop_id": p.shop_id,
+        "category": p.category, "description": p.description,
+        "source": "manual", "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.products.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/products/{pid}")
+async def update_product(pid: str, update: ProductUpdate):
+    upd = {k: v for k, v in update.dict().items() if v is not None}
+    if upd: await db.products.update_one({"id": pid}, {"$set": upd})
+    p = await db.products.find_one({"id": pid}, {"_id": 0})
+    if not p: raise HTTPException(status_code=404, detail="Nie znaleziono")
+    return p
+
+@api_router.delete("/products/{pid}")
+async def delete_product(pid: str):
+    await db.products.delete_one({"id": pid})
+    return {"status": "ok"}
+
 # ===== COMPANY SETTINGS =====
 class CompanySettings(BaseModel):
     name: str = ""
