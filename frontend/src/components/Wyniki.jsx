@@ -151,7 +151,7 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
         <button onClick={() => { setShop(0); setOpenDays(new Set()); }}
           className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap border transition-colors ${shop === 0 ? "text-white bg-ecom-primary/15 border-ecom-primary" : "text-ecom-muted border-ecom-border hover:text-white"}`}
           data-testid="wyniki-tab-all">WSZYSTKIE</button>
-        {SHOPS.map((s) => (
+        {shops.map((s) => (
           <button key={s.id} onClick={() => { setShop(s.id); setOpenDays(new Set()); }}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap border transition-colors ${shop === s.id ? "text-white border-transparent" : "text-ecom-muted border-ecom-border hover:text-white"}`}
             style={shop === s.id ? { backgroundColor: s.color + "20", borderColor: s.color, color: s.color } : {}}
