@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import {
   BarChart3, ClipboardList, Store, Sparkles, LogOut, ChevronRight,
   Target, Settings, Flame, TrendingUp, Crown, Users, CalendarDays,
-  Plus, Check, Trash2, ShoppingCart, Calculator, ArrowUp, ArrowDown
+  Plus, Check, Trash2, ShoppingCart, ArrowUp, ArrowDown
 } from "lucide-react";
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_d80f261d-499e-4117-b40a-11f7363e88f3/artifacts/gvqot30h_ecommify%20logo.png";
