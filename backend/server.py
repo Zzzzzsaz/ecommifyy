@@ -887,6 +887,142 @@ async def summary_pdf(year: int = Query(...), month: int = Query(...), shop_id: 
     buf.seek(0)
     return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="zestawienie_{year}_{month:02d}.pdf"'})
 
+# ===== GENERATE RECEIPT FROM ORDER =====
+@api_router.post("/orders/{oid}/generate-receipt")
+async def generate_receipt_from_order(oid: str):
+    order = await db.orders.find_one({"id": oid}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Nie znaleziono zamowienia")
+    if order.get("receipt_id"):
+        raise HTTPException(status_code=400, detail="Paragon juz wystawiony dla tego zamowienia")
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    count = await db.receipts.count_documents({"date": {"$regex": f"^{order['date'][:7]}"}})
+    month_num = order["date"][5:7]
+    year_str = order["date"][:4]
+    receipt_number = f"{count + 1}/{month_num}/{year_str}/P"
+    items_for_receipt = []
+    total_brutto = order.get("total", 0)
+    order_items = order.get("items", [])
+    if order_items:
+        for it in order_items:
+            qty = it.get("quantity", 1)
+            price = it.get("price", 0)
+            brutto_unit = round(price, 2)
+            brutto_line = round(brutto_unit * qty, 2)
+            items_for_receipt.append({
+                "description": it.get("name", it.get("description", "Produkt")),
+                "quantity": qty,
+                "brutto_unit": brutto_unit,
+                "brutto": brutto_line,
+                "netto": round(brutto_line / 1.23, 2),
+                "vat": round(brutto_line - brutto_line / 1.23, 2),
+                "netto_price": round(brutto_unit / 1.23, 2),
+            })
+    else:
+        items_for_receipt.append({
+            "description": f"Zamowienie {order.get('order_number', '')}",
+            "quantity": 1,
+            "brutto_unit": total_brutto,
+            "brutto": total_brutto,
+            "netto": round(total_brutto / 1.23, 2),
+            "vat": round(total_brutto - total_brutto / 1.23, 2),
+            "netto_price": round(total_brutto / 1.23, 2),
+        })
+    total_netto = sum(it["netto"] for it in items_for_receipt)
+    total_vat = sum(it["vat"] for it in items_for_receipt)
+    total_b = sum(it["brutto"] for it in items_for_receipt)
+    now_str = datetime.now(timezone.utc).strftime("%H:%M:%S")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "receipt_number": receipt_number,
+        "date": order["date"],
+        "time": now_str,
+        "shop_id": order.get("shop_id", 1),
+        "order_id": oid,
+        "order_number": order.get("order_number", ""),
+        "items": items_for_receipt,
+        "total_netto": round(total_netto, 2),
+        "vat_rate": 23,
+        "vat_amount": round(total_vat, 2),
+        "total_brutto": round(total_b, 2),
+        "company_data": company,
+        "payment_gateway": order.get("payment_gateway", ""),
+        "payment_method": order.get("payment_method", ""),
+        "transaction_id": order.get("transaction_id", ""),
+        "customer_name": order.get("customer_name", ""),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.receipts.insert_one(doc)
+    doc.pop("_id", None)
+    await db.orders.update_one({"id": oid}, {"$set": {"receipt_id": doc["id"]}})
+    return doc
+
+@api_router.post("/orders/generate-receipts-bulk")
+async def generate_receipts_bulk(shop_id: Optional[int] = None, year: Optional[int] = None, month: Optional[int] = None):
+    q = {"$or": [{"receipt_id": None}, {"receipt_id": {"$exists": False}}]}
+    if shop_id and shop_id > 0:
+        q["shop_id"] = shop_id
+    if year and month:
+        q["date"] = {"$regex": f"^{year}-{month:02d}"}
+    orders_without = await db.orders.find(q, {"_id": 0}).to_list(10000)
+    if not orders_without:
+        return {"status": "ok", "generated": 0, "message": "Wszystkie zamowienia maja paragony"}
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    generated = 0
+    for order in orders_without:
+        count = await db.receipts.count_documents({"date": {"$regex": f"^{order['date'][:7]}"}})
+        month_num = order["date"][5:7]
+        year_str = order["date"][:4]
+        receipt_number = f"{count + 1}/{month_num}/{year_str}/P"
+        total_brutto = order.get("total", 0)
+        order_items = order.get("items", [])
+        items_for_receipt = []
+        if order_items:
+            for it in order_items:
+                qty = it.get("quantity", 1)
+                price = it.get("price", 0)
+                brutto_unit = round(price, 2)
+                brutto_line = round(brutto_unit * qty, 2)
+                items_for_receipt.append({
+                    "description": it.get("name", it.get("description", "Produkt")),
+                    "quantity": qty, "brutto_unit": brutto_unit, "brutto": brutto_line,
+                    "netto": round(brutto_line / 1.23, 2),
+                    "vat": round(brutto_line - brutto_line / 1.23, 2),
+                    "netto_price": round(brutto_unit / 1.23, 2),
+                })
+        else:
+            items_for_receipt.append({
+                "description": f"Zamowienie {order.get('order_number', '')}",
+                "quantity": 1, "brutto_unit": total_brutto, "brutto": total_brutto,
+                "netto": round(total_brutto / 1.23, 2),
+                "vat": round(total_brutto - total_brutto / 1.23, 2),
+                "netto_price": round(total_brutto / 1.23, 2),
+            })
+        total_netto = sum(it["netto"] for it in items_for_receipt)
+        total_vat = sum(it["vat"] for it in items_for_receipt)
+        total_b = sum(it["brutto"] for it in items_for_receipt)
+        now_str = datetime.now(timezone.utc).strftime("%H:%M:%S")
+        doc = {
+            "id": str(uuid.uuid4()), "receipt_number": receipt_number,
+            "date": order["date"], "time": now_str,
+            "shop_id": order.get("shop_id", 1), "order_id": order["id"],
+            "order_number": order.get("order_number", ""),
+            "items": items_for_receipt,
+            "total_netto": round(total_netto, 2), "vat_rate": 23,
+            "vat_amount": round(total_vat, 2), "total_brutto": round(total_b, 2),
+            "company_data": company,
+            "payment_gateway": order.get("payment_gateway", ""),
+            "payment_method": order.get("payment_method", ""),
+            "transaction_id": order.get("transaction_id", ""),
+            "customer_name": order.get("customer_name", ""),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.receipts.insert_one(doc)
+        doc.pop("_id", None)
+        await db.orders.update_one({"id": order["id"]}, {"$set": {"receipt_id": doc["id"]}})
+        generated += 1
+    return {"status": "ok", "generated": generated, "message": f"Wystawiono {generated} paragonow"}
+
 # ===== WEEKLY STATS =====
 @api_router.get("/weekly-stats")
 async def get_weekly_stats():
