@@ -201,6 +201,80 @@ async def get_monthly_stats(shop_id: int = Query(...), year: int = Query(...), m
         "days": sorted(days.values(), key=lambda x: x["date"])
     }
 
+# ===== COMBINED MONTHLY STATS =====
+@api_router.get("/combined-monthly-stats")
+async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(...)):
+    prefix = f"{year}-{month:02d}"
+    incomes = await db.incomes.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
+    expenses = await db.expenses.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
+
+    days_in_month = calendar.monthrange(year, month)[1]
+    days = {}
+    for d in range(1, days_in_month + 1):
+        ds = f"{year}-{month:02d}-{d:02d}"
+        days[ds] = {"date": ds, "income": 0, "ads": 0, "shops": [{"shop_id": i, "income": 0, "ads": 0} for i in range(1, 5)]}
+
+    for inc in incomes:
+        dt = inc["date"]
+        if dt in days:
+            days[dt]["income"] += inc["amount"]
+            sid = inc.get("shop_id", 1)
+            for s in days[dt]["shops"]:
+                if s["shop_id"] == sid:
+                    s["income"] += inc["amount"]
+
+    for exp in expenses:
+        dt = exp["date"]
+        if dt in days:
+            days[dt]["ads"] += exp["amount"]
+            sid = exp.get("shop_id", 1)
+            for s in days[dt]["shops"]:
+                if s["shop_id"] == sid:
+                    s["ads"] += exp["amount"]
+
+    total_income = 0
+    total_ads = 0
+    for day in days.values():
+        day["netto"] = round(day["income"] * 0.77, 2)
+        day["profit"] = round(day["netto"] - day["ads"], 2)
+        day["profit_pp"] = round(day["profit"] / 2, 2)
+        for s in day["shops"]:
+            s["netto"] = round(s["income"] * 0.77, 2)
+            s["profit"] = round(s["netto"] - s["ads"], 2)
+        total_income += day["income"]
+        total_ads += day["ads"]
+
+    total_netto = round(total_income * 0.77, 2)
+    total_profit = round(total_netto - total_ads, 2)
+    roi = round((total_profit / total_ads * 100), 2) if total_ads > 0 else 0
+
+    now_utc = datetime.now(timezone.utc)
+    today_num = now_utc.day if (year == now_utc.year and month == now_utc.month) else days_in_month
+
+    streak = 0
+    for d in range(today_num, 0, -1):
+        ds = f"{year}-{month:02d}-{d:02d}"
+        if ds in days and days[ds]["profit"] > 0:
+            streak += 1
+        elif ds in days and (days[ds]["income"] > 0 or days[ds]["ads"] > 0):
+            break
+        else:
+            break
+
+    active = [d for d in days.values() if d["income"] > 0]
+    best = max(active, key=lambda x: x["profit"])["date"] if active else None
+    forecast = round((total_income / today_num) * days_in_month, 2) if total_income > 0 and today_num > 0 else 0
+
+    return {
+        "year": year, "month": month,
+        "total_income": round(total_income, 2), "total_ads": round(total_ads, 2),
+        "total_netto": total_netto, "total_profit": total_profit,
+        "profit_per_person": round(total_profit / 2, 2), "roi": roi,
+        "target": 250000, "progress": round(min(total_income / 250000 * 100, 100), 2) if total_income > 0 else 0,
+        "streak": streak, "best_day": best, "forecast": forecast,
+        "days": sorted(days.values(), key=lambda x: x["date"])
+    }
+
 # ===== TASKS =====
 @api_router.get("/tasks")
 async def get_tasks():

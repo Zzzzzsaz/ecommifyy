@@ -29,6 +29,8 @@ export const api = {
   updateTikTokConfig: (id, data) => axios.put(`${API}/tiktok-configs/${id}`, data),
   deleteTikTokConfig: (id) => axios.delete(`${API}/tiktok-configs/${id}`),
 
+  getCombinedStats: (params) => axios.get(`${API}/combined-monthly-stats`, { params }),
+
   syncShopify: (shopId, year, month) => axios.post(`${API}/sync/shopify/${shopId}?year=${year}&month=${month}`),
   syncTikTok: (configId, year, month) => axios.post(`${API}/sync/tiktok/${configId}?year=${year}&month=${month}`),
   syncAll: (year, month) => axios.post(`${API}/sync/all?year=${year}&month=${month}`),
