@@ -6,6 +6,7 @@ import Dashboard from "@/components/Dashboard";
 import Wyniki from "@/components/Wyniki";
 import Orders from "@/components/Orders";
 import Tasks from "@/components/Tasks";
+import CalendarPage from "@/components/CalendarPage";
 import Stores from "@/components/Stores";
 import Chat from "@/components/Chat";
 import Settings from "@/components/Settings";
@@ -39,6 +40,7 @@ function App() {
       case "wyniki": return <Wyniki user={user} />;
       case "orders": return <Orders user={user} />;
       case "tasks": return <Tasks user={user} />;
+      case "calendar": return <CalendarPage user={user} />;
       case "stores": return <Stores />;
       case "ai": return <Chat user={user} />;
       case "settings": return <Settings user={user} onLogout={handleLogout} />;
