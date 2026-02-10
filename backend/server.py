@@ -588,6 +588,14 @@ async def delete_reminder(rid: str):
 class OrderCreate(BaseModel):
     order_number: str = ""
     customer_name: str = ""
+    customer_email: str = ""
+    customer_phone: str = ""
+    shipping_address: str = ""
+    shipping_method: str = ""
+    parcel_locker: str = ""
+    payment_method: str = ""
+    payment_gateway: str = ""
+    transaction_id: str = ""
     items: List[dict] = []
     total: float
     date: str
