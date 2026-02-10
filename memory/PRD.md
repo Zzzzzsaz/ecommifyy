@@ -1,40 +1,67 @@
 # Ecommify Campaign Calculator - PRD
 
-## Architecture
-- Frontend: React + Tailwind + shadcn/ui + framer-motion + recharts
-- Backend: FastAPI + Motor (async MongoDB)
-- AI: OpenAI GPT-5.2 via Emergent LLM Key (emergentintegrations)
+## Original Problem Statement
+Business dashboard "Ecommify Campaign Calculator" for managing e-commerce stores (Shopify). Features include:
+- PIN-based authentication (3 users)
+- Game-style UI menu dashboard
+- Financial results tracking with CS:GO ranks
+- Orders management with Shopify integration
+- Receipt (paragon) generation matching Polish format with 23% VAT
+- Company settings for receipt data
+- Tasks, reminders, chat with AI
+- Everything in Polish, PLN currency
 
-## Users
-| User | PIN | Role |
-|------|-----|------|
-| Admin | 2409 | admin |
-| Kacper | 2609 | kacper |
-| Szymon | 2509 | szymon |
+## Core Requirements
+- Polish language throughout
+- PLN currency, 23% VAT
+- 4 shops (ecom1-4)
+- PIN login: 2409 (Admin), 2609 (Kacper), 2509 (Szymon)
+- Dark, game-like UI theme
 
-## Implemented (Feb 2026 - v2)
-- [x] PIN login
-- [x] **GAME MENU** - CS:GO ranks (Silver I → Global Elite), 250k target bar, today's combined stats, streak, forecast, best day, profit per person (÷2)
-- [x] **WYNIKI** - "WSZYSTKIE" combined tab + per-shop tabs, expandable per-shop daily breakdown with +P/+A buttons, sparkline, KPIs with "Na łeb", daily target
-- [x] Kanban tasks (todo/in_progress/done), browser notifications
-- [x] Shopify + TikTok Ads config + sync
-- [x] AI Marketing Expert (GPT-5.2)
-- [x] Confetti + rank-up animations
-- [x] PWA manifest, dark theme, responsive
+## What's Been Implemented
 
-## CS:GO Ranks (based on monthly revenue)
-Silver I-IV (0-25k), Gold Nova I-IV (25-85k), MG I-II + MGE (85-150k), DMG (150-175k), LE/LEM (175-215k), Supreme (215-235k), Global Elite (235k+)
+### Completed (Feb 2026)
+- **Authentication**: PIN-based login with numpad, 3 hardcoded users
+- **Dashboard**: Game-style menu with weekly stats, reminders
+- **Results (Wyniki)**: Aggregated/per-store stats, CS:GO ranks, 250k PLN goal, profit/person, add/delete entries, notes, Excel export
+- **Orders & Receipts (Zamowienia)**: 
+  - Full orders page with detailed info (customer, email, phone, address, shipping, payment)
+  - Receipt status badges (green "Paragon" / yellow "Brak paragonu") per order
+  - Generate receipt from individual order
+  - Bulk generate receipts for all orders without receipt
+  - Polish paragon-style PDF receipts (company header, items, VAT 23%, payment info)
+  - Improved summary PDF (zestawienie) with landscape layout, item descriptions, totals
+  - Manual order and receipt creation
+  - Shop filtering and month navigation
+- **Company Settings**: Save company data (name, NIP, address, bank) used in receipts
+- **Tasks**: CRUD with assignments
+- **AI Chat**: GPT-5.2 integration via Emergent LLM key
+- **Store configs**: Shopify and TikTok configuration management
+- **Data**: MongoDB persistent storage
 
-## Test Results
-- Backend: 100% (19/19)
-- Frontend: 98%
+### Architecture
+- Backend: FastAPI + MongoDB (Motor async driver)
+- Frontend: React 19 + TailwindCSS + Shadcn/UI
+- PDF: fpdf2 for receipt and summary generation
+- LLM: OpenAI GPT-5.2 via emergentintegrations
 
-## Backlog
-### P1
-- Monthly comparison charts
-- Data export CSV/PDF
-- Polish diacritical characters
-- Achievement system (milestones)
-### P2
-- Automated sync scheduling
-- Team performance dashboard
+## Prioritized Backlog
+
+### P1 - Next Tasks
+- **Margin Calculator (Kalkulator marzy)**: New tool/page for margin calculations
+- **Real Shopify API integration**: Replace mocked sync with actual Shopify API (needs user API keys)
+- **Sales report for accountant**: Enhanced report generation as PDF/CSV
+
+### P2 - Future Tasks
+- **TikTok API integration**: Real ad spend sync (needs API keys)
+- **Enhanced game-like effects**: More animations, interactive elements
+- **PIN notification fix**: "Invalid PIN" message disappears too quickly
+
+### P3 - Nice to Have
+- PWA support improvements
+- Data export enhancements
+- Multi-language support
+
+## MOCKED Integrations
+- Shopify order sync (needs API keys from user)
+- TikTok ad spend sync (needs API keys from user)
