@@ -461,7 +461,7 @@ export default function Orders({ user, shops = [] }) {
             </div>
             <Select value={recordForm.shop_id} onValueChange={v => setRecordForm(f => ({ ...f, shop_id: v }))}>
               <SelectTrigger className="bg-ecom-bg border-ecom-border text-white"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-ecom-card border-ecom-border">{SHOPS.map(s => <SelectItem key={s.id} value={String(s.id)}><span style={{ color: s.color }}>{s.name}</span></SelectItem>)}</SelectContent>
+              <SelectContent className="bg-ecom-card border-ecom-border">{shops.map(s => <SelectItem key={s.id} value={String(s.id)}><span style={{ color: s.color }}>{s.name}</span></SelectItem>)}</SelectContent>
             </Select>
             {recordForm.brutto && (() => {
               const b = parseFloat(recordForm.brutto) * (parseInt(recordForm.quantity) || 1);
