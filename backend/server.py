@@ -125,7 +125,59 @@ async def login(req: LoginRequest):
     user = USERS.get(req.pin)
     if not user:
         raise HTTPException(status_code=401, detail="Nieprawidlowy PIN")
-    return {"user": user, "shops": SHOPS}
+    shops = await get_shops_list()
+    settings = await get_app_settings()
+    return {"user": user, "shops": shops, "settings": settings}
+
+# ===== SHOPS CRUD =====
+class ShopCreate(BaseModel):
+    name: str
+    color: str = "#6366f1"
+
+class ShopUpdate(BaseModel):
+    name: Optional[str] = None
+    color: Optional[str] = None
+    is_active: Optional[bool] = None
+
+@api_router.get("/shops")
+async def list_shops():
+    return await get_shops_list()
+
+@api_router.post("/shops")
+async def create_shop(shop: ShopCreate):
+    shops = await get_shops_list()
+    max_id = max((s["id"] for s in shops), default=0)
+    doc = {"id": max_id + 1, "name": shop.name, "color": shop.color, "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.shops.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/shops/{shop_id}")
+async def update_shop(shop_id: int, update: ShopUpdate):
+    upd = {k: v for k, v in update.dict().items() if v is not None}
+    if upd:
+        await db.shops.update_one({"id": shop_id}, {"$set": upd})
+    shop = await db.shops.find_one({"id": shop_id}, {"_id": 0})
+    if not shop:
+        raise HTTPException(status_code=404, detail="Nie znaleziono sklepu")
+    return shop
+
+@api_router.delete("/shops/{shop_id}")
+async def delete_shop(shop_id: int):
+    await db.shops.delete_one({"id": shop_id})
+    return {"status": "ok"}
+
+# ===== APP SETTINGS =====
+@api_router.get("/app-settings")
+async def get_settings():
+    return await get_app_settings()
+
+@api_router.put("/app-settings")
+async def update_settings(body: dict):
+    body.pop("_key", None)
+    body.pop("_id", None)
+    await db.app_settings.update_one({"_key": "main"}, {"$set": body}, upsert=True)
+    return await get_app_settings()
 
 # ===== INCOMES =====
 @api_router.post("/incomes")
