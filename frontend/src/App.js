@@ -9,15 +9,16 @@ import Orders from "@/components/Orders";
 import Tasks from "@/components/Tasks";
 import CalendarPage from "@/components/CalendarPage";
 import Stores from "@/components/Stores";
-import Chat from "@/components/Chat";
 import Settings from "@/components/Settings";
 import BottomNav from "@/components/BottomNav";
+import AiAssistant from "@/components/AiAssistant";
 
 function App() {
   const [user, setUser] = useState(null);
   const [shops, setShops] = useState([]);
   const [appSettings, setAppSettings] = useState({});
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const handleLogin = useCallback((data) => {
     setUser(data.user);
@@ -46,6 +47,12 @@ function App() {
     setActiveTab("dashboard");
   }, []);
 
+  const handleAiDataChange = useCallback(() => {
+    // Trigger refresh of current view when AI makes changes
+    setRefreshKey(k => k + 1);
+    refreshShops();
+  }, [refreshShops]);
+
   if (!user) {
     return (
       <>
@@ -57,15 +64,14 @@ function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case "dashboard": return <Dashboard user={user} shops={shops} appSettings={appSettings} onNavigate={setActiveTab} onLogout={handleLogout} />;
-      case "wyniki": return <Wyniki user={user} shops={shops} appSettings={appSettings} />;
-      case "orders": return <Orders user={user} shops={shops} />;
+      case "dashboard": return <Dashboard key={refreshKey} user={user} shops={shops} appSettings={appSettings} onNavigate={setActiveTab} onLogout={handleLogout} />;
+      case "wyniki": return <Wyniki key={refreshKey} user={user} shops={shops} appSettings={appSettings} />;
+      case "orders": return <Orders key={refreshKey} user={user} shops={shops} />;
       case "tasks": return <Tasks user={user} />;
       case "calendar": return <CalendarPage user={user} />;
       case "stores": return <Stores shops={shops} onShopsChange={refreshShops} />;
-      case "ai": return <Chat user={user} />;
       case "settings": return <Settings user={user} shops={shops} appSettings={appSettings} onSettingsChange={refreshSettings} onShopsChange={refreshShops} onLogout={handleLogout} />;
-      default: return <Dashboard user={user} shops={shops} appSettings={appSettings} onNavigate={setActiveTab} onLogout={handleLogout} />;
+      default: return <Dashboard key={refreshKey} user={user} shops={shops} appSettings={appSettings} onNavigate={setActiveTab} onLogout={handleLogout} />;
     }
   };
 
@@ -75,6 +81,7 @@ function App() {
         {renderContent()}
       </div>
       <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <AiAssistant onDataChange={handleAiDataChange} />
       <Toaster position="top-center" richColors />
     </div>
   );
