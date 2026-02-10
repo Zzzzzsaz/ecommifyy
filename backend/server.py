@@ -720,6 +720,29 @@ async def create_order(order: OrderCreate):
     }
     await db.orders.insert_one(doc)
     doc.pop("_id", None)
+    # Auto-create fulfillment with calculated extra_payment from products
+    extra = 0
+    for it in doc.get("items", []):
+        product_name = it.get("name", it.get("description", ""))
+        qty = it.get("quantity", 1)
+        product = await db.products.find_one({"name": product_name, "shop_id": doc["shop_id"]}, {"_id": 0})
+        if not product:
+            product = await db.products.find_one({"name": product_name}, {"_id": 0})
+        if product and product.get("extra_payment", 0) > 0:
+            extra += product["extra_payment"] * qty
+    source_month = doc["date"][:7]
+    fdoc = {
+        "id": str(uuid.uuid4()), "order_id": doc["id"],
+        "order_number": doc["order_number"], "customer_name": doc["customer_name"],
+        "customer_email": doc.get("customer_email", ""), "customer_phone": doc.get("customer_phone", ""),
+        "shipping_address": doc.get("shipping_address", ""), "items": doc.get("items", []),
+        "total": doc["total"], "extra_payment": round(extra, 2), "extra_payment_paid": False,
+        "source_month": source_month, "status": "waiting", "notes": "",
+        "tracking_number": "", "reminder_sent_at": None, "payment_checked_at": None,
+        "shipped_at": None, "shop_id": doc["shop_id"],
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.fulfillment.insert_one(fdoc)
     return doc
 
 @api_router.put("/orders/{oid}/status")
@@ -731,6 +754,8 @@ async def update_order_status(oid: str, status: str = Query(...)):
 @api_router.delete("/orders/{oid}")
 async def delete_order(oid: str):
     await db.orders.delete_one({"id": oid})
+    await db.returns.delete_many({"order_id": oid})
+    await db.fulfillment.delete_many({"order_id": oid})
     return {"status": "ok"}
 
 # ===== RETURNS (ZWROTY) =====
