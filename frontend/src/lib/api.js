@@ -53,6 +53,9 @@ export const api = {
   bulkFulfillmentStatus: (params) => axios.post(`${API}/fulfillment/bulk-status`, null, { params }),
   deleteFulfillment: (id) => axios.delete(`${API}/fulfillment/${id}`),
   getFulfillmentReminder: () => axios.get(`${API}/fulfillment/reminder-check`),
+  getFulfillmentNotes: (params) => axios.get(`${API}/fulfillment-notes`, { params }),
+  createFulfillmentNote: (data) => axios.post(`${API}/fulfillment-notes`, data),
+  deleteFulfillmentNote: (id) => axios.delete(`${API}/fulfillment-notes/${id}`),
 
   getShops: () => axios.get(`${API}/shops`),
   createShop: (data) => axios.post(`${API}/shops`, data),
