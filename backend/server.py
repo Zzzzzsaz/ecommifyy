@@ -733,6 +733,191 @@ async def delete_order(oid: str):
     await db.orders.delete_one({"id": oid})
     return {"status": "ok"}
 
+# ===== RETURNS (ZWROTY) =====
+class ReturnCreate(BaseModel):
+    order_id: str
+    reason: str = ""
+    refund_amount: Optional[float] = None
+
+@api_router.get("/returns")
+async def get_returns(year: Optional[int] = None, month: Optional[int] = None, shop_id: Optional[int] = None):
+    q = {}
+    if year and month: q["date"] = {"$regex": f"^{year}-{month:02d}"}
+    if shop_id and shop_id > 0: q["shop_id"] = shop_id
+    return await db.returns.find(q, {"_id": 0}).sort("date", -1).to_list(10000)
+
+@api_router.post("/returns")
+async def create_return(r: ReturnCreate):
+    order = await db.orders.find_one({"id": r.order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Nie znaleziono zamowienia")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "order_id": r.order_id,
+        "order_number": order.get("order_number", ""),
+        "customer_name": order.get("customer_name", ""),
+        "customer_email": order.get("customer_email", ""),
+        "customer_phone": order.get("customer_phone", ""),
+        "items": order.get("items", []),
+        "total": order.get("total", 0),
+        "refund_amount": r.refund_amount if r.refund_amount is not None else order.get("total", 0),
+        "reason": r.reason,
+        "date": order.get("date", ""),
+        "shop_id": order.get("shop_id", 1),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.returns.insert_one(doc)
+    doc.pop("_id", None)
+    await db.orders.update_one({"id": r.order_id}, {"$set": {"status": "returned"}})
+    return doc
+
+@api_router.delete("/returns/{rid}")
+async def delete_return(rid: str):
+    ret = await db.returns.find_one({"id": rid}, {"_id": 0})
+    if ret and ret.get("order_id"):
+        await db.orders.update_one({"id": ret["order_id"]}, {"$set": {"status": "new"}})
+    await db.returns.delete_one({"id": rid})
+    return {"status": "ok"}
+
+# ===== FULFILLMENT (REALIZACJA ZAMOWIEN) =====
+# Statuses: waiting -> reminder_sent -> check_payment -> to_ship -> archived
+# Also: unpaid (branched from check_payment)
+class FulfillmentCreate(BaseModel):
+    order_id: str
+    extra_payment: float = 0
+    notes: str = ""
+
+class FulfillmentUpdate(BaseModel):
+    status: Optional[str] = None
+    extra_payment: Optional[float] = None
+    extra_payment_paid: Optional[bool] = None
+    notes: Optional[str] = None
+    tracking_number: Optional[str] = None
+
+@api_router.get("/fulfillment")
+async def get_fulfillment(source_month: Optional[str] = None, status: Optional[str] = None):
+    q = {}
+    if source_month: q["source_month"] = source_month
+    if status: q["status"] = status
+    items = await db.fulfillment.find(q, {"_id": 0}).sort("created_at", -1).to_list(10000)
+    now = datetime.now(timezone.utc)
+    for item in items:
+        if item["status"] == "reminder_sent" and item.get("reminder_sent_at"):
+            sent_at = datetime.fromisoformat(item["reminder_sent_at"].replace("Z", "+00:00")) if isinstance(item["reminder_sent_at"], str) else item["reminder_sent_at"]
+            if (now - sent_at).days >= 7:
+                item["auto_check_ready"] = True
+            else:
+                days_left = 7 - (now - sent_at).days
+                item["auto_check_ready"] = False
+                item["days_until_check"] = max(days_left, 0)
+    return items
+
+@api_router.post("/fulfillment")
+async def create_fulfillment(f: FulfillmentCreate):
+    order = await db.orders.find_one({"id": f.order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(status_code=404, detail="Nie znaleziono zamowienia")
+    existing = await db.fulfillment.find_one({"order_id": f.order_id}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Zamowienie juz jest w realizacji")
+    source_month = order.get("date", "")[:7]
+    doc = {
+        "id": str(uuid.uuid4()),
+        "order_id": f.order_id,
+        "order_number": order.get("order_number", ""),
+        "customer_name": order.get("customer_name", ""),
+        "customer_email": order.get("customer_email", ""),
+        "customer_phone": order.get("customer_phone", ""),
+        "shipping_address": order.get("shipping_address", ""),
+        "items": order.get("items", []),
+        "total": order.get("total", 0),
+        "extra_payment": f.extra_payment,
+        "extra_payment_paid": False,
+        "source_month": source_month,
+        "status": "waiting",
+        "notes": f.notes,
+        "tracking_number": "",
+        "reminder_sent_at": None,
+        "payment_checked_at": None,
+        "shipped_at": None,
+        "shop_id": order.get("shop_id", 1),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.fulfillment.insert_one(doc)
+    doc.pop("_id", None)
+    await db.orders.update_one({"id": f.order_id}, {"$set": {"status": "processing"}})
+    return doc
+
+@api_router.put("/fulfillment/{fid}")
+async def update_fulfillment(fid: str, update: FulfillmentUpdate):
+    upd = {}
+    if update.status is not None:
+        upd["status"] = update.status
+        if update.status == "reminder_sent":
+            upd["reminder_sent_at"] = datetime.now(timezone.utc).isoformat()
+        elif update.status == "check_payment":
+            upd["payment_checked_at"] = datetime.now(timezone.utc).isoformat()
+        elif update.status == "archived":
+            upd["shipped_at"] = datetime.now(timezone.utc).isoformat()
+    if update.extra_payment is not None:
+        upd["extra_payment"] = update.extra_payment
+    if update.extra_payment_paid is not None:
+        upd["extra_payment_paid"] = update.extra_payment_paid
+    if update.notes is not None:
+        upd["notes"] = update.notes
+    if update.tracking_number is not None:
+        upd["tracking_number"] = update.tracking_number
+    if upd:
+        await db.fulfillment.update_one({"id": fid}, {"$set": upd})
+    doc = await db.fulfillment.find_one({"id": fid}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Nie znaleziono")
+    if update.status == "archived" and doc.get("order_id"):
+        await db.orders.update_one({"id": doc["order_id"]}, {"$set": {"status": "delivered"}})
+    return doc
+
+@api_router.post("/fulfillment/bulk-status")
+async def bulk_update_fulfillment_status(source_month: str = Query(...), from_status: str = Query(...), to_status: str = Query(...)):
+    upd = {"status": to_status}
+    if to_status == "reminder_sent":
+        upd["reminder_sent_at"] = datetime.now(timezone.utc).isoformat()
+    elif to_status == "check_payment":
+        upd["payment_checked_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.fulfillment.update_many({"source_month": source_month, "status": from_status}, {"$set": upd})
+    return {"status": "ok", "updated": result.modified_count}
+
+@api_router.delete("/fulfillment/{fid}")
+async def delete_fulfillment(fid: str):
+    doc = await db.fulfillment.find_one({"id": fid}, {"_id": 0})
+    if doc and doc.get("order_id"):
+        await db.orders.update_one({"id": doc["order_id"]}, {"$set": {"status": "new"}})
+    await db.fulfillment.delete_one({"id": fid})
+    return {"status": "ok"}
+
+@api_router.get("/fulfillment/reminder-check")
+async def fulfillment_reminder_check():
+    now = datetime.now(timezone.utc)
+    current_day = now.day
+    if now.month == 1:
+        prev_month = f"{now.year - 1}-12"
+    else:
+        prev_month = f"{now.year}-{now.month - 1:02d}"
+    waiting_count = await db.fulfillment.count_documents({"source_month": prev_month, "status": "waiting"})
+    check_ready = 0
+    reminder_items = await db.fulfillment.find({"status": "reminder_sent"}, {"_id": 0, "reminder_sent_at": 1}).to_list(10000)
+    for item in reminder_items:
+        if item.get("reminder_sent_at"):
+            sent_at = datetime.fromisoformat(item["reminder_sent_at"].replace("Z", "+00:00")) if isinstance(item["reminder_sent_at"], str) else item["reminder_sent_at"]
+            if (now - sent_at).days >= 7:
+                check_ready += 1
+    return {
+        "is_15th": current_day >= 15,
+        "prev_month": prev_month,
+        "waiting_for_reminder": waiting_count,
+        "ready_for_check": check_ready,
+        "show_reminder": current_day >= 15 and waiting_count > 0,
+    }
+
 # ===== COMPANY SETTINGS =====
 class CompanySettings(BaseModel):
     name: str = ""
