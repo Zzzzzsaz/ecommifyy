@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { getRank, getNextRank, getRankProgress, TARGET } from "@/lib/ranks";
+import { getRank, getNextRank, getRankProgress } from "@/lib/ranks";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
