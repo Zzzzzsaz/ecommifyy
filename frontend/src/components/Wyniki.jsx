@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
@@ -167,9 +167,8 @@ export default function Wyniki({ user }) {
       {/* Add Dialog */}
       <Dialog open={dialog.open} onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}>
         <DialogContent className="bg-ecom-card border-ecom-border max-w-sm" data-testid="wyniki-add-dialog">
-          <DialogHeader><DialogTitle className="font-heading text-white">{dialog.type === "income" ? "Dodaj przychod" : "Dodaj koszt reklamy"}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-heading text-white">{dialog.type === "income" ? "Dodaj przychod" : "Dodaj koszt reklamy"}</DialogTitle><DialogDescription className="text-ecom-muted text-sm">{dialog.date}</DialogDescription></DialogHeader>
           <div className="space-y-4 mt-2">
-            <p className="text-ecom-muted text-sm">{dialog.date}</p>
             <Input type="number" placeholder="Kwota (PLN)" value={amount} onChange={(e) => setAmount(e.target.value)} className="bg-ecom-bg border-ecom-border text-white" data-testid="wyniki-add-amount" />
             <Input placeholder={dialog.type === "income" ? "Opis (opcjonalnie)" : "Nazwa kampanii (opcjonalnie)"} value={desc} onChange={(e) => setDesc(e.target.value)} className="bg-ecom-bg border-ecom-border text-white" data-testid="wyniki-add-desc" />
             <Button onClick={handleSave} disabled={saving} className="w-full bg-ecom-primary hover:bg-ecom-primary/80" data-testid="wyniki-add-save">

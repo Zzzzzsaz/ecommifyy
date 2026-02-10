@@ -1,13 +1,13 @@
 # Ecommify Campaign Calculator - PRD
 
 ## Problem Statement
-Web application for e-commerce profitability tracking with Shopify revenue, TikTok Ads costs, profit calculations, Kanban tasks, and AI marketing expert chat. Originally a mobile app, converted to responsive web app. All in Polish, PLN currency.
+Web app for e-commerce profitability tracking (Shopify revenue, TikTok Ads costs, profit calc). Originally mobile app, converted to responsive web. All in Polish, PLN currency.
 
 ## Architecture
-- **Frontend**: React (CRA + Craco) + Tailwind CSS + shadcn/ui + framer-motion
-- **Backend**: FastAPI (Python) + Motor (async MongoDB)
-- **Database**: MongoDB
-- **AI**: OpenAI GPT-5.2 via Emergent LLM Key
+- Frontend: React + Tailwind + shadcn/ui + framer-motion
+- Backend: FastAPI + Motor (async MongoDB)
+- AI: OpenAI GPT-5.2 via Emergent LLM Key
+- Database: MongoDB
 
 ## Users
 | User | PIN | Role |
@@ -16,49 +16,32 @@ Web application for e-commerce profitability tracking with Shopify revenue, TikT
 | Kacper | 2609 | kacper |
 | Szymon | 2509 | szymon |
 
-## Core Requirements
-1. PIN-based authentication (3 users)
-2. Dashboard with 4 shop tabs, monthly stats, daily income/expense tracking
-3. Kanban task board (todo/in_progress/done) with team assignment
-4. Shopify + TikTok Ads configuration and sync
-5. AI Marketing Expert chat (GPT-5.2)
-6. PWA support
-7. Browser notifications for task changes
-8. Dark theme (#0f0f1a background)
+## Implemented Features (Feb 2026)
+- [x] PIN-based login (3 users)
+- [x] **GAME-LIKE MENU** - Dashboard hub with level system (REKRUT→LEGENDA), XP bar, ROI metrics, 4 nav tiles
+- [x] **WYNIKI page** - Shop tabs, month nav, KPI cards, daily income/expense list
+- [x] Kanban tasks (todo/in_progress/done) with browser notifications
+- [x] Shopify + TikTok Ads config with sync endpoints
+- [x] AI Marketing Expert chat (GPT-5.2)
+- [x] Settings page with PWA instructions
+- [x] Bottom nav: Menu, Wyniki, Zadania, Sklepy, AI
+- [x] Dark theme, animated grid background, hover glow effects
 
-## What's Been Implemented (Feb 2026)
-- [x] Full backend with 20+ API endpoints
-- [x] PIN login with 3 users
-- [x] Dashboard with shop tabs, month nav, KPI cards, daily list
-- [x] Add income/expense dialogs
-- [x] Kanban task board with add/move/delete
-- [x] Shopify configuration forms (4 shops)
-- [x] TikTok Ads config with shop linking
-- [x] Sync endpoints (Shopify + TikTok API)
-- [x] AI Marketing Expert chat with GPT-5.2
-- [x] Settings page with PWA install instructions
-- [x] Bottom navigation (5 tabs)
-- [x] PWA manifest
-- [x] Browser notifications for tasks
+## Navigation
+- Menu (game hub) → tiles navigate to: Wyniki, Zadania, Sklepy, AI Expert
+- Bottom nav: 5 tabs (Menu, Wyniki, Zadania, Sklepy, AI)
+- Settings/Logout accessible from menu page
 
 ## Test Results
-- Backend: 100% pass rate
-- Frontend: 95% pass rate
-- All core flows working
+- Backend: 100% (18/18 endpoints)
+- Frontend: 95% (all core flows working)
 
-## Prioritized Backlog
-### P0 (Must Have)
-- All implemented
-
-### P1 (Should Have)
-- Data export (CSV/PDF reports)
+## Backlog
+### P1
 - Monthly comparison charts (recharts)
-- Task due date reminders
-- Polish diacritical characters in UI text
-
-### P2 (Nice to Have)
-- Multi-language support
-- Dark/Light theme toggle
-- Advanced analytics dashboard
+- Data export CSV/PDF
+- Polish diacritical chars in UI
+### P2
+- Automated sync scheduling
 - Team performance metrics
-- Automated daily sync scheduling
+- Advanced analytics
