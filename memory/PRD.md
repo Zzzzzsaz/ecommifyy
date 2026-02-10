@@ -8,23 +8,21 @@ Business dashboard "Ecommify Campaign Calculator" for managing e-commerce stores
 ### Completed (Feb 2026)
 - **Authentication**: PIN-based login (3 users), returns shops + settings
 - **Dashboard**: Game-style menu with weekly stats, reminders, rank display
-- **Results (Wyniki)**: Aggregated/per-store stats, CS:GO ranks, dynamic target, profit/person (dynamic split), add/delete entries, notes, Excel export
-- **Orders (Zamowienia)**: Full orders with detailed info + Ewidencja sprzedazy tab
-- **Ewidencja sprzedazy**: Auto from orders + manual, daily/monthly PDF, grouped by date
-- **Calendar (Kalendarz)**: Full month calendar, reminders (recurring: daily/weekly/monthly), notes
-- **Dynamic Shops**: Add/edit/delete shops from Stores page, auto-detected everywhere
-- **Stores (Sklepy)**: Shop management with color picker (12 colors), Shopify config per shop, TikTok Ads config
-- **Settings (Ustawienia)**: 
-  - App settings: target revenue, profit split, VAT rate, currency, app name
-  - Company data: name, NIP, address, postal code, city, bank, account, email, phone
-  - Account overview
+- **Results (Wyniki)**: Stats, CS:GO ranks, dynamic target, profit/person, entries, Excel export
+- **Orders (Zamowienia)**: 4 tabs:
+  - **Zamowienia**: Full orders with customer info, add/delete, status tracking
+  - **Ewidencja sprzedazy**: Auto from orders + manual, daily/monthly PDF, grouped by date
+  - **Zwroty**: Mark orders as returned with reason, refund tracking, restores status on delete
+  - **Realizacja zamowien**: Presale pipeline:
+    - Oczekujace → Przypomnienie wyslane (15th of month reminder) → Do sprawdzenia (auto after 7 days) → Do wysylki (if paid) / Nieoplacone → Archiwum
+    - Extra payment (doplata) separate from order amount
+    - Bulk reminder marking, per-item payment confirmation
+- **Calendar (Kalendarz)**: Full month calendar, recurring reminders, notes
+- **Dynamic Shops**: Add/edit/delete, auto-detected everywhere
+- **Stores (Sklepy)**: Shop management, Shopify config per shop, TikTok Ads
+- **Settings (Ustawienia)**: Target revenue, profit split, VAT rate, currency, company data
 - **AI Chat**: GPT-5.2 via Emergent LLM key
 - **Data**: MongoDB persistent storage
-
-### Removed Features
-- Receipts (paragony) → replaced by Ewidencja sprzedazy
-- Margin calculator → removed per user request
-- Hardcoded shops → replaced by dynamic MongoDB-based shops
 
 ### Architecture
 - Backend: FastAPI + MongoDB (Motor)
@@ -35,11 +33,10 @@ Business dashboard "Ecommify Campaign Calculator" for managing e-commerce stores
 ## Prioritized Backlog
 ### P1
 - Real Shopify API integration (needs user API keys)
-- Sales report for accountant (enhanced PDF/CSV)
+- Automated payment reminders via Shopify (user mentioned future automation)
 ### P2
-- TikTok API integration (needs API keys)
+- TikTok API integration
 - Enhanced game-like effects
-- PIN notification fix
 ### P3
 - PWA, data export enhancements
 
