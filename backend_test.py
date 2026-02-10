@@ -1,353 +1,317 @@
-#!/usr/bin/env python3
-
 import requests
 import sys
+from datetime import datetime
 import json
-from datetime import datetime, timezone
 
 class EcommifyAPITester:
-    def __init__(self, base_url="https://ads-revenue-sync.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://ads-revenue-sync.preview.emergentagent.com"):
         self.base_url = base_url
-        self.session = requests.Session()
-        self.session.headers.update({'Content-Type': 'application/json'})
         self.tests_run = 0
         self.tests_passed = 0
-        self.results = []
 
-    def log_result(self, test_name, success, details=""):
+    def run_test(self, name, method, endpoint, expected_status, data=None, params=None):
+        """Run a single API test"""
+        url = f"{self.base_url}/api/{endpoint}"
+        headers = {'Content-Type': 'application/json'}
+
         self.tests_run += 1
-        if success:
-            self.tests_passed += 1
+        print(f"\n🔍 Testing {name}...")
         
-        result = {
-            "test": test_name,
-            "success": success,
-            "details": details,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-        self.results.append(result)
+        try:
+            if method == 'GET':
+                response = requests.get(url, headers=headers, params=params, timeout=10)
+            elif method == 'POST':
+                response = requests.post(url, json=data, headers=headers, timeout=10)
+            elif method == 'PUT':
+                response = requests.put(url, json=data, headers=headers, timeout=10)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=headers, timeout=10)
+
+            success = response.status_code == expected_status
+            if success:
+                self.tests_passed += 1
+                print(f"✅ Passed - Status: {response.status_code}")
+                try:
+                    response_data = response.json()
+                    if 'data' in response_data:
+                        print(f"   Response: {json.dumps(response_data['data'], indent=2)[:200]}...")
+                    elif isinstance(response_data, dict) and len(response_data) < 5:
+                        print(f"   Response: {response_data}")
+                except:
+                    print(f"   Response: {response.text[:100]}...")
+            else:
+                print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
+                print(f"   Response: {response.text[:200]}")
+
+            return success, response.json() if response.status_code < 400 else {}
+
+        except Exception as e:
+            print(f"❌ Failed - Error: {str(e)}")
+            return False, {}
+
+    def test_auth(self):
+        """Test login functionality"""
+        print("\n=== AUTHENTICATION TESTS ===")
         
-        status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status} - {test_name}")
-        if details:
-            print(f"    {details}")
-
-    def test_health_check(self):
-        """Test basic API health"""
-        try:
-            response = self.session.get(f"{self.base_url}/")
-            success = response.status_code == 200
-            details = f"Status: {response.status_code}"
-            if success:
-                details += f", Response: {response.json()}"
-            self.log_result("API Health Check", success, details)
-            return success
-        except Exception as e:
-            self.log_result("API Health Check", False, f"Error: {str(e)}")
-            return False
-
-    def test_login_valid_pin(self):
-        """Test login with valid PIN (Admin: 2409)"""
-        try:
-            response = self.session.post(f"{self.base_url}/auth/login", 
-                                       json={"pin": "2409"})
-            success = response.status_code == 200
-            details = f"Status: {response.status_code}"
-            if success:
-                data = response.json()
-                details += f", User: {data.get('user', {}).get('name', 'Unknown')}"
-                details += f", Shops: {len(data.get('shops', []))}"
-            self.log_result("Login Valid PIN (Admin: 2409)", success, details)
-            return success
-        except Exception as e:
-            self.log_result("Login Valid PIN (Admin: 2409)", False, f"Error: {str(e)}")
-            return False
-
-    def test_login_invalid_pin(self):
-        """Test login with invalid PIN"""
-        try:
-            response = self.session.post(f"{self.base_url}/auth/login", 
-                                       json={"pin": "9999"})
-            success = response.status_code == 401
-            details = f"Status: {response.status_code} (Expected 401)"
-            if success:
-                data = response.json()
-                details += f", Error: {data.get('detail', 'Unknown')}"
-            self.log_result("Login Invalid PIN", success, details)
-            return success
-        except Exception as e:
-            self.log_result("Login Invalid PIN", False, f"Error: {str(e)}")
-            return False
+        # Test valid PIN
+        success, response = self.run_test(
+            "Admin Login (PIN: 2409)",
+            "POST",
+            "auth/login",
+            200,
+            data={"pin": "2409"}
+        )
+        
+        # Test invalid PIN
+        self.run_test(
+            "Invalid Login (PIN: 9999)",
+            "POST", 
+            "auth/login",
+            401,
+            data={"pin": "9999"}
+        )
+        
+        return success
 
     def test_monthly_stats(self):
         """Test monthly stats endpoint"""
-        try:
-            now = datetime.now()
-            params = {
-                "shop_id": 1,
-                "year": now.year,
-                "month": now.month
-            }
-            response = self.session.get(f"{self.base_url}/monthly-stats", params=params)
-            success = response.status_code == 200
-            details = f"Status: {response.status_code}"
-            if success:
-                data = response.json()
-                details += f", Shop: {data.get('shop_id')}, Days: {len(data.get('days', []))}"
-                details += f", Total Income: {data.get('total_income', 0)}"
-            self.log_result("Monthly Stats", success, details)
-            return success
-        except Exception as e:
-            self.log_result("Monthly Stats", False, f"Error: {str(e)}")
-            return False
+        print("\n=== MONTHLY STATS TESTS ===")
+        
+        now = datetime.now()
+        success, _ = self.run_test(
+            "Get Current Month Stats",
+            "GET",
+            "monthly-stats",
+            200,
+            params={"shop_id": 1, "year": now.year, "month": now.month}
+        )
+        return success
 
-    def test_create_income(self):
-        """Test creating income entry"""
-        try:
-            income_data = {
-                "amount": 100.50,
-                "date": "2024-12-09",
-                "description": "Test income",
-                "shop_id": 1
-            }
-            response = self.session.post(f"{self.base_url}/incomes", json=income_data)
-            success = response.status_code == 200
-            details = f"Status: {response.status_code}"
-            if success:
-                data = response.json()
-                details += f", Income ID: {data.get('id', 'Unknown')}"
-                details += f", Amount: {data.get('amount', 0)}"
-                # Store ID for cleanup
-                self.test_income_id = data.get('id')
-            self.log_result("Create Income", success, details)
-            return success
-        except Exception as e:
-            self.log_result("Create Income", False, f"Error: {str(e)}")
-            return False
-
-    def test_create_expense(self):
-        """Test creating expense entry"""
-        try:
-            expense_data = {
-                "amount": 50.25,
-                "date": "2024-12-09",
-                "campaign_name": "Test campaign",
-                "shop_id": 1
-            }
-            response = self.session.post(f"{self.base_url}/expenses", json=expense_data)
-            success = response.status_code == 200
-            details = f"Status: {response.status_code}"
-            if success:
-                data = response.json()
-                details += f", Expense ID: {data.get('id', 'Unknown')}"
-                details += f", Amount: {data.get('amount', 0)}"
-                # Store ID for cleanup
-                self.test_expense_id = data.get('id')
-            self.log_result("Create Expense", success, details)
-            return success
-        except Exception as e:
-            self.log_result("Create Expense", False, f"Error: {str(e)}")
-            return False
-
-    def test_get_tasks(self):
-        """Test fetching tasks"""
-        try:
-            response = self.session.get(f"{self.base_url}/tasks")
-            success = response.status_code == 200
-            details = f"Status: {response.status_code}"
-            if success:
-                data = response.json()
-                details += f", Tasks count: {len(data)}"
-            self.log_result("Get Tasks", success, details)
-            return success
-        except Exception as e:
-            self.log_result("Get Tasks", False, f"Error: {str(e)}")
-            return False
-
-    def test_create_task(self):
-        """Test creating a task"""
-        try:
-            task_data = {
+    def test_tasks(self):
+        """Test task management"""
+        print("\n=== TASK MANAGEMENT TESTS ===")
+        
+        # Get tasks
+        success, tasks = self.run_test(
+            "Get Tasks",
+            "GET",
+            "tasks",
+            200
+        )
+        
+        # Create task
+        task_success, created_task = self.run_test(
+            "Create Task",
+            "POST",
+            "tasks", 
+            200,
+            data={
                 "title": "Test Task",
-                "description": "Test task description",
-                "assigned_to": "oboje",
-                "created_by": "Admin"
+                "description": "Test Description",
+                "assigned_to": "Admin"
             }
-            response = self.session.post(f"{self.base_url}/tasks", json=task_data)
-            success = response.status_code == 200
-            details = f"Status: {response.status_code}"
-            if success:
-                data = response.json()
-                details += f", Task ID: {data.get('id', 'Unknown')}"
-                details += f", Status: {data.get('status', 'Unknown')}"
-                # Store ID for cleanup
-                self.test_task_id = data.get('id')
-            self.log_result("Create Task", success, details)
-            return success
-        except Exception as e:
-            self.log_result("Create Task", False, f"Error: {str(e)}")
-            return False
-
-    def test_update_task(self):
-        """Test updating a task status"""
-        if not hasattr(self, 'test_task_id'):
-            self.log_result("Update Task", False, "No task ID from create test")
-            return False
+        )
         
-        try:
-            update_data = {"status": "in_progress"}
-            response = self.session.put(f"{self.base_url}/tasks/{self.test_task_id}", 
-                                       json=update_data)
-            success = response.status_code == 200
-            details = f"Status: {response.status_code}"
-            if success:
-                data = response.json()
-                details += f", New Status: {data.get('status', 'Unknown')}"
-            self.log_result("Update Task", success, details)
-            return success
-        except Exception as e:
-            self.log_result("Update Task", False, f"Error: {str(e)}")
-            return False
-
-    def test_shopify_configs(self):
-        """Test Shopify configs endpoint"""
-        try:
-            response = self.session.get(f"{self.base_url}/shopify-configs")
-            success = response.status_code == 200
-            details = f"Status: {response.status_code}"
-            if success:
-                data = response.json()
-                details += f", Configs count: {len(data)}"
-            self.log_result("Get Shopify Configs", success, details)
-            return success
-        except Exception as e:
-            self.log_result("Get Shopify Configs", False, f"Error: {str(e)}")
-            return False
-
-    def test_tiktok_configs(self):
-        """Test TikTok configs endpoint"""
-        try:
-            response = self.session.get(f"{self.base_url}/tiktok-configs")
-            success = response.status_code == 200
-            details = f"Status: {response.status_code}"
-            if success:
-                data = response.json()
-                details += f", Configs count: {len(data)}"
-            self.log_result("Get TikTok Configs", success, details)
-            return success
-        except Exception as e:
-            self.log_result("Get TikTok Configs", False, f"Error: {str(e)}")
-            return False
-
-    def test_chat_history(self):
-        """Test chat history endpoint"""
-        try:
-            params = {"shop_id": 1, "limit": 10}
-            response = self.session.get(f"{self.base_url}/chat-history", params=params)
-            success = response.status_code == 200
-            details = f"Status: {response.status_code}"
-            if success:
-                data = response.json()
-                details += f", Messages count: {len(data)}"
-            self.log_result("Get Chat History", success, details)
-            return success
-        except Exception as e:
-            self.log_result("Get Chat History", False, f"Error: {str(e)}")
-            return False
-
-    def cleanup(self):
-        """Clean up test data"""
-        print("\n🧹 Cleaning up test data...")
+        task_id = None
+        if task_success and created_task:
+            task_id = created_task.get('id')
         
-        # Delete test task
-        if hasattr(self, 'test_task_id'):
-            try:
-                response = self.session.delete(f"{self.base_url}/tasks/{self.test_task_id}")
-                if response.status_code == 200:
-                    print("✅ Deleted test task")
-                else:
-                    print(f"⚠️ Failed to delete test task: {response.status_code}")
-            except Exception as e:
-                print(f"⚠️ Error deleting test task: {str(e)}")
+        # Update task if created
+        if task_id:
+            self.run_test(
+                "Update Task Status",
+                "PUT",
+                f"tasks/{task_id}",
+                200,
+                data={"status": "in_progress"}
+            )
+            
+            # Delete task
+            self.run_test(
+                "Delete Task",
+                "DELETE", 
+                f"tasks/{task_id}",
+                200
+            )
+        
+        return success
 
-        # Delete test income
-        if hasattr(self, 'test_income_id'):
-            try:
-                response = self.session.delete(f"{self.base_url}/incomes/{self.test_income_id}")
-                if response.status_code == 200:
-                    print("✅ Deleted test income")
-                else:
-                    print(f"⚠️ Failed to delete test income: {response.status_code}")
-            except Exception as e:
-                print(f"⚠️ Error deleting test income: {str(e)}")
+    def test_incomes_expenses(self):
+        """Test income and expense management"""
+        print("\n=== FINANCIAL DATA TESTS ===")
+        
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # Create income
+        income_success, created_income = self.run_test(
+            "Create Income",
+            "POST",
+            "incomes",
+            200,
+            data={
+                "amount": 100.50,
+                "date": today,
+                "description": "Test Income",
+                "shop_id": 1
+            }
+        )
+        
+        # Create expense
+        expense_success, created_expense = self.run_test(
+            "Create Expense",
+            "POST", 
+            "expenses",
+            200,
+            data={
+                "amount": 25.75,
+                "date": today, 
+                "campaign_name": "Test Campaign",
+                "shop_id": 1
+            }
+        )
+        
+        # Get incomes
+        self.run_test(
+            "Get Incomes",
+            "GET",
+            "incomes",
+            200,
+            params={"shop_id": 1, "date": today}
+        )
+        
+        # Get expenses
+        self.run_test(
+            "Get Expenses", 
+            "GET",
+            "expenses",
+            200,
+            params={"shop_id": 1, "date": today}
+        )
+        
+        # Cleanup - delete created records
+        if income_success and created_income:
+            income_id = created_income.get('id')
+            if income_id:
+                self.run_test(
+                    "Delete Income",
+                    "DELETE",
+                    f"incomes/{income_id}",
+                    200
+                )
+        
+        if expense_success and created_expense:
+            expense_id = created_expense.get('id')
+            if expense_id:
+                self.run_test(
+                    "Delete Expense",
+                    "DELETE", 
+                    f"expenses/{expense_id}",
+                    200
+                )
+        
+        return income_success and expense_success
 
-        # Delete test expense
-        if hasattr(self, 'test_expense_id'):
-            try:
-                response = self.session.delete(f"{self.base_url}/expenses/{self.test_expense_id}")
-                if response.status_code == 200:
-                    print("✅ Deleted test expense")
-                else:
-                    print(f"⚠️ Failed to delete test expense: {response.status_code}")
-            except Exception as e:
-                print(f"⚠️ Error deleting test expense: {str(e)}")
+    def test_store_configs(self):
+        """Test store configuration endpoints"""
+        print("\n=== STORE CONFIG TESTS ===")
+        
+        # Get Shopify configs
+        shopify_success, _ = self.run_test(
+            "Get Shopify Configs",
+            "GET",
+            "shopify-configs", 
+            200
+        )
+        
+        # Get TikTok configs
+        tiktok_success, _ = self.run_test(
+            "Get TikTok Configs",
+            "GET",
+            "tiktok-configs",
+            200
+        )
+        
+        return shopify_success and tiktok_success
 
-    def run_all_tests(self):
-        """Run all backend API tests"""
-        print("🚀 Starting Ecommify Backend API Tests")
-        print(f"📍 Testing endpoint: {self.base_url}")
-        print("=" * 60)
+    def test_ai_chat(self):
+        """Test AI chat functionality"""
+        print("\n=== AI CHAT TESTS ===")
+        
+        # Test chat message
+        chat_success, _ = self.run_test(
+            "Send AI Chat Message",
+            "POST",
+            "chat",
+            200,
+            data={
+                "shop_id": 1,
+                "message": "Test message for AI"
+            }
+        )
+        
+        # Get chat history
+        history_success, _ = self.run_test(
+            "Get Chat History",
+            "GET", 
+            "chat-history",
+            200,
+            params={"shop_id": 1, "limit": 10}
+        )
+        
+        return chat_success and history_success
 
-        # Core functionality tests
-        self.test_health_check()
-        self.test_login_valid_pin()
-        self.test_login_invalid_pin()
+    def test_health(self):
+        """Test health endpoint"""
+        print("\n=== HEALTH CHECK TESTS ===")
         
-        # Data operations tests
-        self.test_monthly_stats()
-        self.test_create_income()
-        self.test_create_expense()
-        
-        # Task management tests
-        self.test_get_tasks()
-        self.test_create_task()
-        self.test_update_task()
-        
-        # Configuration tests
-        self.test_shopify_configs()
-        self.test_tiktok_configs()
-        
-        # Chat functionality
-        self.test_chat_history()
-        
-        # Cleanup
-        self.cleanup()
-        
-        # Summary
-        print("\n" + "=" * 60)
-        print(f"📊 BACKEND TEST SUMMARY")
-        print(f"Tests Run: {self.tests_run}")
-        print(f"Tests Passed: {self.tests_passed}")
-        print(f"Tests Failed: {self.tests_run - self.tests_passed}")
-        print(f"Success Rate: {(self.tests_passed/self.tests_run*100):.1f}%")
-        
-        return {
-            "total": self.tests_run,
-            "passed": self.tests_passed,
-            "failed": self.tests_run - self.tests_passed,
-            "success_rate": self.tests_passed/self.tests_run*100,
-            "results": self.results
-        }
+        success, _ = self.run_test(
+            "API Health Check",
+            "GET",
+            "",
+            200
+        )
+        return success
 
 def main():
-    tester = EcommifyAPITester()
-    results = tester.run_all_tests()
+    print("🚀 Starting Ecommify Backend API Tests...")
+    print("=" * 60)
     
-    # Return exit code based on success rate
-    if results["success_rate"] >= 80:
-        return 0
-    else:
-        return 1
+    tester = EcommifyAPITester()
+    
+    # Run all tests
+    tests = [
+        ("Health Check", tester.test_health),
+        ("Authentication", tester.test_auth), 
+        ("Monthly Stats", tester.test_monthly_stats),
+        ("Tasks Management", tester.test_tasks),
+        ("Income/Expense Management", tester.test_incomes_expenses),
+        ("Store Configurations", tester.test_store_configs),
+        ("AI Chat", tester.test_ai_chat)
+    ]
+    
+    results = {}
+    for test_name, test_func in tests:
+        try:
+            results[test_name] = test_func()
+        except Exception as e:
+            print(f"\n❌ {test_name} failed with exception: {str(e)}")
+            results[test_name] = False
+    
+    # Print summary
+    print("\n" + "=" * 60)
+    print(f"📊 BACKEND API TEST SUMMARY")
+    print("=" * 60)
+    print(f"Tests run: {tester.tests_run}")
+    print(f"Tests passed: {tester.tests_passed}")
+    print(f"Success rate: {(tester.tests_passed/tester.tests_run)*100:.1f}%")
+    print()
+    
+    for test_name, passed in results.items():
+        status = "✅ PASS" if passed else "❌ FAIL"
+        print(f"{status} {test_name}")
+    
+    # Return appropriate exit code
+    return 0 if tester.tests_passed == tester.tests_run else 1
 
 if __name__ == "__main__":
     sys.exit(main())
