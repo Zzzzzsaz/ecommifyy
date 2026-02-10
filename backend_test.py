@@ -87,6 +87,42 @@ class EcommifyAPITester:
         )
         return success
 
+    def test_combined_monthly_stats(self):
+        """Test combined monthly stats endpoint for CS:GO ranking system"""
+        print("\n=== COMBINED MONTHLY STATS TESTS ===")
+        
+        now = datetime.now()
+        success, response = self.run_test(
+            "Get Combined Monthly Stats (CS:GO Ranking)",
+            "GET", 
+            "combined-monthly-stats",
+            200,
+            params={"year": now.year, "month": now.month}
+        )
+        
+        # Verify key fields for CS:GO ranking
+        if success and response:
+            required_fields = [
+                'total_income', 'total_ads', 'total_netto', 'total_profit', 
+                'profit_per_person', 'roi', 'target', 'progress', 
+                'streak', 'best_day', 'forecast', 'days'
+            ]
+            for field in required_fields:
+                if field not in response:
+                    print(f"   ⚠️  Missing field: {field}")
+            
+            # Check if days contain shop breakdown
+            if 'days' in response and response['days']:
+                first_day = response['days'][0]
+                if 'shops' not in first_day:
+                    print(f"   ⚠️  Missing 'shops' field in day data")
+                elif 'profit_pp' not in first_day:
+                    print(f"   ⚠️  Missing 'profit_pp' field in day data")
+                else:
+                    print(f"   ✅ Day data includes shop breakdown and profit per person")
+                    
+        return success
+
     def test_tasks(self):
         """Test task management"""
         print("\n=== TASK MANAGEMENT TESTS ===")
