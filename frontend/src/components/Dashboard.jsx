@@ -43,9 +43,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
   const [rankUpData, setRankUpData] = useState(null);
   const [showAddReminder, setShowAddReminder] = useState(false);
   const [remForm, setRemForm] = useState({ title: "", date: "" });
-  const [showMargin, setShowMargin] = useState(false);
-  const [buyPrice, setBuyPrice] = useState("");
-  const [sellPrice, setSellPrice] = useState("");
 
   useEffect(() => {
     const now = new Date();
