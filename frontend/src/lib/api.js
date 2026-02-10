@@ -56,6 +56,8 @@ export const api = {
   downloadReceiptPdf: (id) => downloadBlob(`${API}/receipts/pdf/${id}`, `paragon_${id}.pdf`),
   downloadSummaryPdf: (y, m, sid) => downloadBlob(`${API}/receipts/summary-pdf?year=${y}&month=${m}${sid ? `&shop_id=${sid}` : ""}`, `zestawienie_${y}_${m}.pdf`),
   downloadExcel: (y, m, sid) => downloadBlob(`${API}/export/excel?year=${y}&month=${m}${sid ? `&shop_id=${sid}` : ""}`, `ecommify_${y}_${m}.xlsx`),
+  generateReceiptFromOrder: (oid) => axios.post(`${API}/orders/${oid}/generate-receipt`),
+  generateReceiptsBulk: (params) => axios.post(`${API}/orders/generate-receipts-bulk`, null, { params }),
 
   getShopifyConfigs: () => axios.get(`${API}/shopify-configs`),
   saveShopifyConfig: (data) => axios.post(`${API}/shopify-configs`, data),
