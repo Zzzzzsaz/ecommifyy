@@ -50,14 +50,14 @@ export const api = {
   createNote: (data) => axios.post(`${API}/notes`, data),
   deleteNote: (id) => axios.delete(`${API}/notes/${id}`),
 
-  getReceipts: (params) => axios.get(`${API}/receipts`, { params }),
-  createReceipt: (data) => axios.post(`${API}/receipts`, data),
-  deleteReceipt: (id) => axios.delete(`${API}/receipts/${id}`),
-  downloadReceiptPdf: (id) => downloadBlob(`${API}/receipts/pdf/${id}`, `paragon_${id}.pdf`),
-  downloadSummaryPdf: (y, m, sid) => downloadBlob(`${API}/receipts/summary-pdf?year=${y}&month=${m}${sid ? `&shop_id=${sid}` : ""}`, `zestawienie_${y}_${m}.pdf`),
   downloadExcel: (y, m, sid) => downloadBlob(`${API}/export/excel?year=${y}&month=${m}${sid ? `&shop_id=${sid}` : ""}`, `ecommify_${y}_${m}.xlsx`),
-  generateReceiptFromOrder: (oid) => axios.post(`${API}/orders/${oid}/generate-receipt`),
-  generateReceiptsBulk: (params) => axios.post(`${API}/orders/generate-receipts-bulk`, null, { params }),
+
+  getSalesRecords: (params) => axios.get(`${API}/sales-records`, { params }),
+  createSalesRecord: (data) => axios.post(`${API}/sales-records`, data),
+  deleteSalesRecord: (id) => axios.delete(`${API}/sales-records/${id}`),
+  generateSalesFromOrders: (params) => axios.post(`${API}/sales-records/generate-from-orders`, null, { params }),
+  downloadSalesPdfDaily: (date, sid) => downloadBlob(`${API}/sales-records/pdf/daily?date=${date}${sid ? `&shop_id=${sid}` : ""}`, `ewidencja_${date}.pdf`),
+  downloadSalesPdfMonthly: (y, m, sid) => downloadBlob(`${API}/sales-records/pdf/monthly?year=${y}&month=${m}${sid ? `&shop_id=${sid}` : ""}`, `ewidencja_${y}_${m}.pdf`),
 
   getShopifyConfigs: () => axios.get(`${API}/shopify-configs`),
   saveShopifyConfig: (data) => axios.post(`${API}/shopify-configs`, data),
