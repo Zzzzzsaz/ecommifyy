@@ -154,7 +154,7 @@ export default function Orders({ user, shops = [] }) {
       {/* Shop filter */}
       <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1" data-testid="orders-shop-tabs">
         <button onClick={() => setShop(0)} className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${shop === 0 ? "text-white bg-ecom-primary/15 border-ecom-primary" : "text-ecom-muted border-ecom-border"}`}>WSZYSTKIE</button>
-        {SHOPS.map(s => (
+        {shops.map(s => (
           <button key={s.id} onClick={() => setShop(s.id)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${shop === s.id ? "text-white" : "text-ecom-muted border-ecom-border"}`}
             style={shop === s.id ? { backgroundColor: s.color + "20", borderColor: s.color, color: s.color } : {}}>
