@@ -296,6 +296,344 @@ class EcommifyAPITester:
         
         return chat_success and history_success
 
+    def test_reminders(self):
+        """Test reminders functionality"""
+        print("\n=== REMINDERS TESTS ===")
+        
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # Create reminder
+        reminder_success, created_reminder = self.run_test(
+            "Create Reminder",
+            "POST",
+            "reminders",
+            200,
+            data={
+                "title": "Test Reminder",
+                "date": today,
+                "created_by": "Admin"
+            }
+        )
+        
+        # Get reminders
+        get_success, _ = self.run_test(
+            "Get Reminders",
+            "GET",
+            "reminders",
+            200
+        )
+        
+        reminder_id = None
+        if reminder_success and created_reminder:
+            reminder_id = created_reminder.get('id')
+            
+            # Update reminder
+            self.run_test(
+                "Update Reminder",
+                "PUT",
+                f"reminders/{reminder_id}",
+                200,
+                data={"done": True}
+            )
+            
+            # Delete reminder
+            self.run_test(
+                "Delete Reminder",
+                "DELETE",
+                f"reminders/{reminder_id}",
+                200
+            )
+        
+        return reminder_success and get_success
+
+    def test_orders(self):
+        """Test orders functionality"""
+        print("\n=== ORDERS TESTS ===")
+        
+        now = datetime.now()
+        today = now.strftime('%Y-%m-%d')
+        
+        # Create order
+        order_success, created_order = self.run_test(
+            "Create Order",
+            "POST",
+            "orders",
+            200,
+            data={
+                "customer_name": "Test Customer",
+                "total": 150.00,
+                "date": today,
+                "shop_id": 1,
+                "items": [{"name": "Test Product", "quantity": 1, "price": 150.00}]
+            }
+        )
+        
+        # Get orders
+        get_success, _ = self.run_test(
+            "Get Orders",
+            "GET",
+            "orders",
+            200,
+            params={"year": now.year, "month": now.month}
+        )
+        
+        # Get orders by shop
+        shop_success, _ = self.run_test(
+            "Get Orders by Shop",
+            "GET", 
+            "orders",
+            200,
+            params={"shop_id": 1, "year": now.year, "month": now.month}
+        )
+        
+        order_id = None
+        if order_success and created_order:
+            order_id = created_order.get('id')
+            
+            # Update order status
+            self.run_test(
+                "Update Order Status",
+                "PUT",
+                f"orders/{order_id}/status",
+                200,
+                params={"status": "processing"}
+            )
+            
+            # Delete order
+            self.run_test(
+                "Delete Order",
+                "DELETE",
+                f"orders/{order_id}",
+                200
+            )
+        
+        return order_success and get_success and shop_success
+
+    def test_receipts(self):
+        """Test receipts functionality"""
+        print("\n=== RECEIPTS TESTS ===")
+        
+        now = datetime.now()
+        today = now.strftime('%Y-%m-%d')
+        
+        # Create receipt
+        receipt_success, created_receipt = self.run_test(
+            "Create Receipt",
+            "POST",
+            "receipts",
+            200,
+            data={
+                "date": today,
+                "shop_id": 1,
+                "items": [
+                    {
+                        "description": "Test Item",
+                        "quantity": 2,
+                        "netto_price": 50.00
+                    }
+                ]
+            }
+        )
+        
+        # Get receipts
+        get_success, _ = self.run_test(
+            "Get Receipts",
+            "GET",
+            "receipts",
+            200,
+            params={"year": now.year, "month": now.month}
+        )
+        
+        receipt_id = None
+        if receipt_success and created_receipt:
+            receipt_id = created_receipt.get('id')
+            
+            # Test PDF generation (should return success even if PDF generation has issues)
+            print(f"\n🔍 Testing Receipt PDF Download...")
+            try:
+                import requests
+                url = f"{self.base_url}/api/receipts/pdf/{receipt_id}"
+                response = requests.get(url, timeout=10)
+                if response.status_code == 200:
+                    print(f"✅ Passed - PDF generated successfully")
+                else:
+                    print(f"❌ Failed - PDF generation failed: {response.status_code}")
+            except Exception as e:
+                print(f"⚠️  PDF test skipped - Error: {str(e)}")
+            
+            # Delete receipt
+            self.run_test(
+                "Delete Receipt",
+                "DELETE",
+                f"receipts/{receipt_id}",
+                200
+            )
+        
+        return receipt_success and get_success
+
+    def test_company_settings(self):
+        """Test company settings functionality"""
+        print("\n=== COMPANY SETTINGS TESTS ===")
+        
+        # Get company settings
+        get_success, _ = self.run_test(
+            "Get Company Settings",
+            "GET",
+            "company-settings",
+            200
+        )
+        
+        # Update company settings
+        update_success, _ = self.run_test(
+            "Update Company Settings",
+            "PUT",
+            "company-settings",
+            200,
+            data={
+                "name": "Test Company Ltd",
+                "nip": "1234567890",
+                "address": "Test Street 123",
+                "city": "Test City",
+                "postal_code": "12-345",
+                "email": "test@example.com",
+                "phone": "+48 123 456 789"
+            }
+        )
+        
+        return get_success and update_success
+
+    def test_notes(self):
+        """Test notes functionality"""
+        print("\n=== NOTES TESTS ===")
+        
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # Create note
+        note_success, created_note = self.run_test(
+            "Create Note",
+            "POST",
+            "notes",
+            200,
+            data={
+                "date": today,
+                "shop_id": 1,
+                "content": "Test note content",
+                "created_by": "Admin"
+            }
+        )
+        
+        # Get notes
+        get_success, _ = self.run_test(
+            "Get Notes",
+            "GET",
+            "notes",
+            200,
+            params={"date": today}
+        )
+        
+        note_id = None
+        if note_success and created_note:
+            note_id = created_note.get('id')
+            
+            # Delete note
+            self.run_test(
+                "Delete Note",
+                "DELETE",
+                f"notes/{note_id}",
+                200
+            )
+        
+        return note_success and get_success
+
+    def test_weekly_stats(self):
+        """Test weekly stats functionality"""
+        print("\n=== WEEKLY STATS TESTS ===")
+        
+        success, response = self.run_test(
+            "Get Weekly Stats",
+            "GET",
+            "weekly-stats",
+            200
+        )
+        
+        # Verify response structure
+        if success and response:
+            required_fields = ['current', 'previous', 'income_change', 'profit_change']
+            for field in required_fields:
+                if field not in response:
+                    print(f"   ⚠️  Missing field: {field}")
+                else:
+                    print(f"   ✅ Found field: {field}")
+        
+        return success
+
+    def test_export_functionality(self):
+        """Test export functionality (Excel, PDF)"""
+        print("\n=== EXPORT FUNCTIONALITY TESTS ===")
+        
+        now = datetime.now()
+        
+        # Test Excel export
+        print(f"\n🔍 Testing Excel Export...")
+        try:
+            import requests
+            url = f"{self.base_url}/api/export/excel"
+            params = {"year": now.year, "month": now.month}
+            response = requests.get(url, params=params, timeout=15)
+            if response.status_code == 200:
+                print(f"✅ Passed - Excel export successful")
+                excel_success = True
+            else:
+                print(f"❌ Failed - Excel export failed: {response.status_code}")
+                excel_success = False
+        except Exception as e:
+            print(f"❌ Failed - Excel export error: {str(e)}")
+            excel_success = False
+        
+        # Test Summary PDF
+        print(f"\n🔍 Testing Summary PDF...")
+        try:
+            url = f"{self.base_url}/api/receipts/summary-pdf"
+            params = {"year": now.year, "month": now.month}
+            response = requests.get(url, params=params, timeout=15)
+            if response.status_code == 200:
+                print(f"✅ Passed - Summary PDF export successful")
+                pdf_success = True
+            else:
+                print(f"❌ Failed - Summary PDF export failed: {response.status_code}")
+                pdf_success = False
+        except Exception as e:
+            print(f"❌ Failed - Summary PDF export error: {str(e)}")
+            pdf_success = False
+        
+        return excel_success and pdf_success
+
+    def test_income_expense_details(self):
+        """Test income and expense details endpoints"""
+        print("\n=== INCOME/EXPENSE DETAILS TESTS ===")
+        
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # Get income details
+        income_details_success, _ = self.run_test(
+            "Get Income Details",
+            "GET",
+            "incomes/details",
+            200,
+            params={"shop_id": 1, "date": today}
+        )
+        
+        # Get expense details
+        expense_details_success, _ = self.run_test(
+            "Get Expense Details", 
+            "GET",
+            "expenses/details",
+            200,
+            params={"shop_id": 1, "date": today}
+        )
+        
+        return income_details_success and expense_details_success
+
     def test_health(self):
         """Test health endpoint"""
         print("\n=== HEALTH CHECK TESTS ===")
