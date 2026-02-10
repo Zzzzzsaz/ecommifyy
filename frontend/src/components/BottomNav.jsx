@@ -1,11 +1,10 @@
-import { Gamepad2, BarChart3, ShoppingCart, CalendarDays, Sparkles } from "lucide-react";
+import { Gamepad2, BarChart3, ShoppingCart, CalendarDays } from "lucide-react";
 
 const tabs = [
   { id: "dashboard", label: "Menu", icon: Gamepad2 },
   { id: "wyniki", label: "Wyniki", icon: BarChart3 },
   { id: "orders", label: "Zamowienia", icon: ShoppingCart },
   { id: "calendar", label: "Kalendarz", icon: CalendarDays },
-  { id: "ai", label: "AI", icon: Sparkles },
 ];
 
 export const BottomNav = ({ activeTab, onTabChange }) => {
