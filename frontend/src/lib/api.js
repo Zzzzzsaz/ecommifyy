@@ -103,4 +103,8 @@ export const api = {
   createProduct: (data) => axios.post(`${API}/products`, data),
   updateProduct: (id, data) => axios.put(`${API}/products/${id}`, data),
   deleteProduct: (id) => axios.delete(`${API}/products/${id}`),
+
+  sendAiAssistant: (message) => axios.post(`${API}/ai-assistant`, { message }),
+  getAiAssistantHistory: (limit = 50) => axios.get(`${API}/ai-assistant/history`, { params: { limit } }),
+  clearAiAssistantHistory: () => axios.delete(`${API}/ai-assistant/history`),
 };
