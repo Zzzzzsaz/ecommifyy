@@ -894,6 +894,31 @@ async def delete_fulfillment(fid: str):
     await db.fulfillment.delete_one({"id": fid})
     return {"status": "ok"}
 
+# ===== FULFILLMENT NOTES =====
+@api_router.get("/fulfillment-notes")
+async def get_fulfillment_notes(source_month: Optional[str] = None):
+    q = {}
+    if source_month: q["source_month"] = source_month
+    return await db.fulfillment_notes.find(q, {"_id": 0}).sort("created_at", -1).to_list(1000)
+
+@api_router.post("/fulfillment-notes")
+async def create_fulfillment_note(body: dict):
+    doc = {
+        "id": str(uuid.uuid4()),
+        "content": body.get("content", ""),
+        "source_month": body.get("source_month", ""),
+        "created_by": body.get("created_by", ""),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.fulfillment_notes.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.delete("/fulfillment-notes/{nid}")
+async def delete_fulfillment_note(nid: str):
+    await db.fulfillment_notes.delete_one({"id": nid})
+    return {"status": "ok"}
+
 @api_router.get("/fulfillment/reminder-check")
 async def fulfillment_reminder_check():
     now = datetime.now(timezone.utc)
