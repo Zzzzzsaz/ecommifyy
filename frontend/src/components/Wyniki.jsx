@@ -127,8 +127,8 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
     ...(isAll ? [{ l: "Na leb", v: fmtPLN(stats.profit_per_person), c: "text-ecom-primary" }] : []),
   ] : [];
 
-  const shopName = (id) => SHOPS.find(s => s.id === id)?.name || "";
-  const shopColor = (id) => SHOPS.find(s => s.id === id)?.color || "#6366f1";
+  const shopName = (id) => shops.find(s => s.id === id)?.name || "";
+  const shopColor = (id) => shops.find(s => s.id === id)?.color || "#6366f1";
 
   return (
     <div className="p-4 pb-24 animate-fade-in" data-testid="wyniki-page">
