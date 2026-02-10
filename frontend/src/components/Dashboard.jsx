@@ -221,23 +221,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
         </DialogContent>
       </Dialog>
 
-      {/* MARGIN CALCULATOR DIALOG */}
-      <Dialog open={showMargin} onOpenChange={setShowMargin}>
-        <DialogContent className="bg-ecom-card border-ecom-border max-w-xs" data-testid="margin-dialog">
-          <DialogHeader><DialogTitle className="font-heading text-white">Kalkulator marzy</DialogTitle><DialogDescription className="text-ecom-muted text-xs">Oblicz marze i narzut</DialogDescription></DialogHeader>
-          <div className="space-y-3 mt-1">
-            <Input type="number" placeholder="Cena zakupu (zl)" value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} className="bg-ecom-bg border-ecom-border text-white" data-testid="margin-buy" />
-            <Input type="number" placeholder="Cena sprzedazy (zl)" value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} className="bg-ecom-bg border-ecom-border text-white" data-testid="margin-sell" />
-            {(bp > 0 || sp > 0) && (
-              <div className="grid grid-cols-3 gap-2">
-                <div className="p-2 rounded-lg bg-ecom-border/20 text-center"><p className="text-[8px] text-ecom-muted uppercase">Marza</p><p className="text-ecom-success font-heading font-bold text-sm">{marginPct.toFixed(1)}%</p></div>
-                <div className="p-2 rounded-lg bg-ecom-border/20 text-center"><p className="text-[8px] text-ecom-muted uppercase">Narzut</p><p className="text-ecom-primary font-heading font-bold text-sm">{markupPct.toFixed(1)}%</p></div>
-                <div className="p-2 rounded-lg bg-ecom-border/20 text-center"><p className="text-[8px] text-ecom-muted uppercase">Zysk/szt</p><p className="text-white font-heading font-bold text-sm">{profitUnit.toFixed(2)}</p></div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
