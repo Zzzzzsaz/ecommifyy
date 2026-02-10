@@ -1,10 +1,10 @@
-import { Gamepad2, BarChart3, ClipboardList, Store, Sparkles } from "lucide-react";
+import { Gamepad2, BarChart3, ShoppingCart, ClipboardList, Sparkles } from "lucide-react";
 
 const tabs = [
   { id: "dashboard", label: "Menu", icon: Gamepad2 },
   { id: "wyniki", label: "Wyniki", icon: BarChart3 },
+  { id: "orders", label: "Zamowienia", icon: ShoppingCart },
   { id: "tasks", label: "Zadania", icon: ClipboardList },
-  { id: "stores", label: "Sklepy", icon: Store },
   { id: "ai", label: "AI", icon: Sparkles },
 ];
 
