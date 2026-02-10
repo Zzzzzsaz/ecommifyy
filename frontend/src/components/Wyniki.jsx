@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { api } from "@/lib/api";
 import { getRank, TARGET } from "@/lib/ranks";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Plus, Loader2, ChevronDown, Crown, Users, TrendingUp, Flame, Target } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, ChevronDown, Crown, Users, TrendingUp, Flame, Target, Trash2, Eye, MessageSquare, Download, StickyNote } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
+import { Textarea } from "@/components/ui/textarea";
 
 const SHOPS = [
   { id: 1, name: "ecom1", color: "#6366f1" },
