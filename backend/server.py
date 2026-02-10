@@ -621,155 +621,137 @@ async def chat_endpoint(msg: ChatMessage):
 class AssistantMessage(BaseModel):
     message: str
 
-AI_TOOLS = [
-    {"type": "function", "function": {"name": "get_orders", "description": "Pobierz liste zamowien. Mozna filtrowac po sklepie, roku i miesiacu.", "parameters": {"type": "object", "properties": {"shop_id": {"type": "integer", "description": "ID sklepu (1-4), 0 = wszystkie"}, "year": {"type": "integer"}, "month": {"type": "integer"}}, "required": []}}},
-    {"type": "function", "function": {"name": "get_products", "description": "Pobierz liste produktow", "parameters": {"type": "object", "properties": {"shop_id": {"type": "integer"}}, "required": []}}},
-    {"type": "function", "function": {"name": "create_product", "description": "Dodaj nowy produkt", "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "price": {"type": "number"}, "extra_payment": {"type": "number", "description": "Doplata presale"}, "shop_id": {"type": "integer"}, "sku": {"type": "string"}, "category": {"type": "string"}}, "required": ["name", "shop_id"]}}},
-    {"type": "function", "function": {"name": "update_product", "description": "Edytuj produkt", "parameters": {"type": "object", "properties": {"product_id": {"type": "string"}, "name": {"type": "string"}, "price": {"type": "number"}, "extra_payment": {"type": "number"}, "sku": {"type": "string"}, "category": {"type": "string"}}, "required": ["product_id"]}}},
-    {"type": "function", "function": {"name": "delete_product", "description": "Usun produkt", "parameters": {"type": "object", "properties": {"product_id": {"type": "string"}}, "required": ["product_id"]}}},
-    {"type": "function", "function": {"name": "delete_order", "description": "Usun zamowienie (kaskadowo usuwa tez zwroty, realizacje i ewidencje)", "parameters": {"type": "object", "properties": {"order_id": {"type": "string"}}, "required": ["order_id"]}}},
-    {"type": "function", "function": {"name": "get_returns", "description": "Pobierz liste zwrotow", "parameters": {"type": "object", "properties": {"year": {"type": "integer"}, "month": {"type": "integer"}}, "required": []}}},
-    {"type": "function", "function": {"name": "delete_return", "description": "Cofnij zwrot - przywraca zamowienie", "parameters": {"type": "object", "properties": {"return_id": {"type": "string"}}, "required": ["return_id"]}}},
-    {"type": "function", "function": {"name": "get_fulfillment", "description": "Pobierz liste realizacji (presale pipeline)", "parameters": {"type": "object", "properties": {"source_month": {"type": "string", "description": "Format YYYY-MM"}, "status": {"type": "string", "enum": ["waiting", "reminder_sent", "check_payment", "to_ship", "unpaid", "archived"]}}, "required": []}}},
-    {"type": "function", "function": {"name": "update_fulfillment_status", "description": "Zmien status realizacji", "parameters": {"type": "object", "properties": {"fulfillment_id": {"type": "string"}, "status": {"type": "string", "enum": ["waiting", "reminder_sent", "check_payment", "to_ship", "unpaid", "archived"]}, "extra_payment": {"type": "number"}, "notes": {"type": "string"}}, "required": ["fulfillment_id"]}}},
-    {"type": "function", "function": {"name": "delete_fulfillment", "description": "Usun z realizacji", "parameters": {"type": "object", "properties": {"fulfillment_id": {"type": "string"}}, "required": ["fulfillment_id"]}}},
-    {"type": "function", "function": {"name": "get_sales_records", "description": "Pobierz ewidencje sprzedazy", "parameters": {"type": "object", "properties": {"year": {"type": "integer"}, "month": {"type": "integer"}, "shop_id": {"type": "integer"}}, "required": []}}},
-    {"type": "function", "function": {"name": "delete_sales_record", "description": "Usun wpis z ewidencji", "parameters": {"type": "object", "properties": {"record_id": {"type": "string"}}, "required": ["record_id"]}}},
-    {"type": "function", "function": {"name": "get_stats", "description": "Pobierz statystyki miesieczne", "parameters": {"type": "object", "properties": {"year": {"type": "integer"}, "month": {"type": "integer"}}, "required": ["year", "month"]}}},
-    {"type": "function", "function": {"name": "get_shops", "description": "Pobierz liste sklepow", "parameters": {"type": "object", "properties": {}, "required": []}}},
-    {"type": "function", "function": {"name": "create_shop", "description": "Dodaj nowy sklep", "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "color": {"type": "string", "description": "Kolor hex, np. #6366f1"}}, "required": ["name"]}}},
-    {"type": "function", "function": {"name": "delete_shop", "description": "Usun sklep", "parameters": {"type": "object", "properties": {"shop_id": {"type": "integer"}}, "required": ["shop_id"]}}},
-    {"type": "function", "function": {"name": "create_reminder", "description": "Dodaj przypomnienie", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "date": {"type": "string", "description": "Format YYYY-MM-DD"}, "recurring": {"type": "string", "enum": ["none", "daily", "weekly", "monthly"]}}, "required": ["title", "date"]}}},
-    {"type": "function", "function": {"name": "get_reminders", "description": "Pobierz przypomnienia", "parameters": {"type": "object", "properties": {}, "required": []}}},
-    {"type": "function", "function": {"name": "delete_reminder", "description": "Usun przypomnienie", "parameters": {"type": "object", "properties": {"reminder_id": {"type": "string"}}, "required": ["reminder_id"]}}},
-]
+AVAILABLE_ACTIONS = """
+Dostepne akcje (uzyj dokladnie tego formatu w odpowiedzi):
+[ACTION:get_orders] - pokaz zamowienia
+[ACTION:get_products] - pokaz produkty  
+[ACTION:get_returns] - pokaz zwroty
+[ACTION:get_fulfillment] - pokaz realizacje
+[ACTION:get_stats:YYYY:MM] - pokaz statystyki np. [ACTION:get_stats:2025:12]
+[ACTION:get_shops] - pokaz sklepy
+[ACTION:get_reminders] - pokaz przypomnienia
+[ACTION:delete_product:ID] - usun produkt
+[ACTION:delete_order:ID] - usun zamowienie
+[ACTION:delete_return:ID] - cofnij zwrot
+[ACTION:delete_fulfillment:ID] - usun z realizacji
+[ACTION:delete_reminder:ID] - usun przypomnienie
+[ACTION:create_product:nazwa:cena:doplata:shop_id] - dodaj produkt
+[ACTION:create_reminder:tytul:data] - dodaj przypomnienie (data: YYYY-MM-DD)
+[ACTION:update_fulfillment:ID:status] - zmien status realizacji (waiting/reminder_sent/check_payment/to_ship/unpaid/archived)
+"""
 
-async def execute_ai_tool(name: str, args: dict):
-    """Execute AI tool and return result"""
+async def execute_action(action_str: str):
+    """Parse and execute action from AI response"""
     try:
-        if name == "get_orders":
-            q = {}
-            if args.get("shop_id") and args["shop_id"] > 0: q["shop_id"] = args["shop_id"]
-            if args.get("year") and args.get("month"): q["date"] = {"$regex": f"^{args['year']}-{args['month']:02d}"}
-            orders = await db.orders.find(q, {"_id": 0}).sort("date", -1).to_list(100)
-            return {"success": True, "data": orders, "count": len(orders)}
+        parts = action_str.split(":")
+        action = parts[0]
         
-        elif name == "get_products":
-            q = {}
-            if args.get("shop_id") and args["shop_id"] > 0: q["shop_id"] = args["shop_id"]
-            products = await db.products.find(q, {"_id": 0}).to_list(100)
-            return {"success": True, "data": products, "count": len(products)}
+        if action == "get_orders":
+            orders = await db.orders.find({}, {"_id": 0}).sort("date", -1).to_list(20)
+            return {"action": "get_orders", "success": True, "data": orders, "message": f"Znaleziono {len(orders)} zamowien"}
         
-        elif name == "create_product":
-            doc = {"id": str(uuid.uuid4()), "name": args["name"], "sku": args.get("sku", ""), "price": args.get("price", 0), "extra_payment": args.get("extra_payment", 0), "shop_id": args["shop_id"], "category": args.get("category", ""), "source": "ai", "created_at": datetime.now(timezone.utc).isoformat()}
-            await db.products.insert_one(doc)
-            return {"success": True, "message": f"Dodano produkt: {args['name']}", "product_id": doc["id"]}
+        elif action == "get_products":
+            products = await db.products.find({}, {"_id": 0}).to_list(50)
+            return {"action": "get_products", "success": True, "data": products, "message": f"Znaleziono {len(products)} produktow"}
         
-        elif name == "update_product":
-            upd = {k: v for k, v in args.items() if k != "product_id" and v is not None}
-            if upd: await db.products.update_one({"id": args["product_id"]}, {"$set": upd})
-            return {"success": True, "message": "Produkt zaktualizowany"}
+        elif action == "get_returns":
+            returns = await db.returns.find({}, {"_id": 0}).to_list(50)
+            return {"action": "get_returns", "success": True, "data": returns, "message": f"Znaleziono {len(returns)} zwrotow"}
         
-        elif name == "delete_product":
-            await db.products.delete_one({"id": args["product_id"]})
-            return {"success": True, "message": "Produkt usuniety"}
+        elif action == "get_fulfillment":
+            items = await db.fulfillment.find({}, {"_id": 0}).to_list(50)
+            return {"action": "get_fulfillment", "success": True, "data": items, "message": f"Znaleziono {len(items)} pozycji w realizacji"}
         
-        elif name == "delete_order":
-            await db.orders.delete_one({"id": args["order_id"]})
-            await db.returns.delete_many({"order_id": args["order_id"]})
-            await db.fulfillment.delete_many({"order_id": args["order_id"]})
-            await db.sales_records.delete_many({"order_id": args["order_id"]})
-            return {"success": True, "message": "Zamowienie usuniete (wraz ze zwrotami, realizacja i ewidencja)"}
-        
-        elif name == "get_returns":
-            q = {}
-            if args.get("year") and args.get("month"): q["date"] = {"$regex": f"^{args['year']}-{args['month']:02d}"}
-            returns = await db.returns.find(q, {"_id": 0}).to_list(100)
-            return {"success": True, "data": returns, "count": len(returns)}
-        
-        elif name == "delete_return":
-            ret = await db.returns.find_one({"id": args["return_id"]}, {"_id": 0})
-            if ret and ret.get("order_id"):
-                await db.orders.update_one({"id": ret["order_id"]}, {"$set": {"status": "new"}})
-            await db.returns.delete_one({"id": args["return_id"]})
-            return {"success": True, "message": "Zwrot cofniety - zamowienie przywrocone"}
-        
-        elif name == "get_fulfillment":
-            q = {}
-            if args.get("source_month"): q["source_month"] = args["source_month"]
-            if args.get("status"): q["status"] = args["status"]
-            items = await db.fulfillment.find(q, {"_id": 0}).to_list(100)
-            return {"success": True, "data": items, "count": len(items)}
-        
-        elif name == "update_fulfillment_status":
-            upd = {}
-            if args.get("status"): upd["status"] = args["status"]
-            if args.get("extra_payment") is not None: upd["extra_payment"] = args["extra_payment"]
-            if args.get("notes"): upd["notes"] = args["notes"]
-            if upd: await db.fulfillment.update_one({"id": args["fulfillment_id"]}, {"$set": upd})
-            return {"success": True, "message": "Status realizacji zmieniony"}
-        
-        elif name == "delete_fulfillment":
-            doc = await db.fulfillment.find_one({"id": args["fulfillment_id"]}, {"_id": 0})
-            if doc and doc.get("order_id"):
-                await db.orders.update_one({"id": doc["order_id"]}, {"$set": {"status": "new"}})
-            await db.fulfillment.delete_one({"id": args["fulfillment_id"]})
-            return {"success": True, "message": "Usunieto z realizacji"}
-        
-        elif name == "get_sales_records":
-            q = {}
-            if args.get("year") and args.get("month"): q["date"] = {"$regex": f"^{args['year']}-{args['month']:02d}"}
-            if args.get("shop_id") and args["shop_id"] > 0: q["shop_id"] = args["shop_id"]
-            records = await db.sales_records.find(q, {"_id": 0}).to_list(100)
-            return {"success": True, "data": records, "count": len(records)}
-        
-        elif name == "delete_sales_record":
-            await db.sales_records.delete_one({"id": args["record_id"]})
-            return {"success": True, "message": "Wpis ewidencji usuniety"}
-        
-        elif name == "get_stats":
-            prefix = f"{args['year']}-{args['month']:02d}"
+        elif action == "get_stats" and len(parts) >= 3:
+            year, month = int(parts[1]), int(parts[2])
+            prefix = f"{year}-{month:02d}"
             incomes = await db.incomes.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
             expenses = await db.expenses.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
-            ti = sum(i["amount"] for i in incomes); te = sum(e["amount"] for e in expenses)
-            return {"success": True, "data": {"income": ti, "expenses": te, "netto": round(ti * 0.77, 2), "profit": round(ti * 0.77 - te, 2)}}
+            ti = sum(i["amount"] for i in incomes)
+            te = sum(e["amount"] for e in expenses)
+            return {"action": "get_stats", "success": True, "data": {"income": ti, "expenses": te, "netto": round(ti * 0.77, 2), "profit": round(ti * 0.77 - te, 2)}, "message": f"Statystyki {month}/{year}"}
         
-        elif name == "get_shops":
-            shops = await db.shops.find({}, {"_id": 0}).to_list(100)
-            return {"success": True, "data": shops, "count": len(shops)}
+        elif action == "get_shops":
+            shops = await db.shops.find({}, {"_id": 0}).to_list(20)
+            return {"action": "get_shops", "success": True, "data": shops, "message": f"Znaleziono {len(shops)} sklepow"}
         
-        elif name == "create_shop":
-            shops = await db.shops.find({}, {"_id": 0}).to_list(100)
-            max_id = max((s["id"] for s in shops), default=0)
-            doc = {"id": max_id + 1, "name": args["name"], "color": args.get("color", "#6366f1"), "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()}
-            await db.shops.insert_one(doc)
-            return {"success": True, "message": f"Sklep '{args['name']}' dodany", "shop_id": doc["id"]}
+        elif action == "get_reminders":
+            reminders = await db.reminders.find({}, {"_id": 0}).to_list(50)
+            return {"action": "get_reminders", "success": True, "data": reminders, "message": f"Znaleziono {len(reminders)} przypomn"}
         
-        elif name == "delete_shop":
-            await db.shops.delete_one({"id": args["shop_id"]})
-            return {"success": True, "message": "Sklep usuniety"}
+        elif action == "delete_product" and len(parts) >= 2:
+            pid = parts[1]
+            product = await db.products.find_one({"id": pid}, {"_id": 0})
+            if product:
+                await db.products.delete_one({"id": pid})
+                return {"action": "delete_product", "success": True, "message": f"Usunieto produkt: {product.get('name', pid)}"}
+            return {"action": "delete_product", "success": False, "message": "Nie znaleziono produktu"}
         
-        elif name == "create_reminder":
-            doc = {"id": str(uuid.uuid4()), "title": args["title"], "date": args["date"], "time": None, "recurring": args.get("recurring", "none"), "done": False, "created_by": "AI", "created_at": datetime.now(timezone.utc).isoformat()}
+        elif action == "delete_order" and len(parts) >= 2:
+            oid = parts[1]
+            order = await db.orders.find_one({"id": oid}, {"_id": 0})
+            if order:
+                await db.orders.delete_one({"id": oid})
+                await db.returns.delete_many({"order_id": oid})
+                await db.fulfillment.delete_many({"order_id": oid})
+                await db.sales_records.delete_many({"order_id": oid})
+                return {"action": "delete_order", "success": True, "message": f"Usunieto zamowienie: {order.get('order_number', oid)}"}
+            return {"action": "delete_order", "success": False, "message": "Nie znaleziono zamowienia"}
+        
+        elif action == "delete_return" and len(parts) >= 2:
+            rid = parts[1]
+            ret = await db.returns.find_one({"id": rid}, {"_id": 0})
+            if ret:
+                if ret.get("order_id"):
+                    await db.orders.update_one({"id": ret["order_id"]}, {"$set": {"status": "new"}})
+                await db.returns.delete_one({"id": rid})
+                return {"action": "delete_return", "success": True, "message": "Cofnieto zwrot, zamowienie przywrocone"}
+            return {"action": "delete_return", "success": False, "message": "Nie znaleziono zwrotu"}
+        
+        elif action == "delete_fulfillment" and len(parts) >= 2:
+            fid = parts[1]
+            doc = await db.fulfillment.find_one({"id": fid}, {"_id": 0})
+            if doc:
+                if doc.get("order_id"):
+                    await db.orders.update_one({"id": doc["order_id"]}, {"$set": {"status": "new"}})
+                await db.fulfillment.delete_one({"id": fid})
+                return {"action": "delete_fulfillment", "success": True, "message": f"Usunieto z realizacji: {doc.get('order_number', fid)}"}
+            return {"action": "delete_fulfillment", "success": False, "message": "Nie znaleziono pozycji"}
+        
+        elif action == "delete_reminder" and len(parts) >= 2:
+            rid = parts[1]
+            reminder = await db.reminders.find_one({"id": rid}, {"_id": 0})
+            if reminder:
+                await db.reminders.delete_one({"id": rid})
+                return {"action": "delete_reminder", "success": True, "message": f"Usunieto przypomnienie: {reminder.get('title', rid)}"}
+            return {"action": "delete_reminder", "success": False, "message": "Nie znaleziono przypomnienia"}
+        
+        elif action == "create_product" and len(parts) >= 5:
+            name, price, extra, shop_id = parts[1], float(parts[2]), float(parts[3]), int(parts[4])
+            doc = {"id": str(uuid.uuid4()), "name": name, "sku": "", "price": price, "extra_payment": extra, "shop_id": shop_id, "category": "", "source": "ai", "created_at": datetime.now(timezone.utc).isoformat()}
+            await db.products.insert_one(doc)
+            return {"action": "create_product", "success": True, "message": f"Dodano produkt: {name} (cena: {price} zl, doplata: {extra} zl)"}
+        
+        elif action == "create_reminder" and len(parts) >= 3:
+            title, date = parts[1], parts[2]
+            doc = {"id": str(uuid.uuid4()), "title": title, "date": date, "time": None, "recurring": "none", "done": False, "created_by": "AI", "created_at": datetime.now(timezone.utc).isoformat()}
             await db.reminders.insert_one(doc)
-            return {"success": True, "message": f"Przypomnienie dodane: {args['title']}", "reminder_id": doc["id"]}
+            return {"action": "create_reminder", "success": True, "message": f"Dodano przypomnienie: {title} na {date}"}
         
-        elif name == "get_reminders":
-            reminders = await db.reminders.find({}, {"_id": 0}).to_list(100)
-            return {"success": True, "data": reminders, "count": len(reminders)}
+        elif action == "update_fulfillment" and len(parts) >= 3:
+            fid, status = parts[1], parts[2]
+            result = await db.fulfillment.update_one({"id": fid}, {"$set": {"status": status}})
+            if result.modified_count > 0:
+                return {"action": "update_fulfillment", "success": True, "message": f"Zmieniono status na: {status}"}
+            return {"action": "update_fulfillment", "success": False, "message": "Nie znaleziono pozycji lub status nie zmieniony"}
         
-        elif name == "delete_reminder":
-            await db.reminders.delete_one({"id": args["reminder_id"]})
-            return {"success": True, "message": "Przypomnienie usuniete"}
-        
-        else:
-            return {"success": False, "error": f"Nieznana funkcja: {name}"}
+        return {"action": action, "success": False, "message": f"Nieznana akcja: {action}"}
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {"action": "error", "success": False, "message": str(e)}
 
 @api_router.post("/ai-assistant")
 async def ai_assistant_endpoint(msg: AssistantMessage):
-    import openai
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
     
     llm_key = os.environ.get("EMERGENT_LLM_KEY")
     if not llm_key:
@@ -779,63 +761,53 @@ async def ai_assistant_endpoint(msg: AssistantMessage):
     user_doc = {"id": str(uuid.uuid4()), "role": "user", "content": msg.message, "created_at": datetime.now(timezone.utc).isoformat()}
     await db.ai_assistant_history.insert_one(user_doc)
     
-    # Get recent history for context
-    history = await db.ai_assistant_history.find({}, {"_id": 0}).sort("created_at", -1).to_list(20)
-    history = list(reversed(history))
-    
-    messages = [{"role": "system", "content": """Jestes AI Asystentem aplikacji Ecommify - dashboardu e-commerce.
-Mozesz wykonywac akcje na stronie uzywajac dostepnych funkcji.
-Odpowiadaj po polsku, krotko i konkretnie.
-Gdy wykonujesz akcje, informuj uzytkownika co zrobiles.
-Masz dostep do: zamowien, produktow, zwrotow, realizacji (presale pipeline), ewidencji sprzedazy, sklepow, przypomn.
-Statusy realizacji: waiting (oczekujace), reminder_sent (przypomnienie wyslane), check_payment (sprawdzenie doplaty), to_ship (do wysylki), unpaid (nieoplacone), archived (archiwum).
-Dzisiejsza data: """ + datetime.now(timezone.utc).strftime("%Y-%m-%d")}]
-    
-    for h in history[-10:]:
-        messages.append({"role": h["role"], "content": h["content"]})
-    
-    client = openai.AsyncOpenAI(api_key=llm_key, base_url="https://api.openai.com/v1")
-    
-    actions_taken = []
-    max_iterations = 5
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    system_msg = f"""Jestes AI Asystentem aplikacji Ecommify - dashboardu e-commerce do zarzadzania presale.
+Odpowiadasz po polsku, krotko i konkretnie.
+Mozesz wykonywac akcje uzywajac specjalnych komend w odpowiedzi.
+Dzisiejsza data: {today}
+
+{AVAILABLE_ACTIONS}
+
+Przyklad uzycia:
+- Uzytkownik: "pokaz mi produkty" -> Odpowiedz: "Pobieram produkty... [ACTION:get_products]"
+- Uzytkownik: "dodaj produkt Bluza za 100zl z doplata 30zl do sklepu 1" -> "Dodaje produkt... [ACTION:create_product:Bluza:100:30:1]"
+- Uzytkownik: "usun produkt abc-123" -> "Usuwam... [ACTION:delete_product:abc-123]"
+
+Zawsze informuj uzytkownika co robisz i uzyj odpowiedniej komendy [ACTION:...].
+Jesli uzytkownik pyta o cos bez potrzeby akcji, odpowiedz normalnie bez komend.
+Mozesz uzyc wielu akcji w jednej odpowiedzi."""
+
+    session_id = f"ecommify-assistant-{today}"
+    chat = LlmChat(api_key=llm_key, session_id=session_id, system_message=system_msg)
+    chat.with_model("openai", "gpt-4o")
     
     try:
-        for _ in range(max_iterations):
-            response = await client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                tools=AI_TOOLS,
-                tool_choice="auto"
-            )
-            
-            assistant_msg = response.choices[0].message
-            
-            if assistant_msg.tool_calls:
-                messages.append({"role": "assistant", "content": assistant_msg.content or "", "tool_calls": [{"id": tc.id, "type": "function", "function": {"name": tc.function.name, "arguments": tc.function.arguments}} for tc in assistant_msg.tool_calls]})
-                
-                for tool_call in assistant_msg.tool_calls:
-                    fn_name = tool_call.function.name
-                    fn_args = eval(tool_call.function.arguments) if tool_call.function.arguments else {}
-                    
-                    result = await execute_ai_tool(fn_name, fn_args)
-                    actions_taken.append({"function": fn_name, "args": fn_args, "result": result})
-                    
-                    messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": str(result)})
-            else:
-                final_response = assistant_msg.content or "Gotowe!"
-                break
-        else:
-            final_response = "Wykonalem akcje."
-        
-        # Save assistant response
-        assistant_doc = {"id": str(uuid.uuid4()), "role": "assistant", "content": final_response, "actions": actions_taken, "created_at": datetime.now(timezone.utc).isoformat()}
-        await db.ai_assistant_history.insert_one(assistant_doc)
-        
-        return {"response": final_response, "actions": actions_taken, "id": assistant_doc["id"]}
-    
+        response = await chat.send_message(UserMessage(text=msg.message))
     except Exception as e:
         logger.error(f"AI Assistant error: {e}")
         raise HTTPException(status_code=500, detail=f"Blad AI: {str(e)}")
+    
+    # Parse and execute actions from response
+    import re
+    action_pattern = r'\[ACTION:([^\]]+)\]'
+    actions_found = re.findall(action_pattern, response)
+    
+    executed_actions = []
+    for action_str in actions_found:
+        result = await execute_action(action_str)
+        executed_actions.append(result)
+    
+    # Clean response text (remove action tags for display)
+    clean_response = re.sub(action_pattern, '', response).strip()
+    if not clean_response:
+        clean_response = "Wykonano!"
+    
+    # Save assistant response
+    assistant_doc = {"id": str(uuid.uuid4()), "role": "assistant", "content": clean_response, "actions": executed_actions, "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.ai_assistant_history.insert_one(assistant_doc)
+    
+    return {"response": clean_response, "actions": executed_actions, "id": assistant_doc["id"]}
 
 @api_router.get("/ai-assistant/history")
 async def get_ai_assistant_history(limit: int = Query(50)):
