@@ -886,6 +886,10 @@ async def sales_pdf_daily(date: str = Query(...), shop_id: Optional[int] = None)
     recs = await db.sales_records.find(q, {"_id": 0}).sort("date", 1).to_list(10000)
     company = await db.company_settings.find_one({}, {"_id": 0}) or {}
     sn = await get_shop_names()
+    pdf = FPDF()
+    pdf.add_page("L")
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(0, 10, "EWIDENCJA SPRZEDAZY - DZIENNA", ln=True, align="C")
     pdf.set_font("Helvetica", "", 11)
     pdf.cell(0, 6, f"Data: {date}", ln=True, align="C")
     if company.get("name"):
