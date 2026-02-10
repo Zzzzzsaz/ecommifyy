@@ -545,6 +545,306 @@ async def clear_chat_history(shop_id: int = Query(...)):
 async def root():
     return {"message": "Ecommify API running"}
 
+# ===== REMINDERS =====
+class ReminderCreate(BaseModel):
+    title: str
+    date: str
+    time: Optional[str] = None
+    recurring: str = "none"
+    created_by: str = "Admin"
+
+class ReminderUpdate(BaseModel):
+    title: Optional[str] = None
+    date: Optional[str] = None
+    time: Optional[str] = None
+    recurring: Optional[str] = None
+    done: Optional[bool] = None
+
+@api_router.get("/reminders")
+async def get_reminders():
+    return await db.reminders.find({}, {"_id": 0}).to_list(1000)
+
+@api_router.post("/reminders")
+async def create_reminder(r: ReminderCreate):
+    doc = {"id": str(uuid.uuid4()), "title": r.title, "date": r.date, "time": r.time, "recurring": r.recurring, "done": False, "created_by": r.created_by, "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.reminders.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/reminders/{rid}")
+async def update_reminder(rid: str, update: ReminderUpdate):
+    ud = {k: v for k, v in update.model_dump().items() if v is not None}
+    result = await db.reminders.update_one({"id": rid}, {"$set": ud})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Nie znaleziono")
+    return await db.reminders.find_one({"id": rid}, {"_id": 0})
+
+@api_router.delete("/reminders/{rid}")
+async def delete_reminder(rid: str):
+    await db.reminders.delete_one({"id": rid})
+    return {"status": "ok"}
+
+# ===== ORDERS =====
+class OrderCreate(BaseModel):
+    order_number: str = ""
+    customer_name: str = ""
+    items: List[dict] = []
+    total: float
+    date: str
+    shop_id: int
+    status: str = "new"
+
+@api_router.get("/orders")
+async def get_orders(shop_id: Optional[int] = None, year: Optional[int] = None, month: Optional[int] = None):
+    q = {}
+    if shop_id and shop_id > 0: q["shop_id"] = shop_id
+    if year and month: q["date"] = {"$regex": f"^{year}-{month:02d}"}
+    return await db.orders.find(q, {"_id": 0}).sort("date", -1).to_list(10000)
+
+@api_router.post("/orders")
+async def create_order(order: OrderCreate):
+    doc = {"id": str(uuid.uuid4()), "order_number": order.order_number or f"ORD-{str(uuid.uuid4())[:8].upper()}", "customer_name": order.customer_name, "items": order.items, "total": order.total, "date": order.date, "shop_id": order.shop_id, "status": order.status, "source": "manual", "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.orders.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/orders/{oid}/status")
+async def update_order_status(oid: str, status: str = Query(...)):
+    result = await db.orders.update_one({"id": oid}, {"$set": {"status": status}})
+    if result.matched_count == 0: raise HTTPException(status_code=404, detail="Nie znaleziono")
+    return await db.orders.find_one({"id": oid}, {"_id": 0})
+
+@api_router.delete("/orders/{oid}")
+async def delete_order(oid: str):
+    await db.orders.delete_one({"id": oid})
+    return {"status": "ok"}
+
+# ===== COMPANY SETTINGS =====
+class CompanySettings(BaseModel):
+    name: str = ""
+    nip: str = ""
+    address: str = ""
+    city: str = ""
+    postal_code: str = ""
+    bank_name: str = ""
+    bank_account: str = ""
+    email: str = ""
+    phone: str = ""
+
+@api_router.get("/company-settings")
+async def get_company():
+    doc = await db.company_settings.find_one({}, {"_id": 0})
+    return doc or {}
+
+@api_router.put("/company-settings")
+async def update_company(s: CompanySettings):
+    data = s.model_dump()
+    await db.company_settings.update_one({}, {"$set": data}, upsert=True)
+    return data
+
+# ===== NOTES =====
+class NoteCreate(BaseModel):
+    date: str
+    shop_id: int = 0
+    content: str
+    created_by: str = "Admin"
+
+@api_router.get("/notes")
+async def get_notes(date: Optional[str] = None, year: Optional[int] = None, month: Optional[int] = None):
+    q = {}
+    if date: q["date"] = date
+    elif year and month: q["date"] = {"$regex": f"^{year}-{month:02d}"}
+    return await db.notes.find(q, {"_id": 0}).to_list(1000)
+
+@api_router.post("/notes")
+async def create_note(note: NoteCreate):
+    doc = {"id": str(uuid.uuid4()), "date": note.date, "shop_id": note.shop_id, "content": note.content, "created_by": note.created_by, "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.notes.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.delete("/notes/{nid}")
+async def delete_note(nid: str):
+    await db.notes.delete_one({"id": nid})
+    return {"status": "ok"}
+
+# ===== RECEIPTS =====
+class ReceiptCreate(BaseModel):
+    date: str
+    shop_id: int
+    items: List[dict]
+
+@api_router.get("/receipts")
+async def get_receipts(shop_id: Optional[int] = None, year: Optional[int] = None, month: Optional[int] = None):
+    q = {}
+    if shop_id and shop_id > 0: q["shop_id"] = shop_id
+    if year and month: q["date"] = {"$regex": f"^{year}-{month:02d}"}
+    return await db.receipts.find(q, {"_id": 0}).sort("date", -1).to_list(10000)
+
+@api_router.post("/receipts")
+async def create_receipt(r: ReceiptCreate):
+    count = await db.receipts.count_documents({"date": {"$regex": f"^{r.date[:7]}"}})
+    number = f"PAR/{r.date[:4]}/{r.date[5:7]}/{count + 1:03d}"
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    items_c = []
+    total_n = 0
+    for it in r.items:
+        n = round(it.get("netto_price", 0) * it.get("quantity", 1), 2)
+        v = round(n * 0.23, 2)
+        items_c.append({"description": it.get("description", ""), "quantity": it.get("quantity", 1), "netto_price": it.get("netto_price", 0), "netto": n, "vat": v, "brutto": round(n + v, 2)})
+        total_n += n
+    total_v = round(total_n * 0.23, 2)
+    doc = {"id": str(uuid.uuid4()), "receipt_number": number, "date": r.date, "shop_id": r.shop_id, "items": items_c, "total_netto": round(total_n, 2), "vat_rate": 23, "vat_amount": total_v, "total_brutto": round(total_n + total_v, 2), "company_data": company, "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.receipts.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.delete("/receipts/{rid}")
+async def delete_receipt(rid: str):
+    await db.receipts.delete_one({"id": rid})
+    return {"status": "ok"}
+
+@api_router.get("/receipts/pdf/{rid}")
+async def receipt_pdf(rid: str):
+    from fpdf import FPDF
+    r = await db.receipts.find_one({"id": rid}, {"_id": 0})
+    if not r: raise HTTPException(status_code=404, detail="Nie znaleziono")
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 16)
+    pdf.cell(0, 10, "PARAGON", ln=True, align="C")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 6, f"Nr: {r['receipt_number']}", ln=True, align="C")
+    pdf.cell(0, 6, f"Data: {r['date']}", ln=True, align="C")
+    pdf.ln(5)
+    co = r.get("company_data", {})
+    if co.get("name"):
+        pdf.set_font("Helvetica", "B", 10)
+        pdf.cell(0, 6, "Sprzedawca:", ln=True)
+        pdf.set_font("Helvetica", "", 9)
+        pdf.cell(0, 5, co.get("name", ""), ln=True)
+        if co.get("nip"): pdf.cell(0, 5, f"NIP: {co['nip']}", ln=True)
+        if co.get("address"): pdf.cell(0, 5, f"{co.get('address', '')} {co.get('postal_code', '')} {co.get('city', '')}", ln=True)
+    pdf.ln(5)
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.cell(80, 8, "Opis", border=1)
+    pdf.cell(15, 8, "Ilosc", border=1, align="C")
+    pdf.cell(30, 8, "Netto", border=1, align="R")
+    pdf.cell(25, 8, "VAT 23%", border=1, align="R")
+    pdf.cell(30, 8, "Brutto", border=1, align="R")
+    pdf.ln()
+    pdf.set_font("Helvetica", "", 9)
+    for it in r["items"]:
+        pdf.cell(80, 7, str(it["description"])[:40], border=1)
+        pdf.cell(15, 7, str(it["quantity"]), border=1, align="C")
+        pdf.cell(30, 7, f"{it['netto']:.2f} zl", border=1, align="R")
+        pdf.cell(25, 7, f"{it['vat']:.2f} zl", border=1, align="R")
+        pdf.cell(30, 7, f"{it['brutto']:.2f} zl", border=1, align="R")
+        pdf.ln()
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.ln(3)
+    pdf.cell(95, 8, "")
+    pdf.cell(85, 8, f"Netto: {r['total_netto']:.2f} zl | VAT: {r['vat_amount']:.2f} zl | Brutto: {r['total_brutto']:.2f} zl", align="R")
+    buf = io.BytesIO()
+    pdf.output(buf)
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="paragon_{r["receipt_number"].replace("/","_")}.pdf"'})
+
+@api_router.get("/receipts/summary-pdf")
+async def summary_pdf(year: int = Query(...), month: int = Query(...), shop_id: Optional[int] = None):
+    from fpdf import FPDF
+    q = {"date": {"$regex": f"^{year}-{month:02d}"}}
+    if shop_id and shop_id > 0: q["shop_id"] = shop_id
+    recs = await db.receipts.find(q, {"_id": 0}).sort("date", 1).to_list(10000)
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(0, 10, f"ZESTAWIENIE SPRZEDAZY - {MONTHS_PL.get(month, '')} {year}", ln=True, align="C")
+    if company.get("name"):
+        pdf.set_font("Helvetica", "", 9)
+        pdf.cell(0, 5, f"{company.get('name', '')} | NIP: {company.get('nip', '')}", ln=True, align="C")
+    pdf.ln(5)
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.cell(12, 7, "Lp.", border=1, align="C")
+    pdf.cell(22, 7, "Data", border=1)
+    pdf.cell(38, 7, "Nr paragonu", border=1)
+    pdf.cell(22, 7, "Sklep", border=1)
+    pdf.cell(28, 7, "Netto", border=1, align="R")
+    pdf.cell(28, 7, "VAT 23%", border=1, align="R")
+    pdf.cell(28, 7, "Brutto", border=1, align="R")
+    pdf.ln()
+    pdf.set_font("Helvetica", "", 8)
+    tn = tv = tb = 0
+    for i, rc in enumerate(recs, 1):
+        pdf.cell(12, 6, str(i), border=1, align="C")
+        pdf.cell(22, 6, rc["date"], border=1)
+        pdf.cell(38, 6, rc["receipt_number"], border=1)
+        pdf.cell(22, 6, SHOP_NAMES.get(rc["shop_id"], ""), border=1)
+        pdf.cell(28, 6, f"{rc['total_netto']:.2f}", border=1, align="R")
+        pdf.cell(28, 6, f"{rc['vat_amount']:.2f}", border=1, align="R")
+        pdf.cell(28, 6, f"{rc['total_brutto']:.2f}", border=1, align="R")
+        pdf.ln()
+        tn += rc["total_netto"]; tv += rc["vat_amount"]; tb += rc["total_brutto"]
+    pdf.set_font("Helvetica", "B", 9)
+    pdf.cell(94, 8, "RAZEM:", border=1, align="R")
+    pdf.cell(28, 8, f"{tn:.2f} zl", border=1, align="R")
+    pdf.cell(28, 8, f"{tv:.2f} zl", border=1, align="R")
+    pdf.cell(28, 8, f"{tb:.2f} zl", border=1, align="R")
+    buf = io.BytesIO()
+    pdf.output(buf)
+    buf.seek(0)
+    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="zestawienie_{year}_{month:02d}.pdf"'})
+
+# ===== WEEKLY STATS =====
+@api_router.get("/weekly-stats")
+async def get_weekly_stats():
+    now = datetime.now(timezone.utc)
+    monday = now - timedelta(days=now.weekday())
+    m_str = monday.strftime("%Y-%m-%d")
+    s_str = (monday + timedelta(days=6)).strftime("%Y-%m-%d")
+    pm_str = (monday - timedelta(days=7)).strftime("%Y-%m-%d")
+    ps_str = (monday - timedelta(days=1)).strftime("%Y-%m-%d")
+    async def wk(start, end):
+        inc = await db.incomes.find({"date": {"$gte": start, "$lte": end}}, {"_id": 0}).to_list(10000)
+        exp = await db.expenses.find({"date": {"$gte": start, "$lte": end}}, {"_id": 0}).to_list(10000)
+        ti = sum(i["amount"] for i in inc); te = sum(e["amount"] for e in exp)
+        n = round(ti * 0.77, 2); p = round(n - te, 2)
+        return {"income": round(ti, 2), "ads": round(te, 2), "profit": p, "profit_pp": round(p / 2, 2)}
+    cur = await wk(m_str, s_str)
+    prev = await wk(pm_str, ps_str)
+    ic = round(((cur["income"] - prev["income"]) / prev["income"] * 100) if prev["income"] > 0 else 0, 1)
+    pc = round(((cur["profit"] - prev["profit"]) / abs(prev["profit"]) * 100) if prev["profit"] != 0 else 0, 1)
+    return {"current": {"start": m_str, "end": s_str, **cur}, "previous": {"start": pm_str, "end": ps_str, **prev}, "income_change": ic, "profit_change": pc}
+
+# ===== EXPORT EXCEL =====
+@api_router.get("/export/excel")
+async def export_excel(year: int = Query(...), month: int = Query(...), shop_id: Optional[int] = None):
+    from openpyxl import Workbook
+    prefix = f"{year}-{month:02d}"
+    iq = {"date": {"$regex": f"^{prefix}"}}; eq = {"date": {"$regex": f"^{prefix}"}}
+    if shop_id and shop_id > 0: iq["shop_id"] = shop_id; eq["shop_id"] = shop_id
+    incs = await db.incomes.find(iq, {"_id": 0}).sort("date", 1).to_list(10000)
+    exps = await db.expenses.find(eq, {"_id": 0}).sort("date", 1).to_list(10000)
+    wb = Workbook()
+    ws1 = wb.active; ws1.title = "Przychody"
+    ws1.append(["Data", "Sklep", "Kwota", "Opis"])
+    for i in incs: ws1.append([i["date"], SHOP_NAMES.get(i.get("shop_id", 0), ""), i["amount"], i.get("description", "")])
+    ws2 = wb.create_sheet("Koszty Ads")
+    ws2.append(["Data", "Sklep", "Kwota", "Kampania"])
+    for e in exps: ws2.append([e["date"], SHOP_NAMES.get(e.get("shop_id", 0), ""), e["amount"], e.get("campaign_name", "")])
+    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+    return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": f'attachment; filename="ecommify_{year}_{month:02d}.xlsx"'})
+
+# ===== INCOME/EXPENSE DETAILS =====
+@api_router.get("/incomes/details")
+async def income_details(shop_id: int = Query(...), date: str = Query(...)):
+    return await db.incomes.find({"shop_id": shop_id, "date": date}, {"_id": 0}).to_list(1000)
+
+@api_router.get("/expenses/details")
+async def expense_details(shop_id: int = Query(...), date: str = Query(...)):
+    return await db.expenses.find({"shop_id": shop_id, "date": date}, {"_id": 0}).to_list(1000)
+
 # ===== SETUP =====
 app.include_router(api_router)
 
