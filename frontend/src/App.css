@@ -95,6 +95,34 @@
   border: 1px solid #2d2d44;
 }
 
+/* ========== CONFETTI ========== */
+@keyframes confetti-fall {
+  0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+.confetti-piece {
+  position: fixed;
+  top: -10px;
+  z-index: 100;
+  animation: confetti-fall 3s ease-in forwards;
+}
+
+/* Rank up badge animation */
+@keyframes rank-pulse {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.rank-up-badge {
+  animation: rank-pulse 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Rank up text glow */
+.rank-up-text {
+  text-shadow: 0 0 40px rgba(245, 158, 11, 0.6), 0 0 80px rgba(245, 158, 11, 0.3);
+}
+
 /* Pin button */
 .pin-btn {
   transition: background-color 0.1s ease, transform 0.1s ease;
