@@ -314,7 +314,7 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
               <Select value={String(dialog.shopId)} onValueChange={(v) => setDialog((d) => ({ ...d, shopId: parseInt(v) }))}>
                 <SelectTrigger className="bg-ecom-bg border-ecom-border text-white" data-testid="dialog-shop-select"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-ecom-card border-ecom-border">
-                  {SHOPS.map((s) => <SelectItem key={s.id} value={String(s.id)}><span style={{ color: s.color }}>{s.name}</span></SelectItem>)}
+                  {shops.map((s) => <SelectItem key={s.id} value={String(s.id)}><span style={{ color: s.color }}>{s.name}</span></SelectItem>)}
                 </SelectContent>
               </Select>
             )}
