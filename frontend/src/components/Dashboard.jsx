@@ -79,6 +79,7 @@ export default function Dashboard({ user, shops = [], appSettings = {}, onNaviga
     setReminders((p) => p.filter((r) => r.id !== id));
   };
 
+  const TARGET = appSettings.target_revenue || 250000;
   const rank = getRank(stats?.total_income || 0);
   const nextRank = getNextRank(stats?.total_income || 0);
   const rp = getRankProgress(stats?.total_income || 0);
