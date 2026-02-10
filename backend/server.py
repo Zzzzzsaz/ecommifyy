@@ -790,6 +790,7 @@ async def delete_order(oid: str):
     await db.orders.delete_one({"id": oid})
     await db.returns.delete_many({"order_id": oid})
     await db.fulfillment.delete_many({"order_id": oid})
+    await db.sales_records.delete_many({"order_id": oid})
     return {"status": "ok"}
 
 # ===== RETURNS (ZWROTY) =====
