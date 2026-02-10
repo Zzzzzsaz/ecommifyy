@@ -310,6 +310,63 @@ export default function Dashboard({ user, shops = [], appSettings = {}, onNaviga
         </DialogContent>
       </Dialog>
 
+      {/* ADD/EDIT PRODUCT DIALOG */}
+      <Dialog open={showAddProduct} onOpenChange={(v) => { setShowAddProduct(v); if (!v) setEditingProduct(null); }}>
+        <DialogContent className="bg-ecom-card border-ecom-border max-w-sm" data-testid="product-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-white">{editingProduct ? "Edytuj produkt" : "Nowy produkt"}</DialogTitle>
+            <DialogDescription className="text-ecom-muted text-xs">Ustaw doplaty dla produktow presale</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-1">
+            <div>
+              <label className="text-[10px] text-ecom-muted uppercase mb-1 block">Nazwa produktu *</label>
+              <Input placeholder="np. Bluza Premium" value={productForm.name} onChange={(e) => setProductForm(f => ({ ...f, name: e.target.value }))} className="bg-ecom-bg border-ecom-border text-white" data-testid="product-name" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-ecom-muted uppercase mb-1 block">SKU</label>
+                <Input placeholder="ABC-123" value={productForm.sku} onChange={(e) => setProductForm(f => ({ ...f, sku: e.target.value }))} className="bg-ecom-bg border-ecom-border text-white" data-testid="product-sku" />
+              </div>
+              <div>
+                <label className="text-[10px] text-ecom-muted uppercase mb-1 block">Cena (zl)</label>
+                <Input type="number" step="0.01" value={productForm.price} onChange={(e) => setProductForm(f => ({ ...f, price: parseFloat(e.target.value) || 0 }))} className="bg-ecom-bg border-ecom-border text-white" data-testid="product-price" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] text-cyan-400 uppercase mb-1 block font-semibold">Doplata (zl) *</label>
+                <Input type="number" step="0.01" value={productForm.extra_payment} onChange={(e) => setProductForm(f => ({ ...f, extra_payment: parseFloat(e.target.value) || 0 }))} className="bg-ecom-bg border-cyan-500/30 text-cyan-400" data-testid="product-extra-payment" />
+              </div>
+              <div>
+                <label className="text-[10px] text-ecom-muted uppercase mb-1 block">Sklep</label>
+                <Select value={String(productForm.shop_id)} onValueChange={(v) => setProductForm(f => ({ ...f, shop_id: parseInt(v) }))}>
+                  <SelectTrigger className="bg-ecom-bg border-ecom-border text-white h-9" data-testid="product-shop">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-ecom-card border-ecom-border">
+                    {shops.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)} className="text-white">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                          {s.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] text-ecom-muted uppercase mb-1 block">Kategoria</label>
+              <Input placeholder="np. Odziez" value={productForm.category} onChange={(e) => setProductForm(f => ({ ...f, category: e.target.value }))} className="bg-ecom-bg border-ecom-border text-white" data-testid="product-category" />
+            </div>
+            <Button onClick={saveProduct} className="w-full bg-cyan-600 hover:bg-cyan-500" data-testid="product-save">
+              {editingProduct ? "Zapisz zmiany" : "Dodaj produkt"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
