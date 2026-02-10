@@ -737,46 +737,89 @@ async def receipt_pdf(rid: str):
     from fpdf import FPDF
     r = await db.receipts.find_one({"id": rid}, {"_id": 0})
     if not r: raise HTTPException(status_code=404, detail="Nie znaleziono")
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, "PARAGON", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 6, f"Nr: {r['receipt_number']}", ln=True, align="C")
-    pdf.cell(0, 6, f"Data: {r['date']}", ln=True, align="C")
-    pdf.ln(5)
     co = r.get("company_data", {})
-    if co.get("name"):
-        pdf.set_font("Helvetica", "B", 10)
-        pdf.cell(0, 6, "Sprzedawca:", ln=True)
-        pdf.set_font("Helvetica", "", 9)
-        pdf.cell(0, 5, co.get("name", ""), ln=True)
-        if co.get("nip"): pdf.cell(0, 5, f"NIP: {co['nip']}", ln=True)
-        if co.get("address"): pdf.cell(0, 5, f"{co.get('address', '')} {co.get('postal_code', '')} {co.get('city', '')}", ln=True)
-    pdf.ln(5)
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(80, 8, "Opis", border=1)
-    pdf.cell(15, 8, "Ilosc", border=1, align="C")
-    pdf.cell(30, 8, "Netto", border=1, align="R")
-    pdf.cell(25, 8, "VAT 23%", border=1, align="R")
-    pdf.cell(30, 8, "Brutto", border=1, align="R")
-    pdf.ln()
-    pdf.set_font("Helvetica", "", 9)
-    for it in r["items"]:
-        pdf.cell(80, 7, str(it["description"])[:40], border=1)
-        pdf.cell(15, 7, str(it["quantity"]), border=1, align="C")
-        pdf.cell(30, 7, f"{it['netto']:.2f} zl", border=1, align="R")
-        pdf.cell(25, 7, f"{it['vat']:.2f} zl", border=1, align="R")
-        pdf.cell(30, 7, f"{it['brutto']:.2f} zl", border=1, align="R")
-        pdf.ln()
+    w = 80
+    pdf = FPDF(unit="mm", format=(w, 200))
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=5)
+    lm = 3
+    pw = w - 2 * lm
+    pdf.set_left_margin(lm)
+    pdf.set_right_margin(lm)
+    # Company header
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.cell(pw, 4, co.get("name", "").upper(), ln=True, align="C")
+    pdf.set_font("Helvetica", "", 7)
+    if co.get("address"):
+        pdf.cell(pw, 3, co.get("address", ""), ln=True, align="C")
+    addr2 = f"{co.get('postal_code', '')}, {co.get('city', '')}".strip(", ")
+    if addr2:
+        pdf.cell(pw, 3, addr2, ln=True, align="C")
+    if co.get("nip"):
+        pdf.cell(pw, 3, co["nip"], ln=True, align="C")
+    pdf.ln(2)
+    # Date + receipt number
+    pdf.set_font("Helvetica", "", 7)
+    dt_str = r.get("date", "")
+    time_str = r.get("time", datetime.now(timezone.utc).strftime("%H:%M:%S"))
+    half = pw / 2
+    pdf.cell(half, 4, f"{dt_str} {time_str}", align="L")
+    pdf.cell(half, 4, r.get("receipt_number", ""), align="R", ln=True)
+    pdf.ln(1)
+    # Title
     pdf.set_font("Helvetica", "B", 10)
-    pdf.ln(3)
-    pdf.cell(95, 8, "")
-    pdf.cell(85, 8, f"Netto: {r['total_netto']:.2f} zl | VAT: {r['vat_amount']:.2f} zl | Brutto: {r['total_brutto']:.2f} zl", align="R")
+    pdf.cell(pw, 5, "PARAGON", ln=True, align="C")
+    pdf.ln(1)
+    # Separator
+    pdf.line(lm, pdf.get_y(), w - lm, pdf.get_y())
+    pdf.ln(1)
+    # Items
+    total_brutto = 0
+    for it in r.get("items", []):
+        desc = str(it.get("description", ""))
+        qty = it.get("quantity", 1)
+        brutto_unit = it.get("brutto_unit", it.get("brutto", 0) / max(qty, 1))
+        brutto_line = round(brutto_unit * qty, 2)
+        total_brutto += brutto_line
+        pdf.set_font("Helvetica", "", 7)
+        pdf.cell(pw, 3.5, desc[:50], ln=True)
+        price_text = f"{qty} x {brutto_unit:.2f}="
+        total_text = f"{brutto_line:.2f} A"
+        pdf.cell(pw * 0.6, 3.5, price_text, align="R")
+        pdf.cell(pw * 0.4, 3.5, total_text, align="R", ln=True)
+        pdf.ln(0.5)
+    if total_brutto == 0:
+        total_brutto = r.get("total_brutto", 0)
+    # Separator
+    pdf.line(lm, pdf.get_y(), w - lm, pdf.get_y())
+    pdf.ln(2)
+    # Tax summary
+    vat_amount = round(total_brutto - (total_brutto / 1.23), 2)
+    pdf.set_font("Helvetica", "", 7)
+    pdf.cell(pw * 0.6, 3.5, "Sprzedaz opodatkowana A", align="L")
+    pdf.cell(pw * 0.4, 3.5, f"{total_brutto:.2f}", align="R", ln=True)
+    pdf.cell(pw * 0.6, 3.5, "PTU A 23%", align="L")
+    pdf.cell(pw * 0.4, 3.5, f"{vat_amount:.2f}", align="R", ln=True)
+    pdf.ln(1)
+    # Suma PLN
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.cell(pw * 0.5, 6, "Suma PLN", align="L")
+    pdf.cell(pw * 0.5, 6, f"{total_brutto:.2f}", align="R", ln=True)
+    pdf.ln(2)
+    # Payment info
+    pm = r.get("payment_gateway", r.get("payment_method", ""))
+    tid = r.get("transaction_id", "")
+    if pm or tid:
+        pdf.set_font("Helvetica", "", 6)
+        pdf.cell(pw * 0.4, 3, "Platnosc", align="L")
+        pdf.cell(pw * 0.6, 3, pm, align="R", ln=True)
+        if tid:
+            pdf.cell(pw * 0.4, 3, "Numer transakcji", align="L")
+            pdf.cell(pw * 0.6, 3, tid, align="R", ln=True)
     buf = io.BytesIO()
     pdf.output(buf)
     buf.seek(0)
-    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="paragon_{r["receipt_number"].replace("/","_")}.pdf"'})
+    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="paragon_{r.get("receipt_number","").replace("/","_")}.pdf"'})
 
 @api_router.get("/receipts/summary-pdf")
 async def summary_pdf(year: int = Query(...), month: int = Query(...), shop_id: Optional[int] = None):
