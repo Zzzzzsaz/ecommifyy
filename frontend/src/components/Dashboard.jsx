@@ -202,12 +202,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
             </motion.button>
           );
         })}
-        {/* MARGIN CALC TILE */}
-        <motion.button initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-          onClick={() => setShowMargin(true)} className="menu-tile group rounded-xl border border-ecom-border p-3.5 text-left h-[110px] flex flex-col justify-between" style={{ backgroundColor: "#1a1a2e" }} data-testid="menu-tile-margin">
-          <div><div className="w-8 h-8 rounded-lg flex items-center justify-center mb-1.5 bg-cyan-500/10"><Calculator size={16} className="text-cyan-400" /></div>
-          <h3 className="font-heading font-bold text-white text-xs tracking-wider">MARZA</h3><p className="text-ecom-muted text-[9px]">Kalkulator marzy</p></div>
-        </motion.button>
       </div>
 
       {/* BEST DAY */}
