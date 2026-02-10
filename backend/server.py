@@ -611,7 +611,27 @@ async def get_orders(shop_id: Optional[int] = None, year: Optional[int] = None, 
 
 @api_router.post("/orders")
 async def create_order(order: OrderCreate):
-    doc = {"id": str(uuid.uuid4()), "order_number": order.order_number or f"ORD-{str(uuid.uuid4())[:8].upper()}", "customer_name": order.customer_name, "items": order.items, "total": order.total, "date": order.date, "shop_id": order.shop_id, "status": order.status, "source": "manual", "created_at": datetime.now(timezone.utc).isoformat()}
+    doc = {
+        "id": str(uuid.uuid4()),
+        "order_number": order.order_number or f"ORD-{str(uuid.uuid4())[:8].upper()}",
+        "customer_name": order.customer_name,
+        "customer_email": order.customer_email,
+        "customer_phone": order.customer_phone,
+        "shipping_address": order.shipping_address,
+        "shipping_method": order.shipping_method,
+        "parcel_locker": order.parcel_locker,
+        "payment_method": order.payment_method,
+        "payment_gateway": order.payment_gateway,
+        "transaction_id": order.transaction_id,
+        "items": order.items,
+        "total": order.total,
+        "date": order.date,
+        "shop_id": order.shop_id,
+        "status": order.status,
+        "source": "manual",
+        "receipt_id": None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
     await db.orders.insert_one(doc)
     doc.pop("_id", None)
     return doc
