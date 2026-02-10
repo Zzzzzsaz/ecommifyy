@@ -29,7 +29,7 @@ export default function LoginScreen({ onLogin }) {
     try {
       const resp = await api.login(code);
       toast.success(`Witaj, ${resp.data.user.name}!`);
-      onLogin(resp.data.user);
+      onLogin(resp.data);
     } catch {
       toast.error("Nieprawidlowy PIN");
       setPin("");
