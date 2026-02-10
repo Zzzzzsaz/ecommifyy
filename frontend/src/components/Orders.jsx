@@ -432,7 +432,7 @@ export default function Orders({ user, shops = [] }) {
             </div>
             <Select value={orderForm.shop_id} onValueChange={v => setOrderForm(f => ({ ...f, shop_id: v }))}>
               <SelectTrigger className="bg-ecom-bg border-ecom-border text-white"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-ecom-card border-ecom-border">{SHOPS.map(s => <SelectItem key={s.id} value={String(s.id)}><span style={{ color: s.color }}>{s.name}</span></SelectItem>)}</SelectContent>
+              <SelectContent className="bg-ecom-card border-ecom-border">{shops.map(s => <SelectItem key={s.id} value={String(s.id)}><span style={{ color: s.color }}>{s.name}</span></SelectItem>)}</SelectContent>
             </Select>
             <Button onClick={addOrder} disabled={saving} className="w-full bg-ecom-primary hover:bg-ecom-primary/80" data-testid="submit-order-btn">
               {saving ? <Loader2 className="animate-spin mr-2" size={16} /> : null}Dodaj zamowienie
