@@ -6,25 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
-import { getRank, TARGET } from "@/lib/ranks";
+import { getRank } from "@/lib/ranks";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Plus, Loader2, ChevronDown, Crown, Users, TrendingUp, Flame, Target, Trash2, Eye, MessageSquare, Download, StickyNote } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
 import { Textarea } from "@/components/ui/textarea";
 
-const SHOPS = [
-  { id: 1, name: "ecom1", color: "#6366f1" },
-  { id: 2, name: "ecom2", color: "#10b981" },
-  { id: 3, name: "ecom3", color: "#f59e0b" },
-  { id: 4, name: "ecom4", color: "#ec4899" },
-];
 const MONTHS_PL = ["Styczen", "Luty", "Marzec", "Kwiecien", "Maj", "Czerwiec", "Lipiec", "Sierpien", "Wrzesien", "Pazdziernik", "Listopad", "Grudzien"];
 const DAYS_PL = ["Nd", "Pn", "Wt", "Sr", "Cz", "Pt", "So"];
 const fmtPLN = (v) => (v || 0).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " zl";
 const fmtShort = (v) => (v || 0).toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-export default function Wyniki({ user }) {
+export default function Wyniki({ user, shops = [], appSettings = {} }) {
+  const TARGET = appSettings.target_revenue || 250000;
   const now = new Date();
   const [shop, setShop] = useState(0); // 0 = WSZYSTKIE
   const [year, setYear] = useState(now.getFullYear());
