@@ -228,6 +228,51 @@ export default function Dashboard({ user, shops = [], appSettings = {}, onNaviga
         )}
       </motion.div>
 
+      {/* PRODUCTS SECTION */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.16 }} className="mb-3">
+        <div className="flex items-center justify-between mb-2 px-0.5">
+          <div className="flex items-center gap-1.5">
+            <Package size={14} className="text-cyan-400" />
+            <span className="text-[10px] text-ecom-muted uppercase tracking-wider font-semibold">PRODUKTY</span>
+            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-cyan-500/30 text-cyan-400">{products.length}</Badge>
+          </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => setShowProducts(!showProducts)} className="text-[9px] text-ecom-muted hover:text-white transition-colors" data-testid="toggle-products-btn">
+              {showProducts ? "Zwiń" : "Rozwin"}
+            </button>
+            <button onClick={() => { setEditingProduct(null); setProductForm({ name: "", sku: "", price: 0, extra_payment: 0, shop_id: shops[0]?.id || 1, category: "" }); setShowAddProduct(true); }} className="text-cyan-400 hover:text-white" data-testid="add-product-btn">
+              <Plus size={16} />
+            </button>
+          </div>
+        </div>
+        {showProducts && (
+          <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+            {products.length === 0 ? (
+              <p className="text-ecom-muted text-[10px] text-center py-3">Brak produktow. Dodaj pierwszy!</p>
+            ) : products.map((p) => {
+              const shop = shops.find(s => s.id === p.shop_id);
+              return (
+                <div key={p.id} className="flex items-center gap-2 p-2 rounded-lg bg-ecom-card/60 border border-ecom-border/50 group" data-testid={`product-item-${p.id}`}>
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: shop?.color || "#666" }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-white truncate">{p.name}</p>
+                    <p className="text-[9px] text-ecom-muted">{p.sku && `SKU: ${p.sku} | `}Cena: {fmtPLN(p.price)} zl</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[10px] text-cyan-400 font-semibold">+{fmtPLN(p.extra_payment)} zl</p>
+                    <p className="text-[8px] text-ecom-muted">doplata</p>
+                  </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openEditProduct(p)} className="text-ecom-muted hover:text-white"><Edit2 size={12} /></button>
+                    <button onClick={() => deleteProduct(p.id)} className="text-ecom-muted hover:text-ecom-danger"><Trash2 size={12} /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </motion.div>
+
       {/* MENU TILES */}
       <div className="grid grid-cols-2 gap-2.5 mb-4" data-testid="menu-tiles">
         {MENU_ITEMS.map((item, i) => {
