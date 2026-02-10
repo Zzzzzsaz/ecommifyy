@@ -1,13 +1,9 @@
 # Ecommify Campaign Calculator - PRD
 
-## Problem Statement
-Web app for e-commerce profitability tracking (Shopify revenue, TikTok Ads costs, profit calc). Originally mobile app, converted to responsive web. All in Polish, PLN currency.
-
 ## Architecture
-- Frontend: React + Tailwind + shadcn/ui + framer-motion
+- Frontend: React + Tailwind + shadcn/ui + framer-motion + recharts
 - Backend: FastAPI + Motor (async MongoDB)
-- AI: OpenAI GPT-5.2 via Emergent LLM Key
-- Database: MongoDB
+- AI: OpenAI GPT-5.2 via Emergent LLM Key (emergentintegrations)
 
 ## Users
 | User | PIN | Role |
@@ -16,32 +12,29 @@ Web app for e-commerce profitability tracking (Shopify revenue, TikTok Ads costs
 | Kacper | 2609 | kacper |
 | Szymon | 2509 | szymon |
 
-## Implemented Features (Feb 2026)
-- [x] PIN-based login (3 users)
-- [x] **GAME-LIKE MENU** - Dashboard hub with level system (REKRUT→LEGENDA), XP bar, ROI metrics, 4 nav tiles
-- [x] **WYNIKI page** - Shop tabs, month nav, KPI cards, daily income/expense list
-- [x] Kanban tasks (todo/in_progress/done) with browser notifications
-- [x] Shopify + TikTok Ads config with sync endpoints
-- [x] AI Marketing Expert chat (GPT-5.2)
-- [x] Settings page with PWA instructions
-- [x] Bottom nav: Menu, Wyniki, Zadania, Sklepy, AI
-- [x] Dark theme, animated grid background, hover glow effects
+## Implemented (Feb 2026 - v2)
+- [x] PIN login
+- [x] **GAME MENU** - CS:GO ranks (Silver I → Global Elite), 250k target bar, today's combined stats, streak, forecast, best day, profit per person (÷2)
+- [x] **WYNIKI** - "WSZYSTKIE" combined tab + per-shop tabs, expandable per-shop daily breakdown with +P/+A buttons, sparkline, KPIs with "Na łeb", daily target
+- [x] Kanban tasks (todo/in_progress/done), browser notifications
+- [x] Shopify + TikTok Ads config + sync
+- [x] AI Marketing Expert (GPT-5.2)
+- [x] Confetti + rank-up animations
+- [x] PWA manifest, dark theme, responsive
 
-## Navigation
-- Menu (game hub) → tiles navigate to: Wyniki, Zadania, Sklepy, AI Expert
-- Bottom nav: 5 tabs (Menu, Wyniki, Zadania, Sklepy, AI)
-- Settings/Logout accessible from menu page
+## CS:GO Ranks (based on monthly revenue)
+Silver I-IV (0-25k), Gold Nova I-IV (25-85k), MG I-II + MGE (85-150k), DMG (150-175k), LE/LEM (175-215k), Supreme (215-235k), Global Elite (235k+)
 
 ## Test Results
-- Backend: 100% (18/18 endpoints)
-- Frontend: 95% (all core flows working)
+- Backend: 100% (19/19)
+- Frontend: 98%
 
 ## Backlog
 ### P1
-- Monthly comparison charts (recharts)
+- Monthly comparison charts
 - Data export CSV/PDF
-- Polish diacritical chars in UI
+- Polish diacritical characters
+- Achievement system (milestones)
 ### P2
 - Automated sync scheduling
-- Team performance metrics
-- Advanced analytics
+- Team performance dashboard
