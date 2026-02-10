@@ -844,7 +844,12 @@ async def create_fulfillment(f: FulfillmentCreate):
         raise HTTPException(status_code=404, detail="Nie znaleziono zamowienia")
     existing = await db.fulfillment.find_one({"order_id": f.order_id}, {"_id": 0})
     if existing:
-        raise HTTPException(status_code=400, detail="Zamowienie juz jest w realizacji")
+        upd = {}
+        if f.extra_payment > 0: upd["extra_payment"] = f.extra_payment
+        if f.notes: upd["notes"] = f.notes
+        if upd: await db.fulfillment.update_one({"order_id": f.order_id}, {"$set": upd})
+        updated = await db.fulfillment.find_one({"order_id": f.order_id}, {"_id": 0})
+        return updated
     source_month = order.get("date", "")[:7]
     doc = {
         "id": str(uuid.uuid4()),
