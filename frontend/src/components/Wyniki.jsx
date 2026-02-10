@@ -145,7 +145,10 @@ export default function Wyniki({ user }) {
             <Badge variant="outline" className="text-[9px] tracking-wider" style={{ borderColor: rank.color, color: rank.color }}>{rank.icon} {rank.name}</Badge>
           )}
         </div>
-        <Badge variant="secondary" className="text-xs">{user.name}</Badge>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => api.downloadExcel(year, month, shop > 0 ? shop : null)} className="border-ecom-border text-ecom-muted hover:text-white" data-testid="export-excel-btn"><Download size={12} className="mr-1" />Excel</Button>
+          <Badge variant="secondary" className="text-xs">{user.name}</Badge>
+        </div>
       </div>
 
       {/* SHOP TABS */}
