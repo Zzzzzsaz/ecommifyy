@@ -336,6 +336,8 @@ export default function Orders({ user, shops = [] }) {
                           {STAGE_PREV[item.status] && (
                             <Button size="sm" variant="ghost" onClick={() => undoStatus(item.id, item.status)} className="text-[9px] h-6 px-2 text-ecom-muted hover:text-white" title="Cofnij" data-testid={`undo-${item.id}`}><Undo2 size={10} /></Button>
                           )}
+                          {/* Delete button */}
+                          <Button size="sm" variant="ghost" onClick={() => deleteFulfillmentItem(item.id)} className="text-[9px] h-6 px-2 text-ecom-muted hover:text-ecom-danger" title="Usun z realizacji" data-testid={`delete-fulfill-${item.id}`}><Trash2 size={10} /></Button>
                         </div>
                       </div>
                     </CardContent>
