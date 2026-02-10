@@ -324,7 +324,7 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
     for day in days.values():
         day["netto"] = round(day["income"] * 0.77, 2)
         day["profit"] = round(day["netto"] - day["ads"], 2)
-        day["profit_pp"] = round(day["profit"] / 2, 2)
+        day["profit_pp"] = round(day["profit"] / max(app_s.get("profit_split", 2), 1), 2)
         for s in day["shops"]:
             s["netto"] = round(s["income"] * 0.77, 2)
             s["profit"] = round(s["netto"] - s["ads"], 2)
