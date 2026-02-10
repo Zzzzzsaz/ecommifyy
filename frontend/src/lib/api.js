@@ -43,6 +43,17 @@ export const api = {
   updateOrderStatus: (id, status) => axios.put(`${API}/orders/${id}/status?status=${status}`),
   deleteOrder: (id) => axios.delete(`${API}/orders/${id}`),
 
+  getReturns: (params) => axios.get(`${API}/returns`, { params }),
+  createReturn: (data) => axios.post(`${API}/returns`, data),
+  deleteReturn: (id) => axios.delete(`${API}/returns/${id}`),
+
+  getFulfillment: (params) => axios.get(`${API}/fulfillment`, { params }),
+  createFulfillment: (data) => axios.post(`${API}/fulfillment`, data),
+  updateFulfillment: (id, data) => axios.put(`${API}/fulfillment/${id}`, data),
+  bulkFulfillmentStatus: (params) => axios.post(`${API}/fulfillment/bulk-status`, null, { params }),
+  deleteFulfillment: (id) => axios.delete(`${API}/fulfillment/${id}`),
+  getFulfillmentReminder: () => axios.get(`${API}/fulfillment/reminder-check`),
+
   getShops: () => axios.get(`${API}/shops`),
   createShop: (data) => axios.post(`${API}/shops`, data),
   updateShop: (id, data) => axios.put(`${API}/shops/${id}`, data),
