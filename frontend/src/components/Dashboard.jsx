@@ -84,7 +84,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
   const rp = getRankProgress(stats?.total_income || 0);
   const tp = stats ? Math.min((stats.total_income / TARGET) * 100, 100) : 0;
   const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
-  const td = stats?.days?.find((d) => d.date === todayStr);
 
   const upcomingReminders = reminders.filter((r) => !r.done && r.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
   const overdueReminders = reminders.filter((r) => !r.done && r.date < todayStr);
