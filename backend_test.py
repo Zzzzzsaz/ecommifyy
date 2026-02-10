@@ -394,9 +394,8 @@ class EcommifyAPITester:
             self.run_test(
                 "Update Order Status",
                 "PUT",
-                f"orders/{order_id}/status",
-                200,
-                params={"status": "processing"}
+                f"orders/{order_id}/status?status=processing",
+                200
             )
             
             # Delete order
