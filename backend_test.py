@@ -319,6 +319,7 @@ def main():
         ("Health Check", tester.test_health),
         ("Authentication", tester.test_auth), 
         ("Monthly Stats", tester.test_monthly_stats),
+        ("Combined Monthly Stats", tester.test_combined_monthly_stats),
         ("Tasks Management", tester.test_tasks),
         ("Income/Expense Management", tester.test_incomes_expenses),
         ("Store Configurations", tester.test_store_configs),
