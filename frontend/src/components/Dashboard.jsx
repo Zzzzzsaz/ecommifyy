@@ -44,6 +44,11 @@ export default function Dashboard({ user, shops = [], appSettings = {}, onNaviga
   const [rankUpData, setRankUpData] = useState(null);
   const [showAddReminder, setShowAddReminder] = useState(false);
   const [remForm, setRemForm] = useState({ title: "", date: "" });
+  const [products, setProducts] = useState([]);
+  const [showProducts, setShowProducts] = useState(false);
+  const [showAddProduct, setShowAddProduct] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productForm, setProductForm] = useState({ name: "", sku: "", price: 0, extra_payment: 0, shop_id: 1, category: "" });
 
   useEffect(() => {
     const now = new Date();
@@ -57,6 +62,7 @@ export default function Dashboard({ user, shops = [], appSettings = {}, onNaviga
     api.getTasks().then((r) => setTaskCount(r.data.filter((t) => t.status !== "done").length)).catch(() => {});
     api.getReminders().then((r) => setReminders(r.data)).catch(() => {});
     api.getWeeklyStats().then((r) => setWeekly(r.data)).catch(() => {});
+    api.getProducts().then((r) => setProducts(r.data)).catch(() => {});
   }, []);
 
   const addReminder = async () => {
