@@ -1,256 +1,221 @@
-import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { Badge } from "@/components/ui/badge";
+import {
+  BarChart3, ClipboardList, Store, Sparkles,
+  LogOut, ChevronRight, Target, Settings, Zap
+} from "lucide-react";
 
 const LOGO_URL = "https://customer-assets.emergentagent.com/job_d80f261d-499e-4117-b40a-11f7363e88f3/artifacts/gvqot30h_ecommify%20logo.png";
 
-const SHOPS = [
-  { id: 1, name: "ecom1", color: "#6366f1" },
-  { id: 2, name: "ecom2", color: "#10b981" },
-  { id: 3, name: "ecom3", color: "#f59e0b" },
-  { id: 4, name: "ecom4", color: "#ec4899" },
+const MENU_ITEMS = [
+  { id: "wyniki", title: "WYNIKI", desc: "Przychody, zyski, ROI", icon: BarChart3, color: "#6366f1", accent: "rgba(99,102,241," },
+  { id: "tasks", title: "ZADANIA", desc: "Tablica Kanban zespolu", icon: ClipboardList, color: "#f59e0b", accent: "rgba(245,158,11," },
+  { id: "stores", title: "SKLEPY", desc: "Shopify & TikTok Ads", icon: Store, color: "#10b981", accent: "rgba(16,185,129," },
+  { id: "ai", title: "AI EXPERT", desc: "Marketing GPT-5.2", icon: Sparkles, color: "#ec4899", accent: "rgba(236,72,153," },
 ];
 
-const MONTHS_PL = ["Styczen", "Luty", "Marzec", "Kwiecien", "Maj", "Czerwiec", "Lipiec", "Sierpien", "Wrzesien", "Pazdziernik", "Listopad", "Grudzien"];
-const DAYS_PL = ["Nd", "Pn", "Wt", "Sr", "Cz", "Pt", "So"];
+const SHOPS_PREVIEW = [
+  { name: "ecom1", color: "#6366f1" },
+  { name: "ecom2", color: "#10b981" },
+  { name: "ecom3", color: "#f59e0b" },
+  { name: "ecom4", color: "#ec4899" },
+];
 
-const fmtPLN = (v) => v.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " zl";
+const fmtPLN = (v) => (v || 0).toLocaleString("pl-PL", { minimumFractionDigits: 0 });
 
-export default function Dashboard({ user }) {
-  const now = new Date();
-  const [shop, setShop] = useState(1);
-  const [year, setYear] = useState(now.getFullYear());
-  const [month, setMonth] = useState(now.getMonth() + 1);
+const getLevel = (roi) => {
+  if (roi > 300) return { name: "LEGENDA", emoji: "V", progress: 100 };
+  if (roi > 200) return { name: "ELITA", emoji: "IV", progress: 85 };
+  if (roi > 100) return { name: "WOJOWNIK", emoji: "III", progress: 65 };
+  if (roi > 50) return { name: "LOWCA", emoji: "II", progress: 45 };
+  if (roi > 0) return { name: "ZWIADOWCA", emoji: "I", progress: 25 };
+  return { name: "REKRUT", emoji: "0", progress: 5 };
+};
+
+export default function Dashboard({ user, onNavigate, onLogout }) {
+  const [taskCount, setTaskCount] = useState(0);
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [dialog, setDialog] = useState({ open: false, type: null, date: null });
-  const [amount, setAmount] = useState("");
-  const [desc, setDesc] = useState("");
-  const [saving, setSaving] = useState(false);
 
-  const fetchStats = useCallback(async () => {
-    setLoading(true);
-    try {
-      const r = await api.getMonthlyStats({ shop_id: shop, year, month });
-      setStats(r.data);
-    } catch {
-      toast.error("Blad ladowania danych");
-    } finally {
-      setLoading(false);
-    }
-  }, [shop, year, month]);
+  useEffect(() => {
+    api.getTasks().then((r) => setTaskCount(r.data.filter((t) => t.status !== "done").length)).catch(() => {});
+    const now = new Date();
+    api.getMonthlyStats({ shop_id: 1, year: now.getFullYear(), month: now.getMonth() + 1 })
+      .then((r) => setStats(r.data)).catch(() => {});
+  }, []);
 
-  useEffect(() => { fetchStats(); }, [fetchStats]);
-
-  const prevMonth = () => {
-    if (month === 1) { setMonth(12); setYear((y) => y - 1); } else setMonth((m) => m - 1);
-  };
-  const nextMonth = () => {
-    if (month === 12) { setMonth(1); setYear((y) => y + 1); } else setMonth((m) => m + 1);
-  };
-
-  const openAdd = (type, date) => {
-    setDialog({ open: true, type, date });
-    setAmount("");
-    setDesc("");
-  };
-
-  const handleSave = async () => {
-    const val = parseFloat(amount);
-    if (!val || val <= 0) { toast.error("Podaj prawidlowa kwote"); return; }
-    setSaving(true);
-    try {
-      if (dialog.type === "income") {
-        await api.createIncome({ amount: val, date: dialog.date, description: desc || "Reczne dodanie", shop_id: shop });
-      } else {
-        await api.createExpense({ amount: val, date: dialog.date, campaign_name: desc || "Reczne dodanie", shop_id: shop });
-      }
-      toast.success("Dodano!");
-      setDialog({ open: false, type: null, date: null });
-      fetchStats();
-    } catch {
-      toast.error("Blad zapisu");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const getDayName = (dateStr) => {
-    const d = new Date(dateStr + "T12:00:00");
-    return DAYS_PL[d.getDay()];
-  };
-  const getDayNum = (dateStr) => parseInt(dateStr.split("-")[2], 10);
-
-  const shopColor = SHOPS.find((s) => s.id === shop)?.color || "#6366f1";
-
-  const kpis = stats
-    ? [
-        { label: "Przychod", value: fmtPLN(stats.total_income), color: "text-white" },
-        { label: "Ads", value: fmtPLN(stats.total_ads), color: "text-ecom-danger" },
-        { label: "Netto", value: fmtPLN(stats.total_netto), color: "text-ecom-muted" },
-        { label: "Zysk", value: fmtPLN(stats.total_profit), color: stats.total_profit >= 0 ? "text-ecom-success" : "text-ecom-danger" },
-        { label: "ROI", value: stats.roi.toFixed(1) + "%", color: stats.roi >= 0 ? "text-ecom-success" : "text-ecom-danger" },
-      ]
-    : [];
+  const level = getLevel(stats?.roi || 0);
 
   return (
-    <div className="p-4 pb-24 animate-fade-in" data-testid="dashboard-page">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <img src={LOGO_URL} alt="Ecommify" className="h-8 object-contain" />
-          <h1 className="font-heading text-xl font-bold text-white tracking-wide">ECOMMIFY</h1>
+    <div className="game-grid min-h-screen p-4 pb-24" data-testid="menu-page">
+      {/* ===== HEADER ===== */}
+      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-8 pt-2">
+        <div>
+          <img src={LOGO_URL} alt="Ecommify" className="h-10 object-contain mb-3" data-testid="menu-logo" />
+          <h1 className="font-heading text-4xl sm:text-5xl font-bold text-white leading-none">
+            Witaj, <span className="text-ecom-primary">{user.name}</span>
+          </h1>
+          <p className="text-ecom-muted text-sm mt-1.5 flex items-center gap-1.5">
+            <Zap size={12} className="text-ecom-warning" /> Centrum dowodzenia
+          </p>
         </div>
-        <Badge variant="secondary" className="text-xs" data-testid="user-badge">{user.name}</Badge>
-      </div>
+        <div className="flex flex-col items-end gap-2 pt-1">
+          <Badge variant="outline" className="text-[10px] border-ecom-border text-ecom-muted uppercase tracking-wider">{user.role}</Badge>
+          <div className="flex gap-2">
+            <button onClick={() => onNavigate("settings")} className="w-8 h-8 rounded-lg bg-ecom-card border border-ecom-border flex items-center justify-center text-ecom-muted hover:text-white hover:border-ecom-primary/40 transition-colors" data-testid="menu-settings-btn">
+              <Settings size={14} />
+            </button>
+            <button onClick={onLogout} className="w-8 h-8 rounded-lg bg-ecom-card border border-ecom-border flex items-center justify-center text-ecom-muted hover:text-ecom-danger hover:border-ecom-danger/40 transition-colors" data-testid="menu-logout-btn">
+              <LogOut size={14} />
+            </button>
+          </div>
+        </div>
+      </motion.div>
 
-      {/* Shop Tabs */}
-      <div className="flex gap-2 mb-5 overflow-x-auto pb-1" data-testid="shop-tabs">
-        {SHOPS.map((s) => (
-          <button
-            key={s.id}
-            onClick={() => setShop(s.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors duration-150 border ${
-              shop === s.id ? "text-white border-transparent" : "text-ecom-muted border-ecom-border hover:text-white hover:border-ecom-muted"
-            }`}
-            style={shop === s.id ? { backgroundColor: s.color + "20", borderColor: s.color, color: s.color } : {}}
-            data-testid={`shop-tab-${s.id}`}
+      {/* ===== LEVEL BAR ===== */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
+        className="mb-8 p-5 rounded-xl border border-ecom-border relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, rgba(99,102,241,0.05) 0%, #1a1a2e 40%, rgba(16,185,129,0.03) 100%)" }}
+        data-testid="level-bar"
+      >
+        {/* Scan line effect */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div className="scan-line-anim absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-ecom-primary/30 to-transparent" />
+        </div>
+
+        <div className="flex items-center justify-between mb-3 relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg border border-ecom-primary/30 bg-ecom-primary/10 flex items-center justify-center">
+              <Target size={18} className="text-ecom-primary" />
+            </div>
+            <div>
+              <p className="text-[10px] text-ecom-muted uppercase tracking-[0.25em] font-medium">POZIOM</p>
+              <p className="font-heading font-bold text-white text-lg leading-tight">{level.name} <span className="text-ecom-primary text-sm">{level.emoji}</span></p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] text-ecom-muted uppercase tracking-wider">ROI</p>
+            <p className={`font-heading font-bold text-xl tabular-nums ${(stats?.roi || 0) >= 0 ? "text-ecom-success" : "text-ecom-danger"}`}>
+              {stats?.roi?.toFixed(1) || "0.0"}%
+            </p>
+          </div>
+        </div>
+
+        {/* XP Bar */}
+        <div className="h-2 bg-ecom-border/50 rounded-full overflow-hidden mb-4 relative z-10">
+          <motion.div
+            initial={{ width: 0 }} animate={{ width: `${level.progress}%` }}
+            transition={{ duration: 1.8, ease: "easeOut", delay: 0.3 }}
+            className="h-full rounded-full relative"
+            style={{ background: "linear-gradient(90deg, #6366f1 0%, #10b981 60%, #f59e0b 100%)" }}
           >
-            {s.name}
-          </button>
-        ))}
-      </div>
+            <div className="absolute right-0 top-0 bottom-0 w-4 bg-white/20 rounded-full animate-pulse" />
+          </motion.div>
+        </div>
 
-      {/* Month Nav */}
-      <div className="flex items-center justify-center gap-4 mb-6" data-testid="month-nav">
-        <Button variant="ghost" size="icon" onClick={prevMonth} data-testid="prev-month" className="text-ecom-muted hover:text-white">
-          <ChevronLeft size={20} />
-        </Button>
-        <span className="font-heading text-lg font-semibold text-white min-w-[160px] text-center">
-          {MONTHS_PL[month - 1]} {year}
-        </span>
-        <Button variant="ghost" size="icon" onClick={nextMonth} data-testid="next-month" className="text-ecom-muted hover:text-white">
-          <ChevronRight size={20} />
-        </Button>
-      </div>
-
-      {/* KPI Cards */}
-      {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-ecom-primary" size={32} /></div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6" data-testid="kpi-cards">
-            {kpis.map((kpi, i) => (
-              <Card key={i} className="bg-ecom-card border-ecom-border" style={i === 0 ? { borderTop: `2px solid ${shopColor}` } : {}}>
-                <CardContent className="p-4">
-                  <p className="text-ecom-muted text-[10px] uppercase tracking-widest font-medium">{kpi.label}</p>
-                  <p className={`text-lg font-heading font-bold tabular-nums mt-1 ${kpi.color}`} data-testid={`kpi-${kpi.label.toLowerCase()}`}>
-                    {kpi.value}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+        {/* Quick stats row */}
+        <div className="grid grid-cols-3 gap-4 relative z-10">
+          <div>
+            <p className="text-ecom-muted text-[10px] uppercase tracking-wider mb-0.5">Zysk netto</p>
+            <p className="text-white font-heading font-bold text-lg tabular-nums">{fmtPLN(stats?.total_profit)} <span className="text-xs text-ecom-muted font-normal">zl</span></p>
           </div>
+          <div>
+            <p className="text-ecom-muted text-[10px] uppercase tracking-wider mb-0.5">Przychod</p>
+            <p className="text-white font-heading font-bold text-lg tabular-nums">{fmtPLN(stats?.total_income)} <span className="text-xs text-ecom-muted font-normal">zl</span></p>
+          </div>
+          <div>
+            <p className="text-ecom-muted text-[10px] uppercase tracking-wider mb-0.5">Aktywne</p>
+            <p className="text-ecom-warning font-heading font-bold text-lg tabular-nums">{taskCount} <span className="text-xs text-ecom-muted font-normal">zadan</span></p>
+          </div>
+        </div>
+      </motion.div>
 
-          {/* Daily List */}
-          <h2 className="font-heading text-base font-semibold text-white mb-3">Dni</h2>
-          <div className="space-y-2" data-testid="daily-list">
-            {stats?.days?.map((day) => {
-              const hasData = day.income > 0 || day.ads > 0;
-              return (
+      {/* ===== MENU TILES ===== */}
+      <div className="grid grid-cols-2 gap-4 mb-6" data-testid="menu-tiles">
+        {MENU_ITEMS.map((item, i) => {
+          const Icon = item.icon;
+          return (
+            <motion.button
+              key={item.id}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 + i * 0.08, type: "spring", stiffness: 180, damping: 18 }}
+              onClick={() => onNavigate(item.id)}
+              className="menu-tile group relative rounded-xl border border-ecom-border p-5 text-left h-[170px] flex flex-col justify-between overflow-hidden"
+              style={{ backgroundColor: "#1a1a2e" }}
+              data-testid={`menu-tile-${item.id}`}
+            >
+              {/* Ambient glow on hover */}
+              <div
+                className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                style={{ background: `radial-gradient(ellipse at 20% 20%, ${item.accent}0.12), transparent 70%)` }}
+              />
+
+              {/* Top content */}
+              <div className="relative z-10">
                 <div
-                  key={day.date}
-                  className={`day-card rounded-lg border p-3 ${hasData ? "bg-ecom-card border-ecom-border" : "bg-ecom-card/50 border-ecom-border/50"}`}
-                  data-testid={`day-${day.date}`}
+                  className="w-11 h-11 rounded-lg flex items-center justify-center mb-3 border transition-colors duration-300"
+                  style={{ backgroundColor: `${item.accent}0.08)`, borderColor: `${item.accent}0.15)` }}
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-white font-heading font-bold text-lg leading-none">{getDayNum(day.date)}</span>
-                      <span className="text-ecom-muted text-xs">{getDayName(day.date)}</span>
-                    </div>
-                    <div className="flex gap-1.5">
-                      <button
-                        onClick={() => openAdd("income", day.date)}
-                        className="btn-press flex items-center gap-1 text-[10px] font-medium text-ecom-success bg-ecom-success/10 hover:bg-ecom-success/20 px-2 py-1 rounded-md"
-                        data-testid={`add-income-${day.date}`}
-                      >
-                        <Plus size={12} /> Przychod
-                      </button>
-                      <button
-                        onClick={() => openAdd("expense", day.date)}
-                        className="btn-press flex items-center gap-1 text-[10px] font-medium text-ecom-danger bg-ecom-danger/10 hover:bg-ecom-danger/20 px-2 py-1 rounded-md"
-                        data-testid={`add-expense-${day.date}`}
-                      >
-                        <Plus size={12} /> Ads
-                      </button>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1">
-                    <div>
-                      <span className="text-ecom-muted text-[10px]">Przychod</span>
-                      <p className="text-white text-sm tabular-nums font-medium">{fmtPLN(day.income)}</p>
-                    </div>
-                    <div>
-                      <span className="text-ecom-muted text-[10px]">Ads</span>
-                      <p className="text-ecom-danger text-sm tabular-nums font-medium">{fmtPLN(day.ads)}</p>
-                    </div>
-                    <div>
-                      <span className="text-ecom-muted text-[10px]">Netto</span>
-                      <p className="text-ecom-muted text-sm tabular-nums">{fmtPLN(day.netto)}</p>
-                    </div>
-                    <div>
-                      <span className="text-ecom-muted text-[10px]">Zysk</span>
-                      <p className={`text-sm tabular-nums font-medium ${day.profit >= 0 ? "text-ecom-success" : "text-ecom-danger"}`}>
-                        {fmtPLN(day.profit)}
-                      </p>
-                    </div>
-                  </div>
+                  <Icon size={20} style={{ color: item.color }} className="group-hover:scale-110 transition-transform duration-300" />
                 </div>
-              );
-            })}
-          </div>
-        </>
-      )}
+                <h3 className="font-heading font-bold text-white text-lg tracking-wider leading-tight">{item.title}</h3>
+                <p className="text-ecom-muted text-[11px] mt-1 leading-snug">{item.desc}</p>
+              </div>
 
-      {/* Add Dialog */}
-      <Dialog open={dialog.open} onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}>
-        <DialogContent className="bg-ecom-card border-ecom-border max-w-sm" data-testid="add-dialog">
-          <DialogHeader>
-            <DialogTitle className="font-heading text-white">
-              {dialog.type === "income" ? "Dodaj przychod" : "Dodaj koszt reklamy"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-2">
-            <p className="text-ecom-muted text-sm">{dialog.date}</p>
-            <Input
-              type="number"
-              placeholder="Kwota (PLN)"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="bg-ecom-bg border-ecom-border text-white"
-              data-testid="add-amount-input"
-            />
-            <Input
-              placeholder={dialog.type === "income" ? "Opis (opcjonalnie)" : "Nazwa kampanii (opcjonalnie)"}
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              className="bg-ecom-bg border-ecom-border text-white"
-              data-testid="add-desc-input"
-            />
-            <Button onClick={handleSave} disabled={saving} className="w-full bg-ecom-primary hover:bg-ecom-primary/80" data-testid="add-save-btn">
-              {saving ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
-              Zapisz
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+              {/* Bottom: stat + arrow */}
+              <div className="relative z-10 flex items-center justify-between">
+                {item.id === "tasks" && taskCount > 0 && (
+                  <span className="text-[10px] font-medium tabular-nums" style={{ color: item.color }}>{taskCount} aktywnych</span>
+                )}
+                {item.id === "wyniki" && stats && (
+                  <span className="text-[10px] font-medium tabular-nums" style={{ color: item.color }}>{fmtPLN(stats.total_income)} zl</span>
+                )}
+                {item.id !== "tasks" && item.id !== "wyniki" && <span />}
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0"
+                  style={{ backgroundColor: `${item.accent}0.1)` }}
+                >
+                  <ChevronRight size={14} style={{ color: item.color }} />
+                </div>
+              </div>
+
+              {/* Hover border glow */}
+              <div
+                className="absolute inset-0 rounded-xl border-2 border-transparent pointer-events-none transition-all duration-300"
+                style={{ borderColor: "transparent" }}
+              />
+              <style>{`
+                [data-testid="menu-tile-${item.id}"]:hover > div:last-child {
+                  border-color: ${item.color}25 !important;
+                  box-shadow: 0 0 24px ${item.accent}0.08), inset 0 0 24px ${item.accent}0.02);
+                }
+              `}</style>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* ===== SHOP QUICK ACCESS ===== */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}>
+        <p className="text-[10px] text-ecom-muted uppercase tracking-[0.2em] font-medium mb-2 px-1">SZYBKI DOSTEP</p>
+        <div className="grid grid-cols-4 gap-2" data-testid="quick-shops">
+          {SHOPS_PREVIEW.map((s) => (
+            <button
+              key={s.name}
+              onClick={() => onNavigate("wyniki")}
+              className="group py-3.5 rounded-xl border border-ecom-border bg-ecom-card/60 hover:bg-ecom-card text-center transition-all duration-200 hover:border-opacity-60"
+              style={{ "--hover-c": s.color }}
+              data-testid={`quick-shop-${s.name}`}
+            >
+              <div className="w-2.5 h-2.5 rounded-full mx-auto mb-1.5 transition-transform duration-200 group-hover:scale-125" style={{ backgroundColor: s.color }} />
+              <span className="text-[11px] text-ecom-muted font-medium group-hover:text-white transition-colors">{s.name}</span>
+            </button>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 }

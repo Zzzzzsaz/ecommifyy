@@ -3,6 +3,7 @@ import "@/App.css";
 import { Toaster } from "@/components/ui/sonner";
 import LoginScreen from "@/components/LoginScreen";
 import Dashboard from "@/components/Dashboard";
+import Wyniki from "@/components/Wyniki";
 import Tasks from "@/components/Tasks";
 import Stores from "@/components/Stores";
 import Chat from "@/components/Chat";
@@ -33,12 +34,13 @@ function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case "dashboard": return <Dashboard user={user} />;
+      case "dashboard": return <Dashboard user={user} onNavigate={setActiveTab} onLogout={handleLogout} />;
+      case "wyniki": return <Wyniki user={user} />;
       case "tasks": return <Tasks user={user} />;
       case "stores": return <Stores />;
       case "ai": return <Chat user={user} />;
       case "settings": return <Settings user={user} onLogout={handleLogout} />;
-      default: return <Dashboard user={user} />;
+      default: return <Dashboard user={user} onNavigate={setActiveTab} onLogout={handleLogout} />;
     }
   };
 
