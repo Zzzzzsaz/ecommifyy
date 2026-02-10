@@ -88,12 +88,6 @@ export default function Dashboard({ user, onNavigate, onLogout }) {
   const upcomingReminders = reminders.filter((r) => !r.done && r.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
   const overdueReminders = reminders.filter((r) => !r.done && r.date < todayStr);
 
-  const bp = parseFloat(buyPrice) || 0;
-  const sp = parseFloat(sellPrice) || 0;
-  const marginPct = sp > 0 ? ((sp - bp) / sp * 100) : 0;
-  const markupPct = bp > 0 ? ((sp - bp) / bp * 100) : 0;
-  const profitUnit = sp - bp;
-
   return (
     <div className="game-grid min-h-screen p-4 pb-24" data-testid="menu-page">
       <AnimatePresence>
