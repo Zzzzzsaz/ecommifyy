@@ -478,5 +478,5 @@ export default function Orders({ user, shops = [] }) {
   );
   function deleteOrder(id) { api.deleteOrder(id).then(fetchData).then(() => toast.success("Usunieto")); }
   function deleteRecord(id) { api.deleteSalesRecord(id).then(fetchData).then(() => toast.success("Usunieto")); }
-  function deleteReturn(id) { api.deleteReturn(id).then(fetchData).then(() => toast.success("Usunieto")); }
+  function deleteReturn(id) { api.deleteReturn(id).then(fetchData).then(() => toast.success("Zwrot cofniety - zamowienie przywrocone")); }
 }
