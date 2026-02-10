@@ -284,6 +284,7 @@ export default function Wyniki({ user }) {
                                   <span className="text-white">{fmtShort(s.income)}</span>
                                   <span className="text-ecom-danger">{fmtShort(s.ads)}</span>
                                   <span className={s.profit >= 0 ? "text-ecom-success" : "text-ecom-danger"}>{fmtShort(s.profit)}</span>
+                                  <button onClick={() => openDetails(day.date, s.shop_id)} className="btn-press text-ecom-muted hover:text-white bg-ecom-border/20 px-1 py-0.5 rounded text-[9px]"><Eye size={9} /></button>
                                   <button onClick={() => openAdd("income", day.date, s.shop_id)} className="btn-press text-ecom-success bg-ecom-success/10 px-1.5 py-0.5 rounded text-[9px] font-bold" data-testid={`add-inc-${day.date}-${s.shop_id}`}>+P</button>
                                   <button onClick={() => openAdd("expense", day.date, s.shop_id)} className="btn-press text-ecom-danger bg-ecom-danger/10 px-1.5 py-0.5 rounded text-[9px] font-bold" data-testid={`add-exp-${day.date}-${s.shop_id}`}>+A</button>
                                 </div>
