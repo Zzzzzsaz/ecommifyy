@@ -969,7 +969,7 @@ async def sales_pdf_monthly(year: int = Query(...), month: int = Query(...), sho
         pdf.cell(22, 5.5, f"{r.get('vat_amount', 0):.2f}", border=1, align="R")
         pdf.cell(26, 5.5, f"{r.get('brutto', 0):.2f}", border=1, align="R")
         pdf.cell(28, 5.5, str(r.get("payment_method", ""))[:16], border=1)
-        pdf.cell(20, 5.5, SHOP_NAMES.get(r.get("shop_id", 0), ""), border=1)
+        pdf.cell(20, 5.5, sn.get(r.get("shop_id", 0), ""), border=1)
         pdf.ln()
         tn += r.get("netto", 0); tv += r.get("vat_amount", 0); tb += r.get("brutto", 0)
     pdf.set_font("Helvetica", "B", 8)
