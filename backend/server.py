@@ -8,9 +8,11 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import List, Optional
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import httpx
 import calendar
+import io
+from fastapi.responses import StreamingResponse
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -35,6 +37,9 @@ SHOPS = [
     {"id": 3, "name": "ecom3", "color": "#f59e0b"},
     {"id": 4, "name": "ecom4", "color": "#ec4899"},
 ]
+
+SHOP_NAMES = {1: "ecom1", 2: "ecom2", 3: "ecom3", 4: "ecom4"}
+MONTHS_PL = {1: "Styczen", 2: "Luty", 3: "Marzec", 4: "Kwiecien", 5: "Maj", 6: "Czerwiec", 7: "Lipiec", 8: "Sierpien", 9: "Wrzesien", 10: "Pazdziernik", 11: "Listopad", 12: "Grudzien"}
 
 # ===== MODELS =====
 class LoginRequest(BaseModel):
