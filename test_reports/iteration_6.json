@@ -1,0 +1,87 @@
+{
+  "summary": "Comprehensive testing of Ecommify Orders-Ewidencja (sales ledger) integration and Calendar page. All features working correctly. Backend: 28/28 tests passed (100%). Frontend: All tested flows pass. Key changes from previous iteration: Paragony replaced with Ewidencja sprzedazy, Zadania tab replaced with Kalendarz tab, margin calculator removed.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "PIN login (2409) via numpad successfully authenticates",
+    "Bottom nav shows: Menu, Wyniki, Zamowienia, Kalendarz, AI (NOT Zadania)",
+    "Dashboard does NOT have margin calculator tile",
+    "Orders page has two tabs: Zamowienia and Ewidencja (NOT Paragony)",
+    "Orders tab shows orders list with summary cards",
+    "Add order dialog opens and creates orders correctly",
+    "Ewidencja tab shows sales records grouped by date with Brutto/VAT/Netto summary",
+    "Generate sales records from orders button (Z zamowien) works - toast confirms",
+    "Manual sales record entry via Dodaj button in Ewidencja",
+    "Daily PDF download (Dzienna) button clickable",
+    "Monthly PDF download (Miesieczna) button clickable",
+    "Per-day PDF download button works",
+    "Shop filtering tabs (WSZYSTKIE, ecom1-4) work correctly",
+    "Month navigation (Luty 2026) works",
+    "Calendar page shows full month calendar grid",
+    "Calendar highlights today",
+    "Days with reminders/notes show indicator dots",
+    "Click calendar day to select and show reminders/notes for that day",
+    "Add reminder dialog with title, date, time, and recurring frequency (none/daily/weekly/monthly)",
+    "Add note for selected date works",
+    "Recurring frequency dropdown (Jednorazowe/Codziennie/Co tydzien/Co miesiac) works",
+    "Delete note works",
+    "API: GET /api/sales-records returns records (200 OK)",
+    "API: POST /api/sales-records creates manual record (200 OK)",
+    "API: POST /api/sales-records/generate-from-orders generates from orders (200 OK)",
+    "API: DELETE /api/sales-records/{id} deletes record (200 OK)",
+    "API: GET /api/sales-records/pdf/daily returns PDF (200 OK, application/pdf)",
+    "API: GET /api/sales-records/pdf/monthly returns PDF (200 OK, application/pdf)",
+    "API: GET /api/reminders returns list (200 OK)",
+    "API: POST /api/reminders with recurring frequency works (200 OK)",
+    "API: PUT /api/reminders/{id} toggle done works (200 OK)",
+    "API: DELETE /api/reminders/{id} works (200 OK)",
+    "API: GET /api/notes returns list (200 OK)",
+    "API: POST /api/notes creates note (200 OK)",
+    "API: DELETE /api/notes/{id} works (200 OK)",
+    "API: Combined monthly stats works (200 OK)",
+    "API: Weekly stats works (200 OK)"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_ecommify_api.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [],
+
+  "updated_files": [
+    "/app/backend/tests/test_ecommify_api.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (28/28 tests passed)",
+    "frontend": "100% (all UI flows working)"
+  },
+
+  "test_credentials": "PIN: 2409 (Admin), 2609 (Kacper), 2509 (Szymon)",
+
+  "seed_data_creation": "Created test order (Test Customer Playwright, 299.99 PLN, 2026-02-12) which was auto-converted to sales record",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": true,
+
+  "context_for_next_testing_agent": "All requested features implemented and tested: 1) Ewidencja sprzedazy (sales ledger) replaced Paragony with daily/monthly PDF downloads and VAT calculation, 2) Calendar page with reminders (recurring: daily/weekly/monthly) and notes section, 3) Margin calculator removed from Dashboard, 4) Zadania tab replaced with Kalendarz in bottom nav. App is in Polish, currency PLN, VAT 23%. Shopify/TikTok sync endpoints are MOCKED.",
+
+  "mocked_api": {
+    "has_mocked_apis": true,
+    "mocked_apis_list": ["POST /api/sync/shopify/{shop_id}", "POST /api/sync/tiktok/{config_id}"]
+  }
+}
