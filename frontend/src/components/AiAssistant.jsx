@@ -20,20 +20,21 @@ const QUICK_ACTIONS = [
 
 const ActionBadge = ({ action }) => {
   const getIcon = (fn) => {
-    if (fn.includes("product")) return Package;
-    if (fn.includes("order")) return ShoppingCart;
-    if (fn.includes("return")) return RotateCcw;
-    if (fn.includes("shop")) return Store;
-    if (fn.includes("reminder")) return Bell;
+    const fnStr = fn || "";
+    if (fnStr.includes("product")) return Package;
+    if (fnStr.includes("order")) return ShoppingCart;
+    if (fnStr.includes("return")) return RotateCcw;
+    if (fnStr.includes("shop")) return Store;
+    if (fnStr.includes("reminder")) return Bell;
     return CheckCircle2;
   };
-  const Icon = getIcon(action.function);
-  const success = action.result?.success;
+  const Icon = getIcon(action?.action || action?.function);
+  const success = action?.success;
   
   return (
     <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] ${success ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}`}>
       <Icon size={10} />
-      <span>{action.function.replace(/_/g, " ")}</span>
+      <span>{(action?.action || action?.function || "action").replace(/_/g, " ")}</span>
       {success && <CheckCircle2 size={10} />}
     </div>
   );
