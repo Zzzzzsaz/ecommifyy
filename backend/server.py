@@ -31,15 +31,42 @@ USERS = {
     "2509": {"name": "Szymon", "role": "szymon", "pin": "2509"},
 }
 
-SHOPS = [
+DEFAULT_SHOPS = [
     {"id": 1, "name": "ecom1", "color": "#6366f1"},
     {"id": 2, "name": "ecom2", "color": "#10b981"},
     {"id": 3, "name": "ecom3", "color": "#f59e0b"},
     {"id": 4, "name": "ecom4", "color": "#ec4899"},
 ]
 
-SHOP_NAMES = {1: "ecom1", 2: "ecom2", 3: "ecom3", 4: "ecom4"}
 MONTHS_PL = {1: "Styczen", 2: "Luty", 3: "Marzec", 4: "Kwiecien", 5: "Maj", 6: "Czerwiec", 7: "Lipiec", 8: "Sierpien", 9: "Wrzesien", 10: "Pazdziernik", 11: "Listopad", 12: "Grudzien"}
+
+DEFAULT_APP_SETTINGS = {
+    "target_revenue": 250000,
+    "vat_rate": 23,
+    "currency": "PLN",
+    "profit_split": 2,
+    "app_name": "Ecommify Campaign Calculator",
+}
+
+async def get_shops_list():
+    shops = await db.shops.find({}, {"_id": 0}).sort("id", 1).to_list(100)
+    if not shops:
+        for s in DEFAULT_SHOPS:
+            await db.shops.insert_one({**s, "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()})
+        shops = await db.shops.find({}, {"_id": 0}).sort("id", 1).to_list(100)
+    return shops
+
+async def get_shop_names():
+    shops = await get_shops_list()
+    return {s["id"]: s["name"] for s in shops}
+
+async def get_app_settings():
+    settings = await db.app_settings.find_one({"_key": "main"}, {"_id": 0})
+    if not settings:
+        settings = {**DEFAULT_APP_SETTINGS, "_key": "main"}
+        await db.app_settings.insert_one(settings)
+        settings.pop("_id", None)
+    return settings
 
 # ===== MODELS =====
 class LoginRequest(BaseModel):
