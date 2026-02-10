@@ -78,6 +78,43 @@ export default function Wyniki({ user }) {
     finally { setSaving(false); }
   };
 
+  const openDetails = async (date, shopId) => {
+    setDetailDialog({ open: true, date, shopId });
+    setDetailLoading(true);
+    setNoteText("");
+    try {
+      const [inc, exp, notes] = await Promise.all([
+        api.getIncomeDetails({ shop_id: shopId, date }),
+        api.getExpenseDetails({ shop_id: shopId, date }),
+        api.getNotes({ date })
+      ]);
+      setDetails({ incomes: inc.data, expenses: exp.data, notes: notes.data.filter(n => n.shop_id === 0 || n.shop_id === shopId) });
+    } catch { toast.error("Blad ladowania"); }
+    finally { setDetailLoading(false); }
+  };
+
+  const deleteEntry = async (type, id) => {
+    try {
+      type === "income" ? await api.deleteIncome(id) : await api.deleteExpense(id);
+      toast.success("Usunieto!");
+      openDetails(detailDialog.date, detailDialog.shopId);
+      fetchStats();
+    } catch { toast.error("Blad"); }
+  };
+
+  const addNote = async () => {
+    if (!noteText.trim()) return;
+    await api.createNote({ date: detailDialog.date, shop_id: detailDialog.shopId, content: noteText, created_by: user.name });
+    setNoteText("");
+    openDetails(detailDialog.date, detailDialog.shopId);
+    toast.success("Notatka dodana!");
+  };
+
+  const deleteNote = async (id) => {
+    await api.deleteNote(id);
+    openDetails(detailDialog.date, detailDialog.shopId);
+  };
+
   const getDayName = (d) => DAYS_PL[new Date(d + "T12:00:00").getDay()];
   const getDayNum = (d) => parseInt(d.split("-")[2], 10);
 
