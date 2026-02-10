@@ -696,364 +696,209 @@ async def delete_note(nid: str):
     await db.notes.delete_one({"id": nid})
     return {"status": "ok"}
 
-# ===== RECEIPTS =====
-class ReceiptCreate(BaseModel):
+# ===== SALES RECORDS (EWIDENCJA SPRZEDAZY) =====
+class SalesRecordCreate(BaseModel):
     date: str
+    order_number: str = ""
+    product_name: str
+    quantity: int = 1
+    netto: float
+    vat_rate: int = 23
+    brutto: float
+    payment_method: str = ""
     shop_id: int
-    items: List[dict]
 
-@api_router.get("/receipts")
-async def get_receipts(shop_id: Optional[int] = None, year: Optional[int] = None, month: Optional[int] = None):
+@api_router.get("/sales-records")
+async def get_sales_records(shop_id: Optional[int] = None, year: Optional[int] = None, month: Optional[int] = None, date: Optional[str] = None):
     q = {}
     if shop_id and shop_id > 0: q["shop_id"] = shop_id
-    if year and month: q["date"] = {"$regex": f"^{year}-{month:02d}"}
-    return await db.receipts.find(q, {"_id": 0}).sort("date", -1).to_list(10000)
+    if date: q["date"] = date
+    elif year and month: q["date"] = {"$regex": f"^{year}-{month:02d}"}
+    return await db.sales_records.find(q, {"_id": 0}).sort("date", -1).to_list(10000)
 
-@api_router.post("/receipts")
-async def create_receipt(r: ReceiptCreate):
-    count = await db.receipts.count_documents({"date": {"$regex": f"^{r.date[:7]}"}})
-    month_num = r.date[5:7]
-    year_str = r.date[:4]
-    number = f"{count + 1}/{month_num}/{year_str}/P"
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
-    items_c = []
-    total_b = 0
-    for it in r.items:
-        qty = it.get("quantity", 1)
-        brutto_unit = round(it.get("brutto_price", it.get("netto_price", 0) * 1.23), 2)
-        brutto_line = round(brutto_unit * qty, 2)
-        netto_line = round(brutto_line / 1.23, 2)
-        vat_line = round(brutto_line - netto_line, 2)
-        items_c.append({
-            "description": it.get("description", ""),
-            "quantity": qty,
-            "brutto_unit": brutto_unit,
-            "brutto": brutto_line,
-            "netto": netto_line,
-            "vat": vat_line,
-            "netto_price": round(brutto_unit / 1.23, 2),
-        })
-        total_b += brutto_line
-    total_n = round(total_b / 1.23, 2)
-    total_v = round(total_b - total_n, 2)
-    now_str = datetime.now(timezone.utc).strftime("%H:%M:%S")
+@api_router.post("/sales-records")
+async def create_sales_record(r: SalesRecordCreate):
     doc = {
         "id": str(uuid.uuid4()),
-        "receipt_number": number,
         "date": r.date,
-        "time": now_str,
+        "order_number": r.order_number,
+        "product_name": r.product_name,
+        "quantity": r.quantity,
+        "netto": round(r.netto, 2),
+        "vat_rate": r.vat_rate,
+        "vat_amount": round(r.brutto - r.netto, 2),
+        "brutto": round(r.brutto, 2),
+        "payment_method": r.payment_method,
         "shop_id": r.shop_id,
         "order_id": None,
-        "items": items_c,
-        "total_netto": round(total_n, 2),
-        "vat_rate": 23,
-        "vat_amount": round(total_v, 2),
-        "total_brutto": round(total_b, 2),
-        "company_data": company,
-        "payment_gateway": "",
-        "payment_method": "",
-        "transaction_id": "",
+        "source": "manual",
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    await db.receipts.insert_one(doc)
+    await db.sales_records.insert_one(doc)
     doc.pop("_id", None)
     return doc
 
-@api_router.delete("/receipts/{rid}")
-async def delete_receipt(rid: str):
-    await db.receipts.delete_one({"id": rid})
+@api_router.delete("/sales-records/{sid}")
+async def delete_sales_record(sid: str):
+    await db.sales_records.delete_one({"id": sid})
     return {"status": "ok"}
 
-@api_router.get("/receipts/pdf/{rid}")
-async def receipt_pdf(rid: str):
-    from fpdf import FPDF
-    r = await db.receipts.find_one({"id": rid}, {"_id": 0})
-    if not r: raise HTTPException(status_code=404, detail="Nie znaleziono")
-    co = r.get("company_data", {})
-    w = 80
-    pdf = FPDF(unit="mm", format=(w, 200))
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=5)
-    lm = 3
-    pw = w - 2 * lm
-    pdf.set_left_margin(lm)
-    pdf.set_right_margin(lm)
-    # Company header
-    pdf.set_font("Helvetica", "B", 8)
-    pdf.cell(pw, 4, co.get("name", "").upper(), ln=True, align="C")
-    pdf.set_font("Helvetica", "", 7)
-    if co.get("address"):
-        pdf.cell(pw, 3, co.get("address", ""), ln=True, align="C")
-    addr2 = f"{co.get('postal_code', '')}, {co.get('city', '')}".strip(", ")
-    if addr2:
-        pdf.cell(pw, 3, addr2, ln=True, align="C")
-    if co.get("nip"):
-        pdf.cell(pw, 3, co["nip"], ln=True, align="C")
-    pdf.ln(2)
-    # Date + receipt number
-    pdf.set_font("Helvetica", "", 7)
-    dt_str = r.get("date", "")
-    time_str = r.get("time", datetime.now(timezone.utc).strftime("%H:%M:%S"))
-    half = pw / 2
-    pdf.cell(half, 4, f"{dt_str} {time_str}", align="L")
-    pdf.cell(half, 4, r.get("receipt_number", ""), align="R", ln=True)
-    pdf.ln(1)
-    # Title
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(pw, 5, "PARAGON", ln=True, align="C")
-    pdf.ln(1)
-    # Separator
-    pdf.line(lm, pdf.get_y(), w - lm, pdf.get_y())
-    pdf.ln(1)
-    # Items
-    total_brutto = 0
-    for it in r.get("items", []):
-        desc = str(it.get("description", ""))
-        qty = it.get("quantity", 1)
-        brutto_unit = it.get("brutto_unit", it.get("brutto", 0) / max(qty, 1))
-        brutto_line = round(brutto_unit * qty, 2)
-        total_brutto += brutto_line
-        pdf.set_font("Helvetica", "", 7)
-        pdf.cell(pw, 3.5, desc[:50], ln=True)
-        price_text = f"{qty} x {brutto_unit:.2f}="
-        total_text = f"{brutto_line:.2f} A"
-        pdf.cell(pw * 0.6, 3.5, price_text, align="R")
-        pdf.cell(pw * 0.4, 3.5, total_text, align="R", ln=True)
-        pdf.ln(0.5)
-    if total_brutto == 0:
-        total_brutto = r.get("total_brutto", 0)
-    # Separator
-    pdf.line(lm, pdf.get_y(), w - lm, pdf.get_y())
-    pdf.ln(2)
-    # Tax summary
-    vat_amount = round(total_brutto - (total_brutto / 1.23), 2)
-    pdf.set_font("Helvetica", "", 7)
-    pdf.cell(pw * 0.6, 3.5, "Sprzedaz opodatkowana A", align="L")
-    pdf.cell(pw * 0.4, 3.5, f"{total_brutto:.2f}", align="R", ln=True)
-    pdf.cell(pw * 0.6, 3.5, "PTU A 23%", align="L")
-    pdf.cell(pw * 0.4, 3.5, f"{vat_amount:.2f}", align="R", ln=True)
-    pdf.ln(1)
-    # Suma PLN
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(pw * 0.5, 6, "Suma PLN", align="L")
-    pdf.cell(pw * 0.5, 6, f"{total_brutto:.2f}", align="R", ln=True)
-    pdf.ln(2)
-    # Payment info
-    pm = r.get("payment_gateway", r.get("payment_method", ""))
-    tid = r.get("transaction_id", "")
-    if pm or tid:
-        pdf.set_font("Helvetica", "", 6)
-        pdf.cell(pw * 0.4, 3, "Platnosc", align="L")
-        pdf.cell(pw * 0.6, 3, pm, align="R", ln=True)
-        if tid:
-            pdf.cell(pw * 0.4, 3, "Numer transakcji", align="L")
-            pdf.cell(pw * 0.6, 3, tid, align="R", ln=True)
-    buf = io.BytesIO()
-    pdf.output(buf)
-    buf.seek(0)
-    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="paragon_{r.get("receipt_number","").replace("/","_")}.pdf"'})
-
-@api_router.get("/receipts/summary-pdf")
-async def summary_pdf(year: int = Query(...), month: int = Query(...), shop_id: Optional[int] = None):
-    from fpdf import FPDF
+@api_router.post("/sales-records/generate-from-orders")
+async def generate_sales_from_orders(year: int = Query(...), month: int = Query(...), shop_id: Optional[int] = None):
     q = {"date": {"$regex": f"^{year}-{month:02d}"}}
     if shop_id and shop_id > 0: q["shop_id"] = shop_id
-    recs = await db.receipts.find(q, {"_id": 0}).sort("date", 1).to_list(10000)
+    orders = await db.orders.find(q, {"_id": 0}).to_list(10000)
+    existing_order_ids = set()
+    existing = await db.sales_records.find({"order_id": {"$ne": None}, "date": {"$regex": f"^{year}-{month:02d}"}}, {"_id": 0, "order_id": 1}).to_list(10000)
+    for e in existing:
+        if e.get("order_id"): existing_order_ids.add(e["order_id"])
+    generated = 0
+    for order in orders:
+        if order["id"] in existing_order_ids:
+            continue
+        order_items = order.get("items", [])
+        if order_items:
+            for it in order_items:
+                qty = it.get("quantity", 1)
+                price = it.get("price", 0)
+                brutto = round(price * qty, 2)
+                netto = round(brutto / 1.23, 2)
+                doc = {
+                    "id": str(uuid.uuid4()), "date": order["date"],
+                    "order_number": order.get("order_number", ""),
+                    "product_name": it.get("name", it.get("description", "Produkt")),
+                    "quantity": qty, "netto": netto, "vat_rate": 23,
+                    "vat_amount": round(brutto - netto, 2), "brutto": brutto,
+                    "payment_method": order.get("payment_gateway", order.get("payment_method", "")),
+                    "shop_id": order.get("shop_id", 1), "order_id": order["id"],
+                    "source": "order", "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.sales_records.insert_one(doc)
+                generated += 1
+        else:
+            total = order.get("total", 0)
+            netto = round(total / 1.23, 2)
+            doc = {
+                "id": str(uuid.uuid4()), "date": order["date"],
+                "order_number": order.get("order_number", ""),
+                "product_name": f"Zamowienie {order.get('order_number', '')}",
+                "quantity": 1, "netto": netto, "vat_rate": 23,
+                "vat_amount": round(total - netto, 2), "brutto": total,
+                "payment_method": order.get("payment_gateway", order.get("payment_method", "")),
+                "shop_id": order.get("shop_id", 1), "order_id": order["id"],
+                "source": "order", "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.sales_records.insert_one(doc)
+            generated += 1
+    return {"status": "ok", "generated": generated, "message": f"Dodano {generated} wpisow do ewidencji"}
+
+@api_router.get("/sales-records/pdf/daily")
+async def sales_pdf_daily(date: str = Query(...), shop_id: Optional[int] = None):
+    from fpdf import FPDF
+    q = {"date": date}
+    if shop_id and shop_id > 0: q["shop_id"] = shop_id
+    recs = await db.sales_records.find(q, {"_id": 0}).sort("date", 1).to_list(10000)
     company = await db.company_settings.find_one({}, {"_id": 0}) or {}
     pdf = FPDF()
     pdf.add_page("L")
-    pdf.set_font("Helvetica", "B", 16)
-    pdf.cell(0, 10, f"ZESTAWIENIE SPRZEDAZY", ln=True, align="C")
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(0, 10, "EWIDENCJA SPRZEDAZY - DZIENNA", ln=True, align="C")
+    pdf.set_font("Helvetica", "", 11)
+    pdf.cell(0, 6, f"Data: {date}", ln=True, align="C")
+    if company.get("name"):
+        pdf.set_font("Helvetica", "", 9)
+        nip_str = f" | NIP: {company['nip']}" if company.get("nip") else ""
+        pdf.cell(0, 5, f"{company['name']}{nip_str}", ln=True, align="C")
+    pdf.ln(5)
+    cols = [("Lp.", 10, "C"), ("Nr zam.", 30, "L"), ("Produkt", 65, "L"), ("Ilosc", 14, "C"), ("Netto", 28, "R"), ("VAT", 12, "C"), ("VAT kwota", 24, "R"), ("Brutto", 28, "R"), ("Platnosc", 30, "L"), ("Sklep", 20, "L")]
+    pdf.set_font("Helvetica", "B", 7)
+    pdf.set_fill_color(230, 230, 240)
+    for c in cols: pdf.cell(c[1], 7, c[0], border=1, align=c[2], fill=True)
+    pdf.ln()
+    pdf.set_font("Helvetica", "", 7)
+    tn = tv = tb = 0
+    for i, r in enumerate(recs, 1):
+        pdf.cell(10, 6, str(i), border=1, align="C")
+        pdf.cell(30, 6, str(r.get("order_number", ""))[:18], border=1)
+        pdf.cell(65, 6, str(r.get("product_name", ""))[:38], border=1)
+        pdf.cell(14, 6, str(r.get("quantity", 1)), border=1, align="C")
+        pdf.cell(28, 6, f"{r.get('netto', 0):.2f} zl", border=1, align="R")
+        pdf.cell(12, 6, f"{r.get('vat_rate', 23)}%", border=1, align="C")
+        pdf.cell(24, 6, f"{r.get('vat_amount', 0):.2f} zl", border=1, align="R")
+        pdf.cell(28, 6, f"{r.get('brutto', 0):.2f} zl", border=1, align="R")
+        pdf.cell(30, 6, str(r.get("payment_method", ""))[:18], border=1)
+        pdf.cell(20, 6, SHOP_NAMES.get(r.get("shop_id", 0), ""), border=1)
+        pdf.ln()
+        tn += r.get("netto", 0); tv += r.get("vat_amount", 0); tb += r.get("brutto", 0)
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.set_fill_color(240, 240, 250)
+    pdf.cell(119, 7, "RAZEM:", border=1, align="R", fill=True)
+    pdf.cell(28, 7, f"{tn:.2f} zl", border=1, align="R", fill=True)
+    pdf.cell(12, 7, "", border=1, fill=True)
+    pdf.cell(24, 7, f"{tv:.2f} zl", border=1, align="R", fill=True)
+    pdf.cell(28, 7, f"{tb:.2f} zl", border=1, align="R", fill=True)
+    pdf.cell(50, 7, f"Pozycji: {len(recs)}", border=1, fill=True)
+    pdf.ln(8)
+    pdf.set_font("Helvetica", "", 7)
+    pdf.cell(0, 4, f"Wygenerowano: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC", ln=True, align="R")
+    buf = io.BytesIO(); pdf.output(buf); buf.seek(0)
+    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="ewidencja_dzienna_{date}.pdf"'})
+
+@api_router.get("/sales-records/pdf/monthly")
+async def sales_pdf_monthly(year: int = Query(...), month: int = Query(...), shop_id: Optional[int] = None):
+    from fpdf import FPDF
+    q = {"date": {"$regex": f"^{year}-{month:02d}"}}
+    if shop_id and shop_id > 0: q["shop_id"] = shop_id
+    recs = await db.sales_records.find(q, {"_id": 0}).sort("date", 1).to_list(10000)
+    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
+    pdf = FPDF()
+    pdf.add_page("L")
+    pdf.set_font("Helvetica", "B", 14)
+    pdf.cell(0, 10, "EWIDENCJA SPRZEDAZY - MIESIECZNA", ln=True, align="C")
     pdf.set_font("Helvetica", "", 11)
     pdf.cell(0, 6, f"{MONTHS_PL.get(month, '')} {year}", ln=True, align="C")
     if company.get("name"):
         pdf.set_font("Helvetica", "", 9)
         nip_str = f" | NIP: {company['nip']}" if company.get("nip") else ""
-        addr_str = f" | {company.get('address', '')} {company.get('postal_code', '')} {company.get('city', '')}".strip()
-        pdf.cell(0, 5, f"{company['name']}{nip_str}{addr_str}", ln=True, align="C")
-    pdf.ln(6)
-    # Table header
-    cols = [("Lp.", 12, "C"), ("Data", 24, "L"), ("Nr paragonu", 45, "L"), ("Sklep", 22, "L"), ("Pozycje", 70, "L"), ("Brutto", 28, "R"), ("VAT 23%", 26, "R"), ("Netto", 28, "R")]
-    pdf.set_font("Helvetica", "B", 8)
-    pdf.set_fill_color(230, 230, 240)
-    for c in cols:
-        pdf.cell(c[1], 8, c[0], border=1, align=c[2], fill=True)
-    pdf.ln()
-    pdf.set_font("Helvetica", "", 7)
-    tn = tv = tb = 0
-    for i, rc in enumerate(recs, 1):
-        items_str = ", ".join([it.get("description", "")[:30] for it in rc.get("items", [])])[:65]
-        brutto = rc.get("total_brutto", 0)
-        vat = rc.get("vat_amount", 0)
-        netto = rc.get("total_netto", 0)
-        h = 6
-        pdf.cell(12, h, str(i), border=1, align="C")
-        pdf.cell(24, h, rc["date"], border=1)
-        pdf.cell(45, h, rc.get("receipt_number", ""), border=1)
-        pdf.cell(22, h, SHOP_NAMES.get(rc.get("shop_id", 0), ""), border=1)
-        pdf.cell(70, h, items_str, border=1)
-        pdf.cell(28, h, f"{brutto:.2f} zl", border=1, align="R")
-        pdf.cell(26, h, f"{vat:.2f} zl", border=1, align="R")
-        pdf.cell(28, h, f"{netto:.2f} zl", border=1, align="R")
-        pdf.ln()
-        tn += netto; tv += vat; tb += brutto
-    # Totals
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.set_fill_color(240, 240, 250)
-    pdf.cell(173, 8, "RAZEM:", border=1, align="R", fill=True)
-    pdf.cell(28, 8, f"{tb:.2f} zl", border=1, align="R", fill=True)
-    pdf.cell(26, 8, f"{tv:.2f} zl", border=1, align="R", fill=True)
-    pdf.cell(28, 8, f"{tn:.2f} zl", border=1, align="R", fill=True)
-    pdf.ln(10)
-    # Summary stats
-    pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 5, f"Liczba paragonow: {len(recs)}", ln=True)
-    pdf.cell(0, 5, f"Suma brutto: {tb:.2f} zl", ln=True)
-    pdf.cell(0, 5, f"Suma VAT (23%): {tv:.2f} zl", ln=True)
-    pdf.cell(0, 5, f"Suma netto: {tn:.2f} zl", ln=True)
+        addr = f" | {company.get('address', '')} {company.get('postal_code', '')} {company.get('city', '')}".strip()
+        pdf.cell(0, 5, f"{company['name']}{nip_str}{addr}", ln=True, align="C")
     pdf.ln(5)
+    cols = [("Lp.", 10, "C"), ("Data", 20, "L"), ("Nr zam.", 28, "L"), ("Produkt", 55, "L"), ("Ilosc", 14, "C"), ("Netto", 26, "R"), ("VAT", 12, "C"), ("VAT kw.", 22, "R"), ("Brutto", 26, "R"), ("Platnosc", 28, "L"), ("Sklep", 20, "L")]
+    pdf.set_font("Helvetica", "B", 7)
+    pdf.set_fill_color(230, 230, 240)
+    for c in cols: pdf.cell(c[1], 7, c[0], border=1, align=c[2], fill=True)
+    pdf.ln()
+    pdf.set_font("Helvetica", "", 6)
+    tn = tv = tb = 0
+    for i, r in enumerate(recs, 1):
+        pdf.cell(10, 5.5, str(i), border=1, align="C")
+        pdf.cell(20, 5.5, r.get("date", ""), border=1)
+        pdf.cell(28, 5.5, str(r.get("order_number", ""))[:16], border=1)
+        pdf.cell(55, 5.5, str(r.get("product_name", ""))[:32], border=1)
+        pdf.cell(14, 5.5, str(r.get("quantity", 1)), border=1, align="C")
+        pdf.cell(26, 5.5, f"{r.get('netto', 0):.2f}", border=1, align="R")
+        pdf.cell(12, 5.5, f"{r.get('vat_rate', 23)}%", border=1, align="C")
+        pdf.cell(22, 5.5, f"{r.get('vat_amount', 0):.2f}", border=1, align="R")
+        pdf.cell(26, 5.5, f"{r.get('brutto', 0):.2f}", border=1, align="R")
+        pdf.cell(28, 5.5, str(r.get("payment_method", ""))[:16], border=1)
+        pdf.cell(20, 5.5, SHOP_NAMES.get(r.get("shop_id", 0), ""), border=1)
+        pdf.ln()
+        tn += r.get("netto", 0); tv += r.get("vat_amount", 0); tb += r.get("brutto", 0)
+    pdf.set_font("Helvetica", "B", 8)
+    pdf.set_fill_color(240, 240, 250)
+    pdf.cell(127, 7, "RAZEM:", border=1, align="R", fill=True)
+    pdf.cell(26, 7, f"{tn:.2f} zl", border=1, align="R", fill=True)
+    pdf.cell(12, 7, "", border=1, fill=True)
+    pdf.cell(22, 7, f"{tv:.2f} zl", border=1, align="R", fill=True)
+    pdf.cell(26, 7, f"{tb:.2f} zl", border=1, align="R", fill=True)
+    pdf.cell(48, 7, f"Pozycji: {len(recs)}", border=1, fill=True)
+    pdf.ln(8)
+    pdf.set_font("Helvetica", "", 9)
+    pdf.cell(0, 5, f"Podsumowanie: Netto: {tn:.2f} zl | VAT: {tv:.2f} zl | Brutto: {tb:.2f} zl | Pozycji: {len(recs)}", ln=True)
     pdf.set_font("Helvetica", "", 7)
     pdf.cell(0, 4, f"Wygenerowano: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC", ln=True, align="R")
-    buf = io.BytesIO()
-    pdf.output(buf)
-    buf.seek(0)
-    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="zestawienie_{year}_{month:02d}.pdf"'})
-
-# ===== GENERATE RECEIPT FROM ORDER =====
-@api_router.post("/orders/{oid}/generate-receipt")
-async def generate_receipt_from_order(oid: str):
-    order = await db.orders.find_one({"id": oid}, {"_id": 0})
-    if not order:
-        raise HTTPException(status_code=404, detail="Nie znaleziono zamowienia")
-    if order.get("receipt_id"):
-        raise HTTPException(status_code=400, detail="Paragon juz wystawiony dla tego zamowienia")
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
-    count = await db.receipts.count_documents({"date": {"$regex": f"^{order['date'][:7]}"}})
-    month_num = order["date"][5:7]
-    year_str = order["date"][:4]
-    receipt_number = f"{count + 1}/{month_num}/{year_str}/P"
-    items_for_receipt = []
-    total_brutto = order.get("total", 0)
-    order_items = order.get("items", [])
-    if order_items:
-        for it in order_items:
-            qty = it.get("quantity", 1)
-            price = it.get("price", 0)
-            brutto_unit = round(price, 2)
-            brutto_line = round(brutto_unit * qty, 2)
-            items_for_receipt.append({
-                "description": it.get("name", it.get("description", "Produkt")),
-                "quantity": qty,
-                "brutto_unit": brutto_unit,
-                "brutto": brutto_line,
-                "netto": round(brutto_line / 1.23, 2),
-                "vat": round(brutto_line - brutto_line / 1.23, 2),
-                "netto_price": round(brutto_unit / 1.23, 2),
-            })
-    else:
-        items_for_receipt.append({
-            "description": f"Zamowienie {order.get('order_number', '')}",
-            "quantity": 1,
-            "brutto_unit": total_brutto,
-            "brutto": total_brutto,
-            "netto": round(total_brutto / 1.23, 2),
-            "vat": round(total_brutto - total_brutto / 1.23, 2),
-            "netto_price": round(total_brutto / 1.23, 2),
-        })
-    total_netto = sum(it["netto"] for it in items_for_receipt)
-    total_vat = sum(it["vat"] for it in items_for_receipt)
-    total_b = sum(it["brutto"] for it in items_for_receipt)
-    now_str = datetime.now(timezone.utc).strftime("%H:%M:%S")
-    doc = {
-        "id": str(uuid.uuid4()),
-        "receipt_number": receipt_number,
-        "date": order["date"],
-        "time": now_str,
-        "shop_id": order.get("shop_id", 1),
-        "order_id": oid,
-        "order_number": order.get("order_number", ""),
-        "items": items_for_receipt,
-        "total_netto": round(total_netto, 2),
-        "vat_rate": 23,
-        "vat_amount": round(total_vat, 2),
-        "total_brutto": round(total_b, 2),
-        "company_data": company,
-        "payment_gateway": order.get("payment_gateway", ""),
-        "payment_method": order.get("payment_method", ""),
-        "transaction_id": order.get("transaction_id", ""),
-        "customer_name": order.get("customer_name", ""),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.receipts.insert_one(doc)
-    doc.pop("_id", None)
-    await db.orders.update_one({"id": oid}, {"$set": {"receipt_id": doc["id"]}})
-    return doc
-
-@api_router.post("/orders/generate-receipts-bulk")
-async def generate_receipts_bulk(shop_id: Optional[int] = None, year: Optional[int] = None, month: Optional[int] = None):
-    q = {"$or": [{"receipt_id": None}, {"receipt_id": {"$exists": False}}]}
-    if shop_id and shop_id > 0:
-        q["shop_id"] = shop_id
-    if year and month:
-        q["date"] = {"$regex": f"^{year}-{month:02d}"}
-    orders_without = await db.orders.find(q, {"_id": 0}).to_list(10000)
-    if not orders_without:
-        return {"status": "ok", "generated": 0, "message": "Wszystkie zamowienia maja paragony"}
-    company = await db.company_settings.find_one({}, {"_id": 0}) or {}
-    generated = 0
-    for order in orders_without:
-        count = await db.receipts.count_documents({"date": {"$regex": f"^{order['date'][:7]}"}})
-        month_num = order["date"][5:7]
-        year_str = order["date"][:4]
-        receipt_number = f"{count + 1}/{month_num}/{year_str}/P"
-        total_brutto = order.get("total", 0)
-        order_items = order.get("items", [])
-        items_for_receipt = []
-        if order_items:
-            for it in order_items:
-                qty = it.get("quantity", 1)
-                price = it.get("price", 0)
-                brutto_unit = round(price, 2)
-                brutto_line = round(brutto_unit * qty, 2)
-                items_for_receipt.append({
-                    "description": it.get("name", it.get("description", "Produkt")),
-                    "quantity": qty, "brutto_unit": brutto_unit, "brutto": brutto_line,
-                    "netto": round(brutto_line / 1.23, 2),
-                    "vat": round(brutto_line - brutto_line / 1.23, 2),
-                    "netto_price": round(brutto_unit / 1.23, 2),
-                })
-        else:
-            items_for_receipt.append({
-                "description": f"Zamowienie {order.get('order_number', '')}",
-                "quantity": 1, "brutto_unit": total_brutto, "brutto": total_brutto,
-                "netto": round(total_brutto / 1.23, 2),
-                "vat": round(total_brutto - total_brutto / 1.23, 2),
-                "netto_price": round(total_brutto / 1.23, 2),
-            })
-        total_netto = sum(it["netto"] for it in items_for_receipt)
-        total_vat = sum(it["vat"] for it in items_for_receipt)
-        total_b = sum(it["brutto"] for it in items_for_receipt)
-        now_str = datetime.now(timezone.utc).strftime("%H:%M:%S")
-        doc = {
-            "id": str(uuid.uuid4()), "receipt_number": receipt_number,
-            "date": order["date"], "time": now_str,
-            "shop_id": order.get("shop_id", 1), "order_id": order["id"],
-            "order_number": order.get("order_number", ""),
-            "items": items_for_receipt,
-            "total_netto": round(total_netto, 2), "vat_rate": 23,
-            "vat_amount": round(total_vat, 2), "total_brutto": round(total_b, 2),
-            "company_data": company,
-            "payment_gateway": order.get("payment_gateway", ""),
-            "payment_method": order.get("payment_method", ""),
-            "transaction_id": order.get("transaction_id", ""),
-            "customer_name": order.get("customer_name", ""),
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.receipts.insert_one(doc)
-        doc.pop("_id", None)
-        await db.orders.update_one({"id": order["id"]}, {"$set": {"receipt_id": doc["id"]}})
-        generated += 1
-    return {"status": "ok", "generated": generated, "message": f"Wystawiono {generated} paragonow"}
+    buf = io.BytesIO(); pdf.output(buf); buf.seek(0)
+    return StreamingResponse(buf, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="ewidencja_{year}_{month:02d}.pdf"'})
 
 # ===== WEEKLY STATS =====
 @api_router.get("/weekly-stats")
