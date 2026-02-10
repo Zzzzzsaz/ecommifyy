@@ -252,6 +252,7 @@ export default function Wyniki({ user }) {
                       </div>
                       {!isAll && (
                         <div className="flex gap-1">
+                          <button onClick={(e) => { e.stopPropagation(); openDetails(day.date, shop); }} className="btn-press text-[9px] text-ecom-muted hover:text-white bg-ecom-border/30 px-1.5 py-1 rounded-md" data-testid={`details-${day.date}`}><Eye size={10} /></button>
                           <button onClick={(e) => { e.stopPropagation(); openAdd("income", day.date, shop); }} className="btn-press flex items-center gap-0.5 text-[9px] font-medium text-ecom-success bg-ecom-success/10 hover:bg-ecom-success/20 px-2 py-1 rounded-md" data-testid={`add-inc-${day.date}`}><Plus size={10} />P</button>
                           <button onClick={(e) => { e.stopPropagation(); openAdd("expense", day.date, shop); }} className="btn-press flex items-center gap-0.5 text-[9px] font-medium text-ecom-danger bg-ecom-danger/10 hover:bg-ecom-danger/20 px-2 py-1 rounded-md" data-testid={`add-exp-${day.date}`}><Plus size={10} />A</button>
                         </div>
