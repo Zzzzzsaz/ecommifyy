@@ -128,6 +128,10 @@ export default function Orders({ user, shops = [] }) {
   };
   const updateStatus = async (id, status) => { try { await api.updateFulfillment(id, { status }); toast.success("Zaktualizowano"); fetchFulfillment(); } catch { toast.error("Blad"); } };
   const undoStatus = async (id, currentStatus) => { const prev = STAGE_PREV[currentStatus]; if (prev) { await updateStatus(id, prev); } };
+  const deleteFulfillmentItem = async (id) => {
+    if (!window.confirm("Usunac z realizacji? Zamowienie pozostanie w systemie.")) return;
+    try { await api.deleteFulfillment(id); toast.success("Usunieto z realizacji"); fetchFulfillment(); fetchData(); } catch { toast.error("Blad"); }
+  };
   const markPaid = async (id, paid) => {
     try {
       if (paid) { await api.updateFulfillment(id, { extra_payment_paid: true, status: "to_ship" }); toast.success("Oplacone → Wysylka"); }
