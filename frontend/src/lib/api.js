@@ -43,6 +43,14 @@ export const api = {
   updateOrderStatus: (id, status) => axios.put(`${API}/orders/${id}/status?status=${status}`),
   deleteOrder: (id) => axios.delete(`${API}/orders/${id}`),
 
+  getShops: () => axios.get(`${API}/shops`),
+  createShop: (data) => axios.post(`${API}/shops`, data),
+  updateShop: (id, data) => axios.put(`${API}/shops/${id}`, data),
+  deleteShop: (id) => axios.delete(`${API}/shops/${id}`),
+
+  getAppSettings: () => axios.get(`${API}/app-settings`),
+  updateAppSettings: (data) => axios.put(`${API}/app-settings`, data),
+
   getCompany: () => axios.get(`${API}/company-settings`),
   updateCompany: (data) => axios.put(`${API}/company-settings`, data),
 
