@@ -36,6 +36,10 @@ export default function Wyniki({ user }) {
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
   const [saving, setSaving] = useState(false);
+  const [detailDialog, setDetailDialog] = useState({ open: false, date: null, shopId: null });
+  const [details, setDetails] = useState({ incomes: [], expenses: [], notes: [] });
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [noteText, setNoteText] = useState("");
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
