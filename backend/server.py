@@ -291,12 +291,15 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
     prefix = f"{year}-{month:02d}"
     incomes = await db.incomes.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
     expenses = await db.expenses.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
+    shops = await get_shops_list()
+    shop_ids = [s["id"] for s in shops]
+    app_s = await get_app_settings()
 
     days_in_month = calendar.monthrange(year, month)[1]
     days = {}
     for d in range(1, days_in_month + 1):
         ds = f"{year}-{month:02d}-{d:02d}"
-        days[ds] = {"date": ds, "income": 0, "ads": 0, "shops": [{"shop_id": i, "income": 0, "ads": 0} for i in range(1, 5)]}
+        days[ds] = {"date": ds, "income": 0, "ads": 0, "shops": [{"shop_id": i, "income": 0, "ads": 0} for i in shop_ids]}
 
     for inc in incomes:
         dt = inc["date"]
