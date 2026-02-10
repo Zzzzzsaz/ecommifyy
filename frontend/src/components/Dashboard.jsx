@@ -20,8 +20,8 @@ const fmtK = (v) => (v || 0) >= 1000 ? ((v / 1000).toFixed(1) + "k") : (v || 0).
 
 const MENU_ITEMS = [
   { id: "wyniki", title: "WYNIKI", desc: "Przychody, zyski, ROI", icon: BarChart3, color: "#6366f1", accent: "rgba(99,102,241," },
-  { id: "orders", title: "ZAMOWIENIA", desc: "Zamowienia i paragony", icon: ShoppingCart, color: "#10b981", accent: "rgba(16,185,129," },
-  { id: "tasks", title: "ZADANIA", desc: "Tablica Kanban", icon: ClipboardList, color: "#f59e0b", accent: "rgba(245,158,11," },
+  { id: "orders", title: "ZAMOWIENIA", desc: "Zamowienia i ewidencja", icon: ShoppingCart, color: "#10b981", accent: "rgba(16,185,129," },
+  { id: "calendar", title: "KALENDARZ", desc: "Przypomnienia i notatki", icon: CalendarDays, color: "#f59e0b", accent: "rgba(245,158,11," },
   { id: "stores", title: "SKLEPY", desc: "Shopify & TikTok", icon: Store, color: "#8b5cf6", accent: "rgba(139,92,246," },
   { id: "ai", title: "AI EXPERT", desc: "Marketing GPT-5.2", icon: Sparkles, color: "#ec4899", accent: "rgba(236,72,153," },
 ];
