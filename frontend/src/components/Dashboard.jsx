@@ -34,7 +34,7 @@ const ConfettiEffect = () => (
   </div>
 );
 
-export default function Dashboard({ user, onNavigate, onLogout }) {
+export default function Dashboard({ user, shops = [], appSettings = {}, onNavigate, onLogout }) {
   const [stats, setStats] = useState(null);
   const [taskCount, setTaskCount] = useState(0);
   const [reminders, setReminders] = useState([]);
