@@ -53,6 +53,8 @@ export const api = {
 
   getCompany: () => axios.get(`${API}/company-settings`),
   updateCompany: (data) => axios.put(`${API}/company-settings`, data),
+  getCompanySettings: () => axios.get(`${API}/company-settings`),
+  updateCompanySettings: (data) => axios.put(`${API}/company-settings`, data),
 
   getNotes: (params) => axios.get(`${API}/notes`, { params }),
   createNote: (data) => axios.post(`${API}/notes`, data),
