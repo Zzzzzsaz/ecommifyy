@@ -617,6 +617,235 @@ async def chat_endpoint(msg: ChatMessage):
 
     return {"response": response, "id": assistant_doc["id"]}
 
+# ===== AI ASSISTANT WITH ACTIONS =====
+class AssistantMessage(BaseModel):
+    message: str
+
+AI_TOOLS = [
+    {"type": "function", "function": {"name": "get_orders", "description": "Pobierz liste zamowien. Mozna filtrowac po sklepie, roku i miesiacu.", "parameters": {"type": "object", "properties": {"shop_id": {"type": "integer", "description": "ID sklepu (1-4), 0 = wszystkie"}, "year": {"type": "integer"}, "month": {"type": "integer"}}, "required": []}}},
+    {"type": "function", "function": {"name": "get_products", "description": "Pobierz liste produktow", "parameters": {"type": "object", "properties": {"shop_id": {"type": "integer"}}, "required": []}}},
+    {"type": "function", "function": {"name": "create_product", "description": "Dodaj nowy produkt", "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "price": {"type": "number"}, "extra_payment": {"type": "number", "description": "Doplata presale"}, "shop_id": {"type": "integer"}, "sku": {"type": "string"}, "category": {"type": "string"}}, "required": ["name", "shop_id"]}}},
+    {"type": "function", "function": {"name": "update_product", "description": "Edytuj produkt", "parameters": {"type": "object", "properties": {"product_id": {"type": "string"}, "name": {"type": "string"}, "price": {"type": "number"}, "extra_payment": {"type": "number"}, "sku": {"type": "string"}, "category": {"type": "string"}}, "required": ["product_id"]}}},
+    {"type": "function", "function": {"name": "delete_product", "description": "Usun produkt", "parameters": {"type": "object", "properties": {"product_id": {"type": "string"}}, "required": ["product_id"]}}},
+    {"type": "function", "function": {"name": "delete_order", "description": "Usun zamowienie (kaskadowo usuwa tez zwroty, realizacje i ewidencje)", "parameters": {"type": "object", "properties": {"order_id": {"type": "string"}}, "required": ["order_id"]}}},
+    {"type": "function", "function": {"name": "get_returns", "description": "Pobierz liste zwrotow", "parameters": {"type": "object", "properties": {"year": {"type": "integer"}, "month": {"type": "integer"}}, "required": []}}},
+    {"type": "function", "function": {"name": "delete_return", "description": "Cofnij zwrot - przywraca zamowienie", "parameters": {"type": "object", "properties": {"return_id": {"type": "string"}}, "required": ["return_id"]}}},
+    {"type": "function", "function": {"name": "get_fulfillment", "description": "Pobierz liste realizacji (presale pipeline)", "parameters": {"type": "object", "properties": {"source_month": {"type": "string", "description": "Format YYYY-MM"}, "status": {"type": "string", "enum": ["waiting", "reminder_sent", "check_payment", "to_ship", "unpaid", "archived"]}}, "required": []}}},
+    {"type": "function", "function": {"name": "update_fulfillment_status", "description": "Zmien status realizacji", "parameters": {"type": "object", "properties": {"fulfillment_id": {"type": "string"}, "status": {"type": "string", "enum": ["waiting", "reminder_sent", "check_payment", "to_ship", "unpaid", "archived"]}, "extra_payment": {"type": "number"}, "notes": {"type": "string"}}, "required": ["fulfillment_id"]}}},
+    {"type": "function", "function": {"name": "delete_fulfillment", "description": "Usun z realizacji", "parameters": {"type": "object", "properties": {"fulfillment_id": {"type": "string"}}, "required": ["fulfillment_id"]}}},
+    {"type": "function", "function": {"name": "get_sales_records", "description": "Pobierz ewidencje sprzedazy", "parameters": {"type": "object", "properties": {"year": {"type": "integer"}, "month": {"type": "integer"}, "shop_id": {"type": "integer"}}, "required": []}}},
+    {"type": "function", "function": {"name": "delete_sales_record", "description": "Usun wpis z ewidencji", "parameters": {"type": "object", "properties": {"record_id": {"type": "string"}}, "required": ["record_id"]}}},
+    {"type": "function", "function": {"name": "get_stats", "description": "Pobierz statystyki miesieczne", "parameters": {"type": "object", "properties": {"year": {"type": "integer"}, "month": {"type": "integer"}}, "required": ["year", "month"]}}},
+    {"type": "function", "function": {"name": "get_shops", "description": "Pobierz liste sklepow", "parameters": {"type": "object", "properties": {}, "required": []}}},
+    {"type": "function", "function": {"name": "create_shop", "description": "Dodaj nowy sklep", "parameters": {"type": "object", "properties": {"name": {"type": "string"}, "color": {"type": "string", "description": "Kolor hex, np. #6366f1"}}, "required": ["name"]}}},
+    {"type": "function", "function": {"name": "delete_shop", "description": "Usun sklep", "parameters": {"type": "object", "properties": {"shop_id": {"type": "integer"}}, "required": ["shop_id"]}}},
+    {"type": "function", "function": {"name": "create_reminder", "description": "Dodaj przypomnienie", "parameters": {"type": "object", "properties": {"title": {"type": "string"}, "date": {"type": "string", "description": "Format YYYY-MM-DD"}, "recurring": {"type": "string", "enum": ["none", "daily", "weekly", "monthly"]}}, "required": ["title", "date"]}}},
+    {"type": "function", "function": {"name": "get_reminders", "description": "Pobierz przypomnienia", "parameters": {"type": "object", "properties": {}, "required": []}}},
+    {"type": "function", "function": {"name": "delete_reminder", "description": "Usun przypomnienie", "parameters": {"type": "object", "properties": {"reminder_id": {"type": "string"}}, "required": ["reminder_id"]}}},
+]
+
+async def execute_ai_tool(name: str, args: dict):
+    """Execute AI tool and return result"""
+    try:
+        if name == "get_orders":
+            q = {}
+            if args.get("shop_id") and args["shop_id"] > 0: q["shop_id"] = args["shop_id"]
+            if args.get("year") and args.get("month"): q["date"] = {"$regex": f"^{args['year']}-{args['month']:02d}"}
+            orders = await db.orders.find(q, {"_id": 0}).sort("date", -1).to_list(100)
+            return {"success": True, "data": orders, "count": len(orders)}
+        
+        elif name == "get_products":
+            q = {}
+            if args.get("shop_id") and args["shop_id"] > 0: q["shop_id"] = args["shop_id"]
+            products = await db.products.find(q, {"_id": 0}).to_list(100)
+            return {"success": True, "data": products, "count": len(products)}
+        
+        elif name == "create_product":
+            doc = {"id": str(uuid.uuid4()), "name": args["name"], "sku": args.get("sku", ""), "price": args.get("price", 0), "extra_payment": args.get("extra_payment", 0), "shop_id": args["shop_id"], "category": args.get("category", ""), "source": "ai", "created_at": datetime.now(timezone.utc).isoformat()}
+            await db.products.insert_one(doc)
+            return {"success": True, "message": f"Dodano produkt: {args['name']}", "product_id": doc["id"]}
+        
+        elif name == "update_product":
+            upd = {k: v for k, v in args.items() if k != "product_id" and v is not None}
+            if upd: await db.products.update_one({"id": args["product_id"]}, {"$set": upd})
+            return {"success": True, "message": "Produkt zaktualizowany"}
+        
+        elif name == "delete_product":
+            await db.products.delete_one({"id": args["product_id"]})
+            return {"success": True, "message": "Produkt usuniety"}
+        
+        elif name == "delete_order":
+            await db.orders.delete_one({"id": args["order_id"]})
+            await db.returns.delete_many({"order_id": args["order_id"]})
+            await db.fulfillment.delete_many({"order_id": args["order_id"]})
+            await db.sales_records.delete_many({"order_id": args["order_id"]})
+            return {"success": True, "message": "Zamowienie usuniete (wraz ze zwrotami, realizacja i ewidencja)"}
+        
+        elif name == "get_returns":
+            q = {}
+            if args.get("year") and args.get("month"): q["date"] = {"$regex": f"^{args['year']}-{args['month']:02d}"}
+            returns = await db.returns.find(q, {"_id": 0}).to_list(100)
+            return {"success": True, "data": returns, "count": len(returns)}
+        
+        elif name == "delete_return":
+            ret = await db.returns.find_one({"id": args["return_id"]}, {"_id": 0})
+            if ret and ret.get("order_id"):
+                await db.orders.update_one({"id": ret["order_id"]}, {"$set": {"status": "new"}})
+            await db.returns.delete_one({"id": args["return_id"]})
+            return {"success": True, "message": "Zwrot cofniety - zamowienie przywrocone"}
+        
+        elif name == "get_fulfillment":
+            q = {}
+            if args.get("source_month"): q["source_month"] = args["source_month"]
+            if args.get("status"): q["status"] = args["status"]
+            items = await db.fulfillment.find(q, {"_id": 0}).to_list(100)
+            return {"success": True, "data": items, "count": len(items)}
+        
+        elif name == "update_fulfillment_status":
+            upd = {}
+            if args.get("status"): upd["status"] = args["status"]
+            if args.get("extra_payment") is not None: upd["extra_payment"] = args["extra_payment"]
+            if args.get("notes"): upd["notes"] = args["notes"]
+            if upd: await db.fulfillment.update_one({"id": args["fulfillment_id"]}, {"$set": upd})
+            return {"success": True, "message": "Status realizacji zmieniony"}
+        
+        elif name == "delete_fulfillment":
+            doc = await db.fulfillment.find_one({"id": args["fulfillment_id"]}, {"_id": 0})
+            if doc and doc.get("order_id"):
+                await db.orders.update_one({"id": doc["order_id"]}, {"$set": {"status": "new"}})
+            await db.fulfillment.delete_one({"id": args["fulfillment_id"]})
+            return {"success": True, "message": "Usunieto z realizacji"}
+        
+        elif name == "get_sales_records":
+            q = {}
+            if args.get("year") and args.get("month"): q["date"] = {"$regex": f"^{args['year']}-{args['month']:02d}"}
+            if args.get("shop_id") and args["shop_id"] > 0: q["shop_id"] = args["shop_id"]
+            records = await db.sales_records.find(q, {"_id": 0}).to_list(100)
+            return {"success": True, "data": records, "count": len(records)}
+        
+        elif name == "delete_sales_record":
+            await db.sales_records.delete_one({"id": args["record_id"]})
+            return {"success": True, "message": "Wpis ewidencji usuniety"}
+        
+        elif name == "get_stats":
+            prefix = f"{args['year']}-{args['month']:02d}"
+            incomes = await db.incomes.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
+            expenses = await db.expenses.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
+            ti = sum(i["amount"] for i in incomes); te = sum(e["amount"] for e in expenses)
+            return {"success": True, "data": {"income": ti, "expenses": te, "netto": round(ti * 0.77, 2), "profit": round(ti * 0.77 - te, 2)}}
+        
+        elif name == "get_shops":
+            shops = await db.shops.find({}, {"_id": 0}).to_list(100)
+            return {"success": True, "data": shops, "count": len(shops)}
+        
+        elif name == "create_shop":
+            shops = await db.shops.find({}, {"_id": 0}).to_list(100)
+            max_id = max((s["id"] for s in shops), default=0)
+            doc = {"id": max_id + 1, "name": args["name"], "color": args.get("color", "#6366f1"), "is_active": True, "created_at": datetime.now(timezone.utc).isoformat()}
+            await db.shops.insert_one(doc)
+            return {"success": True, "message": f"Sklep '{args['name']}' dodany", "shop_id": doc["id"]}
+        
+        elif name == "delete_shop":
+            await db.shops.delete_one({"id": args["shop_id"]})
+            return {"success": True, "message": "Sklep usuniety"}
+        
+        elif name == "create_reminder":
+            doc = {"id": str(uuid.uuid4()), "title": args["title"], "date": args["date"], "time": None, "recurring": args.get("recurring", "none"), "done": False, "created_by": "AI", "created_at": datetime.now(timezone.utc).isoformat()}
+            await db.reminders.insert_one(doc)
+            return {"success": True, "message": f"Przypomnienie dodane: {args['title']}", "reminder_id": doc["id"]}
+        
+        elif name == "get_reminders":
+            reminders = await db.reminders.find({}, {"_id": 0}).to_list(100)
+            return {"success": True, "data": reminders, "count": len(reminders)}
+        
+        elif name == "delete_reminder":
+            await db.reminders.delete_one({"id": args["reminder_id"]})
+            return {"success": True, "message": "Przypomnienie usuniete"}
+        
+        else:
+            return {"success": False, "error": f"Nieznana funkcja: {name}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+@api_router.post("/ai-assistant")
+async def ai_assistant_endpoint(msg: AssistantMessage):
+    import openai
+    
+    llm_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not llm_key:
+        raise HTTPException(status_code=500, detail="Brak klucza LLM")
+    
+    # Save user message
+    user_doc = {"id": str(uuid.uuid4()), "role": "user", "content": msg.message, "created_at": datetime.now(timezone.utc).isoformat()}
+    await db.ai_assistant_history.insert_one(user_doc)
+    
+    # Get recent history for context
+    history = await db.ai_assistant_history.find({}, {"_id": 0}).sort("created_at", -1).to_list(20)
+    history = list(reversed(history))
+    
+    messages = [{"role": "system", "content": """Jestes AI Asystentem aplikacji Ecommify - dashboardu e-commerce.
+Mozesz wykonywac akcje na stronie uzywajac dostepnych funkcji.
+Odpowiadaj po polsku, krotko i konkretnie.
+Gdy wykonujesz akcje, informuj uzytkownika co zrobiles.
+Masz dostep do: zamowien, produktow, zwrotow, realizacji (presale pipeline), ewidencji sprzedazy, sklepow, przypomn.
+Statusy realizacji: waiting (oczekujace), reminder_sent (przypomnienie wyslane), check_payment (sprawdzenie doplaty), to_ship (do wysylki), unpaid (nieoplacone), archived (archiwum).
+Dzisiejsza data: """ + datetime.now(timezone.utc).strftime("%Y-%m-%d")}]
+    
+    for h in history[-10:]:
+        messages.append({"role": h["role"], "content": h["content"]})
+    
+    client = openai.AsyncOpenAI(api_key=llm_key, base_url="https://api.openai.com/v1")
+    
+    actions_taken = []
+    max_iterations = 5
+    
+    try:
+        for _ in range(max_iterations):
+            response = await client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                tools=AI_TOOLS,
+                tool_choice="auto"
+            )
+            
+            assistant_msg = response.choices[0].message
+            
+            if assistant_msg.tool_calls:
+                messages.append({"role": "assistant", "content": assistant_msg.content or "", "tool_calls": [{"id": tc.id, "type": "function", "function": {"name": tc.function.name, "arguments": tc.function.arguments}} for tc in assistant_msg.tool_calls]})
+                
+                for tool_call in assistant_msg.tool_calls:
+                    fn_name = tool_call.function.name
+                    fn_args = eval(tool_call.function.arguments) if tool_call.function.arguments else {}
+                    
+                    result = await execute_ai_tool(fn_name, fn_args)
+                    actions_taken.append({"function": fn_name, "args": fn_args, "result": result})
+                    
+                    messages.append({"role": "tool", "tool_call_id": tool_call.id, "content": str(result)})
+            else:
+                final_response = assistant_msg.content or "Gotowe!"
+                break
+        else:
+            final_response = "Wykonalem akcje."
+        
+        # Save assistant response
+        assistant_doc = {"id": str(uuid.uuid4()), "role": "assistant", "content": final_response, "actions": actions_taken, "created_at": datetime.now(timezone.utc).isoformat()}
+        await db.ai_assistant_history.insert_one(assistant_doc)
+        
+        return {"response": final_response, "actions": actions_taken, "id": assistant_doc["id"]}
+    
+    except Exception as e:
+        logger.error(f"AI Assistant error: {e}")
+        raise HTTPException(status_code=500, detail=f"Blad AI: {str(e)}")
+
+@api_router.get("/ai-assistant/history")
+async def get_ai_assistant_history(limit: int = Query(50)):
+    return await db.ai_assistant_history.find({}, {"_id": 0}).sort("created_at", 1).to_list(limit)
+
+@api_router.delete("/ai-assistant/history")
+async def clear_ai_assistant_history():
+    await db.ai_assistant_history.delete_many({})
+    return {"status": "ok"}
+
 @api_router.get("/chat-history")
 async def get_chat_history(shop_id: int = Query(...), limit: int = Query(50)):
     return await db.chat_history.find({"shop_id": shop_id}, {"_id": 0}).sort("created_at", 1).to_list(limit)
