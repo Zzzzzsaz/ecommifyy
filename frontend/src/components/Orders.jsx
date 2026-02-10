@@ -12,20 +12,14 @@ import {
   Download, Trash2, Zap, Package, User, Phone, Mail, MapPin, CreditCard, Hash, BookOpen
 } from "lucide-react";
 
-const SHOPS = [
-  { id: 1, name: "ecom1", color: "#6366f1" },
-  { id: 2, name: "ecom2", color: "#10b981" },
-  { id: 3, name: "ecom3", color: "#f59e0b" },
-  { id: 4, name: "ecom4", color: "#ec4899" },
-];
 const MONTHS_PL = ["Styczen","Luty","Marzec","Kwiecien","Maj","Czerwiec","Lipiec","Sierpien","Wrzesien","Pazdziernik","Listopad","Grudzien"];
 const STATUS_MAP = { new: "Nowe", processing: "W realizacji", shipped: "Wyslane", delivered: "Dostarczone", cancelled: "Anulowane" };
 const STATUS_COLORS = { new: "#6366f1", processing: "#f59e0b", shipped: "#10b981", delivered: "#22c55e", cancelled: "#ef4444" };
 const fmtPLN = (v) => (v || 0).toLocaleString("pl-PL", { minimumFractionDigits: 2 }) + " zl";
-const shopColor = (id) => SHOPS.find(s => s.id === id)?.color || "#6366f1";
-const shopName = (id) => SHOPS.find(s => s.id === id)?.name || "";
 
-export default function Orders({ user }) {
+export default function Orders({ user, shops = [] }) {
+  const shopColor = (id) => shops.find(s => s.id === id)?.color || "#6366f1";
+  const shopName = (id) => shops.find(s => s.id === id)?.name || "";
   const now = new Date();
   const [shop, setShop] = useState(0);
   const [year, setYear] = useState(now.getFullYear());
