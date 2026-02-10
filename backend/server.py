@@ -1018,13 +1018,14 @@ async def export_excel(year: int = Query(...), month: int = Query(...), shop_id:
     if shop_id and shop_id > 0: iq["shop_id"] = shop_id; eq["shop_id"] = shop_id
     incs = await db.incomes.find(iq, {"_id": 0}).sort("date", 1).to_list(10000)
     exps = await db.expenses.find(eq, {"_id": 0}).sort("date", 1).to_list(10000)
+    sn = await get_shop_names()
     wb = Workbook()
     ws1 = wb.active; ws1.title = "Przychody"
     ws1.append(["Data", "Sklep", "Kwota", "Opis"])
-    for i in incs: ws1.append([i["date"], SHOP_NAMES.get(i.get("shop_id", 0), ""), i["amount"], i.get("description", "")])
+    for i in incs: ws1.append([i["date"], sn.get(i.get("shop_id", 0), ""), i["amount"], i.get("description", "")])
     ws2 = wb.create_sheet("Koszty Ads")
     ws2.append(["Data", "Sklep", "Kwota", "Kampania"])
-    for e in exps: ws2.append([e["date"], SHOP_NAMES.get(e.get("shop_id", 0), ""), e["amount"], e.get("campaign_name", "")])
+    for e in exps: ws2.append([e["date"], sn.get(e.get("shop_id", 0), ""), e["amount"], e.get("campaign_name", "")])
     buf = io.BytesIO(); wb.save(buf); buf.seek(0)
     return StreamingResponse(buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", headers={"Content-Disposition": f'attachment; filename="ecommify_{year}_{month:02d}.xlsx"'})
 
