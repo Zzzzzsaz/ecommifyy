@@ -658,9 +658,17 @@ def main():
         ("Authentication", tester.test_auth), 
         ("Monthly Stats", tester.test_monthly_stats),
         ("Combined Monthly Stats", tester.test_combined_monthly_stats),
+        ("Weekly Stats", tester.test_weekly_stats),
         ("Tasks Management", tester.test_tasks),
         ("Income/Expense Management", tester.test_incomes_expenses),
+        ("Income/Expense Details", tester.test_income_expense_details),
+        ("Reminders", tester.test_reminders),
+        ("Orders", tester.test_orders),
+        ("Receipts", tester.test_receipts),
+        ("Company Settings", tester.test_company_settings),
+        ("Notes", tester.test_notes),
         ("Store Configurations", tester.test_store_configs),
+        ("Export Functionality", tester.test_export_functionality),
         ("AI Chat", tester.test_ai_chat)
     ]
     
