@@ -331,6 +331,58 @@ export default function Wyniki({ user }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* DETAILS DIALOG (delete entries + notes) */}
+      <Dialog open={detailDialog.open} onOpenChange={(o) => setDetailDialog(d => ({ ...d, open: o }))}>
+        <DialogContent className="bg-ecom-card border-ecom-border max-w-md max-h-[80vh] overflow-y-auto" data-testid="detail-dialog">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-white">Szczegoly dnia</DialogTitle>
+            <DialogDescription asChild>
+              <div className="text-ecom-muted text-sm flex items-center gap-2">
+                {detailDialog.date} <Badge variant="outline" className="text-[10px]" style={{ borderColor: shopColor(detailDialog.shopId), color: shopColor(detailDialog.shopId) }}>{shopName(detailDialog.shopId)}</Badge>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          {detailLoading ? <div className="flex justify-center py-6"><Loader2 className="animate-spin text-ecom-primary" size={24} /></div> : (
+            <div className="space-y-4 mt-2">
+              {/* Incomes */}
+              <div>
+                <p className="text-[10px] text-ecom-success uppercase tracking-wider font-semibold mb-1">Przychody ({details.incomes.length})</p>
+                {details.incomes.length > 0 ? details.incomes.map(i => (
+                  <div key={i.id} className="flex items-center justify-between py-1.5 border-b border-ecom-border/30">
+                    <div><p className="text-white text-xs tabular-nums">{fmtPLN(i.amount)}</p><p className="text-ecom-muted text-[9px]">{i.description || ""}</p></div>
+                    <button onClick={() => deleteEntry("income", i.id)} className="text-ecom-muted hover:text-ecom-danger" data-testid={`del-inc-${i.id}`}><Trash2 size={12} /></button>
+                  </div>
+                )) : <p className="text-ecom-muted text-[10px]">Brak wpisow</p>}
+              </div>
+              {/* Expenses */}
+              <div>
+                <p className="text-[10px] text-ecom-danger uppercase tracking-wider font-semibold mb-1">Koszty Ads ({details.expenses.length})</p>
+                {details.expenses.length > 0 ? details.expenses.map(e => (
+                  <div key={e.id} className="flex items-center justify-between py-1.5 border-b border-ecom-border/30">
+                    <div><p className="text-ecom-danger text-xs tabular-nums">{fmtPLN(e.amount)}</p><p className="text-ecom-muted text-[9px]">{e.campaign_name || ""}</p></div>
+                    <button onClick={() => deleteEntry("expense", e.id)} className="text-ecom-muted hover:text-ecom-danger" data-testid={`del-exp-${e.id}`}><Trash2 size={12} /></button>
+                  </div>
+                )) : <p className="text-ecom-muted text-[10px]">Brak wpisow</p>}
+              </div>
+              {/* Notes */}
+              <div>
+                <p className="text-[10px] text-ecom-primary uppercase tracking-wider font-semibold mb-1 flex items-center gap-1"><StickyNote size={10} />Notatki ({details.notes.length})</p>
+                {details.notes.map(n => (
+                  <div key={n.id} className="flex items-start justify-between py-1.5 border-b border-ecom-border/30">
+                    <div><p className="text-white text-xs">{n.content}</p><p className="text-ecom-muted text-[9px]">{n.created_by}</p></div>
+                    <button onClick={() => deleteNote(n.id)} className="text-ecom-muted hover:text-ecom-danger shrink-0 mt-0.5"><Trash2 size={10} /></button>
+                  </div>
+                ))}
+                <div className="flex gap-2 mt-2">
+                  <Textarea value={noteText} onChange={e => setNoteText(e.target.value)} placeholder="Dodaj notatke..." className="bg-ecom-bg border-ecom-border text-white text-xs resize-none" rows={2} data-testid="note-input" />
+                  <Button size="sm" onClick={addNote} className="bg-ecom-primary hover:bg-ecom-primary/80 shrink-0 self-end" data-testid="note-save"><Plus size={14} /></Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
