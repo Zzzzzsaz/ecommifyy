@@ -146,9 +146,9 @@ export default function Wyniki({ user }) {
           )}
 
           {/* SPARKLINE */}
-          {sparkData.length > 0 && (
+          {sparkData.length > 0 && sparkData.some(d => d.v > 0) && (
             <div className="mb-4 h-[50px] rounded-lg overflow-hidden" data-testid="sparkline">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={50}>
                 <AreaChart data={sparkData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="sparkG" x1="0" y1="0" x2="0" y2="1">
@@ -260,9 +260,11 @@ export default function Wyniki({ user }) {
         <DialogContent className="bg-ecom-card border-ecom-border max-w-sm" data-testid="wyniki-add-dialog">
           <DialogHeader>
             <DialogTitle className="font-heading text-white">{dialog.type === "income" ? "Dodaj przychod" : "Dodaj koszt reklamy"}</DialogTitle>
-            <DialogDescription className="text-ecom-muted text-sm flex items-center gap-2">
-              {dialog.date}
-              <Badge variant="outline" className="text-[10px]" style={{ borderColor: shopColor(dialog.shopId), color: shopColor(dialog.shopId) }}>{shopName(dialog.shopId)}</Badge>
+            <DialogDescription asChild>
+              <div className="text-ecom-muted text-sm flex items-center gap-2">
+                {dialog.date}
+                <Badge variant="outline" className="text-[10px]" style={{ borderColor: shopColor(dialog.shopId), color: shopColor(dialog.shopId) }}>{shopName(dialog.shopId)}</Badge>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 mt-2">
