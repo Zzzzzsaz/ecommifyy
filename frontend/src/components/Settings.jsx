@@ -6,108 +6,231 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { LogOut, Smartphone, Monitor, Info, Save, Building2, Loader2 } from "lucide-react";
+import {
+  Save, LogOut, Loader2, Building2, Target, Users, Percent, DollarSign,
+  Palette, ShoppingBag, Settings2, Shield, Crown
+} from "lucide-react";
 
-const LOGO_URL = "https://customer-assets.emergentagent.com/job_d80f261d-499e-4117-b40a-11f7363e88f3/artifacts/gvqot30h_ecommify%20logo.png";
-
-export default function Settings({ user, onLogout }) {
-  const [company, setCompany] = useState({ name: "", nip: "", address: "", city: "", postal_code: "", bank_name: "", bank_account: "", email: "", phone: "" });
-  const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+export default function Settings({ user, shops = [], appSettings = {}, onSettingsChange, onShopsChange, onLogout }) {
+  const [company, setCompany] = useState({ name: "", nip: "", address: "", postal_code: "", city: "", bank_name: "", bank_account: "", email: "", phone: "" });
+  const [settings, setSettings] = useState({ target_revenue: 250000, profit_split: 2, vat_rate: 23, currency: "PLN", app_name: "Ecommify" });
+  const [loading, setLoading] = useState(true);
+  const [savingCompany, setSavingCompany] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
-    api.getCompany().then(r => {
-      if (r.data && Object.keys(r.data).length > 0) setCompany(r.data);
-      setLoaded(true);
-    }).catch(() => setLoaded(true));
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [c, s] = await Promise.all([api.getCompanySettings(), api.getAppSettings()]);
+        if (c.data) setCompany(c.data);
+        if (s.data) setSettings({ ...settings, ...s.data });
+      } catch {}
+      setLoading(false);
+    };
+    load();
   }, []);
 
   const saveCompany = async () => {
-    setSaving(true);
+    setSavingCompany(true);
     try {
-      await api.updateCompany(company);
+      await api.updateCompanySettings(company);
       toast.success("Dane firmy zapisane!");
-    } catch { toast.error("Blad zapisu"); }
-    finally { setSaving(false); }
+    } catch { toast.error("Blad"); }
+    finally { setSavingCompany(false); }
   };
 
-  const f = (key, label, placeholder) => (
-    <div key={key}>
-      <label className="text-ecom-muted text-[10px] uppercase tracking-wider">{label}</label>
-      <Input value={company[key] || ""} onChange={e => setCompany(c => ({ ...c, [key]: e.target.value }))} placeholder={placeholder} className="bg-ecom-bg border-ecom-border text-white mt-0.5" data-testid={`company-${key}`} />
-    </div>
-  );
+  const saveSettings2 = async () => {
+    setSavingSettings(true);
+    try {
+      await api.updateAppSettings({
+        target_revenue: parseFloat(settings.target_revenue) || 250000,
+        profit_split: parseInt(settings.profit_split) || 2,
+        vat_rate: parseInt(settings.vat_rate) || 23,
+        currency: settings.currency || "PLN",
+        app_name: settings.app_name || "Ecommify",
+      });
+      toast.success("Ustawienia zapisane!");
+      onSettingsChange?.();
+    } catch { toast.error("Blad"); }
+    finally { setSavingSettings(false); }
+  };
+
+  if (loading) {
+    return <div className="p-4 flex justify-center py-12"><Loader2 className="animate-spin text-ecom-primary" size={32} /></div>;
+  }
 
   return (
     <div className="p-4 pb-24 animate-fade-in" data-testid="settings-page">
-      <h1 className="font-heading text-2xl font-bold text-white mb-6">Ustawienia</h1>
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="font-heading text-2xl font-bold text-white">USTAWIENIA</h1>
+        <Badge variant="outline" className="text-[10px] border-ecom-primary text-ecom-primary">
+          <Shield size={10} className="mr-0.5" />{user?.name}
+        </Badge>
+      </div>
 
-      {/* User Info */}
-      <Card className="bg-ecom-card border-ecom-border mb-4" data-testid="user-info-card">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-ecom-primary/20 flex items-center justify-center text-ecom-primary font-heading font-bold text-xl">{user.name[0]}</div>
-            <div><p className="text-white font-medium">{user.name}</p><Badge variant="secondary" className="mt-1 text-[10px] capitalize">{user.role}</Badge></div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Company Settings */}
-      <Card className="bg-ecom-card border-ecom-border mb-4" data-testid="company-settings-card">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Building2 size={16} className="text-ecom-primary" />
-            <h3 className="text-white font-medium text-sm">Dane firmy</h3>
-            <span className="text-[9px] text-ecom-muted">(do paragonow i zestawien)</span>
-          </div>
-          {loaded ? (
-            <div className="space-y-3">
-              {f("name", "Nazwa firmy", "Ecommify Sp. z o.o.")}
-              {f("nip", "NIP", "1234567890")}
-              <div className="grid grid-cols-3 gap-2">
-                {f("address", "Adres", "ul. Przykladowa 1")}
-                {f("postal_code", "Kod", "00-001")}
-                {f("city", "Miasto", "Warszawa")}
-              </div>
-              {f("bank_name", "Bank", "mBank")}
-              {f("bank_account", "Nr konta", "PL 12 3456 ...")}
-              <div className="grid grid-cols-2 gap-2">
-                {f("email", "Email", "kontakt@firma.pl")}
-                {f("phone", "Telefon", "+48 123 456 789")}
-              </div>
-              <Button onClick={saveCompany} disabled={saving} className="w-full bg-ecom-primary hover:bg-ecom-primary/80 mt-2" data-testid="save-company-btn">
-                {saving ? <Loader2 className="animate-spin mr-2" size={16} /> : <Save size={14} className="mr-1.5" />} Zapisz dane firmy
-              </Button>
-            </div>
-          ) : <div className="flex justify-center py-4"><Loader2 className="animate-spin text-ecom-primary" size={24} /></div>}
-        </CardContent>
-      </Card>
-
-      {/* App Info */}
-      <Card className="bg-ecom-card border-ecom-border mb-4">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-3 mb-3">
-            <img src={LOGO_URL} alt="Ecommify" className="h-8 object-contain" />
-            <div><p className="text-white font-medium text-sm">Ecommify Campaign Calculator</p><p className="text-ecom-muted text-xs">v2.0.0</p></div>
-          </div>
-          <p className="text-ecom-muted text-xs leading-relaxed">Sledzenie zyskownosci e-commerce z rangami CS:GO, paragonami, zamowieniami i AI ekspertem.</p>
-        </CardContent>
-      </Card>
-
-      {/* PWA */}
-      <Card className="bg-ecom-card border-ecom-border mb-4" data-testid="pwa-card">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-2 mb-3"><Info size={16} className="text-ecom-primary" /><h3 className="text-white font-medium text-sm">Zainstaluj aplikacje</h3></div>
+      {/* ===== APP SETTINGS ===== */}
+      <Card className="bg-ecom-card border-ecom-border mb-4" data-testid="app-settings-section">
+        <CardContent className="p-4">
+          <h2 className="font-heading text-base font-semibold text-white flex items-center gap-2 mb-3">
+            <Settings2 size={16} className="text-ecom-primary" />Ustawienia aplikacji
+          </h2>
           <div className="space-y-3">
-            <div className="flex items-start gap-2"><Smartphone size={14} className="text-ecom-muted mt-0.5 shrink-0" /><div><p className="text-white text-xs font-medium">iPhone</p><p className="text-ecom-muted text-xs">Safari &rarr; Udostepnij &rarr; Dodaj do ekranu</p></div></div>
-            <div className="flex items-start gap-2"><Smartphone size={14} className="text-ecom-muted mt-0.5 shrink-0" /><div><p className="text-white text-xs font-medium">Android</p><p className="text-ecom-muted text-xs">Chrome &rarr; Menu &rarr; Zainstaluj</p></div></div>
-            <div className="flex items-start gap-2"><Monitor size={14} className="text-ecom-muted mt-0.5 shrink-0" /><div><p className="text-white text-xs font-medium">Komputer</p><p className="text-ecom-muted text-xs">Chrome &rarr; Ikona instalacji w pasku</p></div></div>
+            <div>
+              <label className="text-ecom-muted text-[10px] uppercase block mb-1">
+                <Target size={10} className="inline mr-1" />Cel przychodu miesiecznego (PLN)
+              </label>
+              <Input type="number" value={settings.target_revenue}
+                onChange={e => setSettings(s => ({ ...s, target_revenue: e.target.value }))}
+                className="bg-ecom-bg border-ecom-border text-white" data-testid="target-revenue-input" />
+              <p className="text-ecom-muted text-[9px] mt-0.5">Aktualny cel: {Number(settings.target_revenue).toLocaleString("pl-PL")} PLN - widoczny na Wynikach i Dashboard</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-ecom-muted text-[10px] uppercase block mb-1">
+                  <Users size={10} className="inline mr-1" />Podział zysku (ile osob)
+                </label>
+                <Input type="number" value={settings.profit_split}
+                  onChange={e => setSettings(s => ({ ...s, profit_split: e.target.value }))}
+                  className="bg-ecom-bg border-ecom-border text-white" data-testid="profit-split-input" />
+                <p className="text-ecom-muted text-[9px] mt-0.5">Zysk / {settings.profit_split} osob</p>
+              </div>
+              <div>
+                <label className="text-ecom-muted text-[10px] uppercase block mb-1">
+                  <Percent size={10} className="inline mr-1" />Stawka VAT (%)
+                </label>
+                <Input type="number" value={settings.vat_rate}
+                  onChange={e => setSettings(s => ({ ...s, vat_rate: e.target.value }))}
+                  className="bg-ecom-bg border-ecom-border text-white" data-testid="vat-rate-input" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-ecom-muted text-[10px] uppercase block mb-1">
+                  <DollarSign size={10} className="inline mr-1" />Waluta
+                </label>
+                <Input value={settings.currency}
+                  onChange={e => setSettings(s => ({ ...s, currency: e.target.value }))}
+                  className="bg-ecom-bg border-ecom-border text-white" data-testid="currency-input" />
+              </div>
+              <div>
+                <label className="text-ecom-muted text-[10px] uppercase block mb-1">
+                  <Crown size={10} className="inline mr-1" />Nazwa aplikacji
+                </label>
+                <Input value={settings.app_name}
+                  onChange={e => setSettings(s => ({ ...s, app_name: e.target.value }))}
+                  className="bg-ecom-bg border-ecom-border text-white" data-testid="app-name-input" />
+              </div>
+            </div>
+            <Button onClick={saveSettings2} disabled={savingSettings} className="bg-ecom-primary hover:bg-ecom-primary/80" data-testid="save-app-settings">
+              {savingSettings ? <Loader2 className="animate-spin mr-2" size={16} /> : <Save size={14} className="mr-1" />}Zapisz ustawienia
+            </Button>
           </div>
         </CardContent>
       </Card>
 
-      <Separator className="bg-ecom-border my-4" />
-      <Button onClick={onLogout} variant="outline" className="w-full border-ecom-danger/50 text-ecom-danger hover:bg-ecom-danger/10" data-testid="logout-btn"><LogOut size={16} className="mr-2" /> Wyloguj sie</Button>
+      {/* ===== COMPANY DATA ===== */}
+      <Card className="bg-ecom-card border-ecom-border mb-4" data-testid="company-settings-section">
+        <CardContent className="p-4">
+          <h2 className="font-heading text-base font-semibold text-white flex items-center gap-2 mb-3">
+            <Building2 size={16} className="text-ecom-success" />Dane firmy
+          </h2>
+          <p className="text-ecom-muted text-[10px] mb-3">Dane widoczne na ewidencji sprzedazy PDF i innych dokumentach</p>
+          <div className="space-y-2.5">
+            <div>
+              <label className="text-ecom-muted text-[10px] uppercase block mb-1">Nazwa firmy / spolki</label>
+              <Input value={company.name} onChange={e => setCompany(c => ({ ...c, name: e.target.value }))}
+                placeholder="np. CAMARI SP. Z O.O." className="bg-ecom-bg border-ecom-border text-white" data-testid="company-name" />
+            </div>
+            <div>
+              <label className="text-ecom-muted text-[10px] uppercase block mb-1">NIP</label>
+              <Input value={company.nip} onChange={e => setCompany(c => ({ ...c, nip: e.target.value }))}
+                placeholder="np. PL6762697327" className="bg-ecom-bg border-ecom-border text-white" data-testid="company-nip" />
+            </div>
+            <div>
+              <label className="text-ecom-muted text-[10px] uppercase block mb-1">Adres</label>
+              <Input value={company.address} onChange={e => setCompany(c => ({ ...c, address: e.target.value }))}
+                placeholder="np. Szlak 77/222" className="bg-ecom-bg border-ecom-border text-white" data-testid="company-address" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-ecom-muted text-[10px] uppercase block mb-1">Kod pocztowy</label>
+                <Input value={company.postal_code} onChange={e => setCompany(c => ({ ...c, postal_code: e.target.value }))}
+                  placeholder="31-153" className="bg-ecom-bg border-ecom-border text-white" data-testid="company-postal" />
+              </div>
+              <div>
+                <label className="text-ecom-muted text-[10px] uppercase block mb-1">Miasto</label>
+                <Input value={company.city} onChange={e => setCompany(c => ({ ...c, city: e.target.value }))}
+                  placeholder="Krakow" className="bg-ecom-bg border-ecom-border text-white" data-testid="company-city" />
+              </div>
+            </div>
+            <Separator className="bg-ecom-border" />
+            <div>
+              <label className="text-ecom-muted text-[10px] uppercase block mb-1">Bank</label>
+              <Input value={company.bank_name} onChange={e => setCompany(c => ({ ...c, bank_name: e.target.value }))}
+                placeholder="np. mBank" className="bg-ecom-bg border-ecom-border text-white" data-testid="company-bank" />
+            </div>
+            <div>
+              <label className="text-ecom-muted text-[10px] uppercase block mb-1">Nr konta bankowego</label>
+              <Input value={company.bank_account} onChange={e => setCompany(c => ({ ...c, bank_account: e.target.value }))}
+                placeholder="PL 12 3456 7890 ..." className="bg-ecom-bg border-ecom-border text-white" data-testid="company-account" />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-ecom-muted text-[10px] uppercase block mb-1">Email</label>
+                <Input value={company.email} onChange={e => setCompany(c => ({ ...c, email: e.target.value }))}
+                  placeholder="kontakt@firma.pl" className="bg-ecom-bg border-ecom-border text-white" data-testid="company-email" />
+              </div>
+              <div>
+                <label className="text-ecom-muted text-[10px] uppercase block mb-1">Telefon</label>
+                <Input value={company.phone} onChange={e => setCompany(c => ({ ...c, phone: e.target.value }))}
+                  placeholder="+48 123 456 789" className="bg-ecom-bg border-ecom-border text-white" data-testid="company-phone" />
+              </div>
+            </div>
+            <Button onClick={saveCompany} disabled={savingCompany} className="bg-ecom-success hover:bg-ecom-success/80" data-testid="save-company">
+              {savingCompany ? <Loader2 className="animate-spin mr-2" size={16} /> : <Save size={14} className="mr-1" />}Zapisz dane firmy
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ===== SHOPS OVERVIEW ===== */}
+      <Card className="bg-ecom-card border-ecom-border mb-4" data-testid="shops-overview-section">
+        <CardContent className="p-4">
+          <h2 className="font-heading text-base font-semibold text-white flex items-center gap-2 mb-3">
+            <ShoppingBag size={16} className="text-ecom-warning" />Sklepy ({shops.length})
+          </h2>
+          <div className="space-y-1.5">
+            {shops.map(s => (
+              <div key={s.id} className="flex items-center gap-2 p-2 rounded-lg bg-ecom-bg">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }} />
+                <span className="text-white text-xs font-medium">{s.name}</span>
+                <Badge variant="secondary" className="text-[8px] ml-auto">ID: {s.id}</Badge>
+              </div>
+            ))}
+          </div>
+          <p className="text-ecom-muted text-[9px] mt-2">Zarzadzanie sklepami i API Shopify w zakladce "Sklepy" w menu glownym</p>
+        </CardContent>
+      </Card>
+
+      {/* ===== ACCOUNT ===== */}
+      <Card className="bg-ecom-card border-ecom-border mb-4" data-testid="account-section">
+        <CardContent className="p-4">
+          <h2 className="font-heading text-base font-semibold text-white flex items-center gap-2 mb-3">
+            <Shield size={16} className="text-ecom-danger" />Konto
+          </h2>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between bg-ecom-bg rounded-lg p-2.5">
+              <span className="text-ecom-muted text-xs">Zalogowany jako:</span>
+              <span className="text-white text-xs font-semibold">{user?.name} ({user?.role})</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button onClick={onLogout} variant="outline" className="w-full border-ecom-danger/40 text-ecom-danger hover:bg-ecom-danger/10" data-testid="logout-btn">
+        <LogOut size={14} className="mr-2" />Wyloguj sie
+      </Button>
     </div>
   );
 }
