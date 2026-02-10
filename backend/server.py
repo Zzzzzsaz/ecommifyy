@@ -743,6 +743,40 @@ async def create_order(order: OrderCreate):
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.fulfillment.insert_one(fdoc)
+    # Auto-create sales records (ewidencja) from order items
+    order_items = doc.get("items", [])
+    if order_items:
+        for it in order_items:
+            qty = it.get("quantity", 1)
+            price = it.get("price", 0)
+            brutto = round(price * qty, 2)
+            netto = round(brutto / 1.23, 2)
+            sr_doc = {
+                "id": str(uuid.uuid4()), "date": doc["date"],
+                "order_number": doc.get("order_number", ""),
+                "product_name": it.get("name", it.get("description", "Produkt")),
+                "quantity": qty, "netto": netto, "vat_rate": 23,
+                "vat_amount": round(brutto - netto, 2), "brutto": brutto,
+                "payment_method": doc.get("payment_gateway", doc.get("payment_method", "")),
+                "shop_id": doc.get("shop_id", 1), "order_id": doc["id"],
+                "source": "order", "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.sales_records.insert_one(sr_doc)
+    else:
+        # Single entry for whole order if no items
+        total = doc.get("total", 0)
+        netto = round(total / 1.23, 2)
+        sr_doc = {
+            "id": str(uuid.uuid4()), "date": doc["date"],
+            "order_number": doc.get("order_number", ""),
+            "product_name": f"Zamowienie {doc.get('order_number', '')}",
+            "quantity": 1, "netto": netto, "vat_rate": 23,
+            "vat_amount": round(total - netto, 2), "brutto": total,
+            "payment_method": doc.get("payment_gateway", doc.get("payment_method", "")),
+            "shop_id": doc.get("shop_id", 1), "order_id": doc["id"],
+            "source": "order", "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.sales_records.insert_one(sr_doc)
     return doc
 
 @api_router.put("/orders/{oid}/status")
