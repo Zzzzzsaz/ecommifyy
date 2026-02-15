@@ -404,7 +404,6 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
                         s["custom_costs"][cat] += amt
 
     total_income = 0
-    total_ads = 0
     total_tiktok = 0
     total_meta = 0
     total_google = 0
@@ -414,7 +413,8 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
     
     for day in days.values():
         day["netto"] = round(day["income"] * 0.77, 2)
-        total_day_costs = day["ads"] + day["tiktok_ads"] + day["meta_ads"] + day["google_ads"] + day["zwroty"]
+        day["ads_total"] = round(day["tiktok_ads"] + day["meta_ads"] + day["google_ads"], 2)
+        total_day_costs = day["ads_total"] + day["zwroty"]
         for cc in custom_columns:
             if cc["column_type"] == "expense":
                 total_day_costs += day["custom_costs"].get(cc["name"], 0)
@@ -423,7 +423,8 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
         
         for s in day["shops"]:
             s["netto"] = round(s["income"] * 0.77, 2)
-            s_costs = s["ads"] + s["tiktok_ads"] + s["meta_ads"] + s["google_ads"] + s["zwroty"]
+            s["ads_total"] = round(s["tiktok_ads"] + s["meta_ads"] + s["google_ads"], 2)
+            s_costs = s["ads_total"] + s["zwroty"]
             for cc in custom_columns:
                 if cc["column_type"] == "expense":
                     s_costs += s["custom_costs"].get(cc["name"], 0)
@@ -431,7 +432,6 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
             s["profit_pp"] = round(s["profit"] / split, 2)
         
         total_income += day["income"]
-        total_ads += day["ads"]
         total_tiktok += day["tiktok_ads"]
         total_meta += day["meta_ads"]
         total_google += day["google_ads"]
@@ -440,7 +440,8 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
             total_custom[cc["name"]] = total_custom.get(cc["name"], 0) + day["custom_costs"].get(cc["name"], 0)
 
     total_netto = round(total_income * 0.77, 2)
-    total_all_costs = total_ads + total_tiktok + total_meta + total_google + total_zwroty
+    total_ads = round(total_tiktok + total_meta + total_google, 2)
+    total_all_costs = total_ads + total_zwroty
     for cc in custom_columns:
         if cc["column_type"] == "expense":
             total_all_costs += total_custom.get(cc["name"], 0)
@@ -455,7 +456,7 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
         ds = f"{year}-{month:02d}-{d:02d}"
         if ds in days and days[ds]["profit"] > 0:
             streak += 1
-        elif ds in days and (days[ds]["income"] > 0 or days[ds]["ads"] > 0):
+        elif ds in days and (days[ds]["income"] > 0 or days[ds]["ads_total"] > 0):
             break
         else:
             break
@@ -468,7 +469,7 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
 
     return {
         "year": year, "month": month,
-        "total_income": round(total_income, 2), "total_ads": round(total_ads, 2),
+        "total_income": round(total_income, 2), "total_ads": total_ads,
         "total_tiktok": round(total_tiktok, 2),
         "total_meta": round(total_meta, 2),
         "total_google": round(total_google, 2),
