@@ -874,11 +874,11 @@ async def execute_action(action_str: str):
 
 @api_router.post("/ai-assistant")
 async def ai_assistant_endpoint(msg: AssistantMessage):
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    from openai import OpenAI
     
-    llm_key = os.environ.get("EMERGENT_LLM_KEY")
-    if not llm_key:
-        raise HTTPException(status_code=500, detail="Brak klucza LLM")
+    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Brak klucza OpenAI")
     
     # Save user message
     user_doc = {"id": str(uuid.uuid4()), "role": "user", "content": msg.message, "created_at": datetime.now(timezone.utc).isoformat()}
@@ -901,12 +901,17 @@ Zawsze informuj uzytkownika co robisz i uzyj odpowiedniej komendy [ACTION:...].
 Jesli uzytkownik pyta o cos bez potrzeby akcji, odpowiedz normalnie bez komend.
 Mozesz uzyc wielu akcji w jednej odpowiedzi."""
 
-    session_id = f"ecommify-assistant-{today}"
-    chat = LlmChat(api_key=llm_key, session_id=session_id, system_message=system_msg)
-    chat.with_model("openai", "gpt-4o")
+    client = OpenAI(api_key=api_key)
     
     try:
-        response = await chat.send_message(UserMessage(text=msg.message))
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": msg.message}
+            ]
+        )
+        response = completion.choices[0].message.content
     except Exception as e:
         logger.error(f"AI Assistant error: {e}")
         raise HTTPException(status_code=500, detail=f"Blad AI: {str(e)}")
