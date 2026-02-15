@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,10 +12,10 @@ const DAYS_PL = ["Nd", "Pn", "Wt", "Sr", "Cz", "Pt", "So"];
 const fmt = (v) => (v || 0).toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 const CATEGORIES = [
-  { id: "tiktok", name: "TikTok", color: "#00d4aa" },
-  { id: "meta", name: "Meta", color: "#0088ff" },
-  { id: "google", name: "Google", color: "#ffaa00" },
-  { id: "zwroty", name: "Zwroty", color: "#ff6600" },
+  { id: "tiktok", name: "TikTok", color: "#00d4aa", short: "TT" },
+  { id: "meta", name: "Meta", color: "#0088ff", short: "M" },
+  { id: "google", name: "Google", color: "#ffaa00", short: "G" },
+  { id: "zwroty", name: "Zwroty", color: "#ff6600", short: "Zw" },
 ];
 
 export default function Wyniki({ user, shops = [], appSettings = {} }) {
