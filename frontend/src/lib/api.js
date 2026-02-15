@@ -107,4 +107,16 @@ export const api = {
   sendAiAssistant: (message) => axios.post(`${API}/ai-assistant`, { message }),
   getAiAssistantHistory: (limit = 50) => axios.get(`${API}/ai-assistant/history`, { params: { limit } }),
   clearAiAssistantHistory: () => axios.delete(`${API}/ai-assistant/history`),
+
+  // Categorized Costs
+  getCosts: (params) => axios.get(`${API}/costs`, { params }),
+  createCost: (data) => axios.post(`${API}/costs`, data),
+  updateCost: (id, data) => axios.put(`${API}/costs/${id}`, data),
+  deleteCost: (id) => axios.delete(`${API}/costs/${id}`),
+
+  // Custom Columns
+  getCustomColumns: () => axios.get(`${API}/custom-columns`),
+  createCustomColumn: (data) => axios.post(`${API}/custom-columns`, data),
+  updateCustomColumn: (id, data) => axios.put(`${API}/custom-columns/${id}`, data),
+  deleteCustomColumn: (id) => axios.delete(`${API}/custom-columns/${id}`),
 };
