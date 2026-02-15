@@ -347,6 +347,8 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
     prefix = f"{year}-{month:02d}"
     incomes = await db.incomes.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
     expenses = await db.expenses.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
+    costs = await db.costs.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
+    custom_columns = await db.custom_columns.find({}, {"_id": 0}).to_list(100)
     shops = await get_shops_list()
     shop_ids = [s["id"] for s in shops]
     app_s = await get_app_settings()
@@ -355,7 +357,16 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
     days = {}
     for d in range(1, days_in_month + 1):
         ds = f"{year}-{month:02d}-{d:02d}"
-        days[ds] = {"date": ds, "income": 0, "ads": 0, "shops": [{"shop_id": i, "income": 0, "ads": 0} for i in shop_ids]}
+        days[ds] = {
+            "date": ds, "income": 0, "ads": 0,
+            "tiktok_ads": 0, "meta_ads": 0, "google_ads": 0, "zwroty": 0,
+            "custom_costs": {cc["name"]: 0 for cc in custom_columns},
+            "shops": [{
+                "shop_id": i, "income": 0, "ads": 0,
+                "tiktok_ads": 0, "meta_ads": 0, "google_ads": 0, "zwroty": 0,
+                "custom_costs": {cc["name"]: 0 for cc in custom_columns}
+            } for i in shop_ids]
+        }
 
     for inc in incomes:
         dt = inc["date"]
@@ -375,21 +386,80 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
                 if s["shop_id"] == sid:
                     s["ads"] += exp["amount"]
 
+    for cost in costs:
+        dt = cost["date"]
+        if dt in days:
+            cat = cost.get("category", "inne")
+            amt = cost.get("amount", 0)
+            sid = cost.get("shop_id", 1)
+            
+            if cat == "tiktok":
+                days[dt]["tiktok_ads"] += amt
+            elif cat == "meta":
+                days[dt]["meta_ads"] += amt
+            elif cat == "google":
+                days[dt]["google_ads"] += amt
+            elif cat == "zwroty":
+                days[dt]["zwroty"] += amt
+            elif cat in days[dt]["custom_costs"]:
+                days[dt]["custom_costs"][cat] += amt
+            
+            for s in days[dt]["shops"]:
+                if s["shop_id"] == sid:
+                    if cat == "tiktok":
+                        s["tiktok_ads"] += amt
+                    elif cat == "meta":
+                        s["meta_ads"] += amt
+                    elif cat == "google":
+                        s["google_ads"] += amt
+                    elif cat == "zwroty":
+                        s["zwroty"] += amt
+                    elif cat in s["custom_costs"]:
+                        s["custom_costs"][cat] += amt
+
     total_income = 0
     total_ads = 0
+    total_tiktok = 0
+    total_meta = 0
+    total_google = 0
+    total_zwroty = 0
+    total_custom = {cc["name"]: 0 for cc in custom_columns}
+    split = max(app_s.get("profit_split", 2), 1)
+    
     for day in days.values():
         day["netto"] = round(day["income"] * 0.77, 2)
-        day["profit"] = round(day["netto"] - day["ads"], 2)
-        day["profit_pp"] = round(day["profit"] / max(app_s.get("profit_split", 2), 1), 2)
+        total_day_costs = day["ads"] + day["tiktok_ads"] + day["meta_ads"] + day["google_ads"] + day["zwroty"]
+        for cc in custom_columns:
+            if cc["column_type"] == "expense":
+                total_day_costs += day["custom_costs"].get(cc["name"], 0)
+        day["profit"] = round(day["netto"] - total_day_costs, 2)
+        day["profit_pp"] = round(day["profit"] / split, 2)
+        
         for s in day["shops"]:
             s["netto"] = round(s["income"] * 0.77, 2)
-            s["profit"] = round(s["netto"] - s["ads"], 2)
+            s_costs = s["ads"] + s["tiktok_ads"] + s["meta_ads"] + s["google_ads"] + s["zwroty"]
+            for cc in custom_columns:
+                if cc["column_type"] == "expense":
+                    s_costs += s["custom_costs"].get(cc["name"], 0)
+            s["profit"] = round(s["netto"] - s_costs, 2)
+            s["profit_pp"] = round(s["profit"] / split, 2)
+        
         total_income += day["income"]
         total_ads += day["ads"]
+        total_tiktok += day["tiktok_ads"]
+        total_meta += day["meta_ads"]
+        total_google += day["google_ads"]
+        total_zwroty += day["zwroty"]
+        for cc in custom_columns:
+            total_custom[cc["name"]] = total_custom.get(cc["name"], 0) + day["custom_costs"].get(cc["name"], 0)
 
     total_netto = round(total_income * 0.77, 2)
-    total_profit = round(total_netto - total_ads, 2)
-    roi = round((total_profit / total_ads * 100), 2) if total_ads > 0 else 0
+    total_all_costs = total_ads + total_tiktok + total_meta + total_google + total_zwroty
+    for cc in custom_columns:
+        if cc["column_type"] == "expense":
+            total_all_costs += total_custom.get(cc["name"], 0)
+    total_profit = round(total_netto - total_all_costs, 2)
+    roi = round((total_profit / total_all_costs * 100), 2) if total_all_costs > 0 else 0
 
     now_utc = datetime.now(timezone.utc)
     today_num = now_utc.day if (year == now_utc.year and month == now_utc.month) else days_in_month
@@ -409,15 +479,20 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
     forecast = round((total_income / today_num) * days_in_month, 2) if total_income > 0 and today_num > 0 else 0
 
     target = app_s.get("target_revenue", 250000)
-    split = max(app_s.get("profit_split", 2), 1)
 
     return {
         "year": year, "month": month,
         "total_income": round(total_income, 2), "total_ads": round(total_ads, 2),
+        "total_tiktok": round(total_tiktok, 2),
+        "total_meta": round(total_meta, 2),
+        "total_google": round(total_google, 2),
+        "total_zwroty": round(total_zwroty, 2),
+        "total_custom": total_custom,
         "total_netto": total_netto, "total_profit": total_profit,
         "profit_per_person": round(total_profit / split, 2), "roi": roi,
         "target": target, "progress": round(min(total_income / max(target, 1) * 100, 100), 2) if total_income > 0 else 0,
         "streak": streak, "best_day": best, "forecast": forecast,
+        "custom_columns": custom_columns,
         "days": sorted(days.values(), key=lambda x: x["date"]),
         "settings": {"target_revenue": target, "profit_split": split, "vat_rate": app_s.get("vat_rate", 23)}
     }
