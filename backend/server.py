@@ -1209,6 +1209,104 @@ async def fulfillment_reminder_check():
         "show_reminder": current_day >= 15 and waiting_count > 0,
     }
 
+# ===== CATEGORIZED COSTS (TikTok, Meta, Google, Zwroty, Custom) =====
+COST_CATEGORIES = ["tiktok", "meta", "google", "zwroty", "inne"]
+
+class CostCreate(BaseModel):
+    date: str
+    shop_id: int
+    category: str  # tiktok, meta, google, zwroty, inne, or custom column name
+    amount: float
+    description: str = ""
+
+class CostUpdate(BaseModel):
+    amount: Optional[float] = None
+    description: Optional[str] = None
+
+@api_router.get("/costs")
+async def get_costs(shop_id: Optional[int] = None, date: Optional[str] = None, year: Optional[int] = None, month: Optional[int] = None, category: Optional[str] = None):
+    q = {}
+    if shop_id and shop_id > 0: q["shop_id"] = shop_id
+    if date: q["date"] = date
+    elif year and month: q["date"] = {"$regex": f"^{year}-{month:02d}"}
+    if category: q["category"] = category
+    return await db.costs.find(q, {"_id": 0}).sort("date", -1).to_list(10000)
+
+@api_router.post("/costs")
+async def create_cost(c: CostCreate):
+    doc = {
+        "id": str(uuid.uuid4()),
+        "date": c.date,
+        "shop_id": c.shop_id,
+        "category": c.category,
+        "amount": round(c.amount, 2),
+        "description": c.description,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.costs.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/costs/{cost_id}")
+async def update_cost(cost_id: str, update: CostUpdate):
+    upd = {k: v for k, v in update.dict().items() if v is not None}
+    if upd: await db.costs.update_one({"id": cost_id}, {"$set": upd})
+    c = await db.costs.find_one({"id": cost_id}, {"_id": 0})
+    if not c: raise HTTPException(status_code=404, detail="Nie znaleziono")
+    return c
+
+@api_router.delete("/costs/{cost_id}")
+async def delete_cost(cost_id: str):
+    await db.costs.delete_one({"id": cost_id})
+    return {"status": "ok"}
+
+# ===== CUSTOM COLUMNS =====
+class CustomColumnCreate(BaseModel):
+    name: str
+    column_type: str  # "income" or "expense"
+    color: str = "#888888"
+
+class CustomColumnUpdate(BaseModel):
+    name: Optional[str] = None
+    column_type: Optional[str] = None
+    color: Optional[str] = None
+
+@api_router.get("/custom-columns")
+async def get_custom_columns():
+    return await db.custom_columns.find({}, {"_id": 0}).sort("created_at", 1).to_list(100)
+
+@api_router.post("/custom-columns")
+async def create_custom_column(c: CustomColumnCreate):
+    existing = await db.custom_columns.find_one({"name": c.name}, {"_id": 0})
+    if existing:
+        raise HTTPException(status_code=400, detail="Kolumna o tej nazwie juz istnieje")
+    doc = {
+        "id": str(uuid.uuid4()),
+        "name": c.name,
+        "column_type": c.column_type,
+        "color": c.color,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.custom_columns.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/custom-columns/{col_id}")
+async def update_custom_column(col_id: str, update: CustomColumnUpdate):
+    upd = {k: v for k, v in update.dict().items() if v is not None}
+    if upd: await db.custom_columns.update_one({"id": col_id}, {"$set": upd})
+    c = await db.custom_columns.find_one({"id": col_id}, {"_id": 0})
+    if not c: raise HTTPException(status_code=404, detail="Nie znaleziono")
+    return c
+
+@api_router.delete("/custom-columns/{col_id}")
+async def delete_custom_column(col_id: str):
+    col = await db.custom_columns.find_one({"id": col_id}, {"_id": 0})
+    if col:
+        await db.costs.delete_many({"category": col["name"]})
+    await db.custom_columns.delete_one({"id": col_id})
+    return {"status": "ok"}
+
 # ===== PRODUCTS =====
 class ProductCreate(BaseModel):
     name: str
