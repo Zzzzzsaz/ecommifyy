@@ -353,11 +353,11 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
         </DialogContent>
       </Dialog>
 
-      {/* EDIT DIALOG */}
+      {/* EDIT DIALOG - Szczegoly */}
       <Dialog open={editDialog.open} onOpenChange={o => setEditDialog(d => ({ ...d, open: o }))}>
         <DialogContent className="bg-slate-900 border-slate-700 max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Edytuj: {editDialog.date}</DialogTitle>
+            <DialogTitle className="text-white text-base">Szczegoly: {editDialog.date}</DialogTitle>
           </DialogHeader>
           
           {editLoading ? (
