@@ -80,7 +80,8 @@ Available commands:
 ### Categorized Costs System
 - Categories: tiktok, meta, google, zwroty, inne, user-defined
 - Daily cost breakdown in Wyniki page
-- Hover to reveal + button for quick cost entry
+- **Widoczne przyciski "+" przy każdym dniu** do dodawania przychodów i kosztów
+- Dialog "Szczegóły" z listą wpisów, usuwaniem i szybkim dodawaniem kategorii
 - Custom columns with income/expense types and custom colors
 
 ## Prioritized Backlog
@@ -92,6 +93,7 @@ Available commands:
 - Delete from Fulfillment - COMPLETED
 - AI Assistant with Actions - COMPLETED
 - **Customizable Financial Results - COMPLETED**
+- **Excel-like Wyniki Page UX Fix - COMPLETED (Feb 15, 2026)**
 
 ### P1
 - Shopify Product Sync (endpoint + UI button)
