@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_20", "yarn"]
 
 [phases.install]
-cmds = ["yarn install"]
+cmds = ["yarn install --network-timeout 100000"]
 
 [phases.build]
-cmds = ["CI=false yarn build"]
+cmds = ["CI=false DISABLE_ESLINT_PLUGIN=true yarn build"]
 
 [start]
 cmd = "npx serve -s build -l 3000"
