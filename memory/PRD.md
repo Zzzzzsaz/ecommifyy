@@ -30,6 +30,29 @@ Business dashboard "Ecommify Campaign Calculator" for managing e-commerce stores
 - **Data**: MongoDB persistent storage
 - **UI Cleanup**: Removed "Made with Emergent" badge, removed AI from bottom nav
 
+### Completed (Feb 2026) - Customizable Financial Results
+- **Categorized Costs API** (`/api/costs`):
+  - CRUD operations for categorized costs
+  - Categories: tiktok, meta, google, zwroty, inne, custom column names
+  - Filters: shop_id, date, year+month, category
+- **Custom Columns API** (`/api/custom-columns`):
+  - User-defined financial columns (income or expense type)
+  - Custom colors for columns
+  - Cascade delete: removing column also removes associated costs
+- **Enhanced Stats Endpoints**:
+  - Both `/api/monthly-stats` and `/api/combined-monthly-stats` now return:
+    - `profit_per_person` ("Na łeb")
+    - `total_tiktok`, `total_meta`, `total_google`, `total_zwroty`
+    - `total_custom` (aggregated custom column costs)
+    - `custom_columns` list
+    - Daily breakdown with `tiktok_ads`, `meta_ads`, `google_ads`, `zwroty`, `profit_pp`, `custom_costs`
+- **Wyniki Page UI Updates**:
+  - **"Na łeb" now visible in SINGLE-SHOP view** (previously only in all-shops view)
+  - **Hover buttons on cost cells** (TikTok/Meta/Google/Zwroty/custom) to quickly add costs
+  - **"Kolumny" button** opens custom columns management dialog
+  - Custom columns appear dynamically in the daily metrics grid
+  - Cost add dialog with category name, date, shop badge
+
 ### Architecture
 - Backend: FastAPI + MongoDB (Motor)
 - Frontend: React 19 + TailwindCSS + Shadcn/UI
@@ -59,13 +82,21 @@ Available commands:
 - "Cofnij" button on returns restores order status to "new"
 - Delete button on each fulfillment stage removes from pipeline
 
+### Categorized Costs System
+- Categories: tiktok, meta, google, zwroty, inne, user-defined
+- Daily cost breakdown in Wyniki page
+- Hover to reveal + button for quick cost entry
+- Custom columns with income/expense types and custom colors
+
 ## Prioritized Backlog
+
 ### P0 (Done)
 - Products & Dynamic Top-ups - COMPLETED
 - Auto Sales Records from Orders - COMPLETED  
 - Returns Undo functionality - COMPLETED
 - Delete from Fulfillment - COMPLETED
 - AI Assistant with Actions - COMPLETED
+- **Customizable Financial Results - COMPLETED**
 
 ### P1
 - Shopify Product Sync (endpoint + UI button)
@@ -73,6 +104,7 @@ Available commands:
 
 ### P2
 - TikTok API integration
+- Expand AI Assistant with more actions
 
 ## MOCKED: Shopify sync, TikTok sync (need API keys)
 
@@ -80,3 +112,21 @@ Available commands:
 - Admin: PIN 2409
 - Kacper: PIN 2609
 - Szymon: PIN 2509
+
+## API Endpoints Reference
+
+### Costs API
+- `GET /api/costs` - List costs (params: shop_id, date, year, month, category)
+- `POST /api/costs` - Create cost (body: date, shop_id, category, amount, description)
+- `PUT /api/costs/{id}` - Update cost (body: amount, description)
+- `DELETE /api/costs/{id}` - Delete cost
+
+### Custom Columns API
+- `GET /api/custom-columns` - List user-defined columns
+- `POST /api/custom-columns` - Create column (body: name, column_type: income|expense, color)
+- `PUT /api/custom-columns/{id}` - Update column
+- `DELETE /api/custom-columns/{id}` - Delete column (also removes associated costs)
+
+### Stats Endpoints (Updated)
+- `GET /api/monthly-stats` - Single shop stats with categorized costs
+- `GET /api/combined-monthly-stats` - All shops combined stats
