@@ -342,7 +342,6 @@ async def get_monthly_stats(shop_id: int = Query(...), year: int = Query(...), m
 async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(...)):
     prefix = f"{year}-{month:02d}"
     incomes = await db.incomes.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
-    expenses = await db.expenses.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
     costs = await db.costs.find({"date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
     custom_columns = await db.custom_columns.find({}, {"_id": 0}).to_list(100)
     shops = await get_shops_list()
