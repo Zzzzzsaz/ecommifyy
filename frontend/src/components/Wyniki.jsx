@@ -161,32 +161,32 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
   const getCatColor = (cat) => CATEGORIES.find(c => c.id === cat)?.color || customColumns.find(c => c.name === cat)?.color || "#888";
   const getCatName = (cat) => CATEGORIES.find(c => c.id === cat)?.name || cat;
 
-  const allCategories = [...CATEGORIES, ...customColumns.filter(c => c.column_type === "expense").map(c => ({ id: c.name, name: c.name, color: c.color }))];
+  const allCategories = [...CATEGORIES, ...customColumns.filter(c => c.column_type === "expense").map(c => ({ id: c.name, name: c.name, color: c.color, short: c.name.slice(0,2) }))];
 
   return (
-    <div className="min-h-screen bg-slate-950 p-3 pb-28" data-testid="wyniki-page">
+    <div className="min-h-screen bg-slate-950 p-2 sm:p-3 pb-28" data-testid="wyniki-page">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <h1 className="text-lg font-bold text-white">Wyniki</h1>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-base sm:text-lg font-bold text-white">Wyniki</h1>
         <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={() => setColumnDialog(true)} className="text-slate-400 h-8 px-2">
+          <Button size="sm" variant="ghost" onClick={() => setColumnDialog(true)} className="text-slate-400 h-7 sm:h-8 px-2">
             <Settings2 size={14} />
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => api.downloadExcel(year, month, shop > 0 ? shop : null)} className="text-slate-400 h-8 px-2">
+          <Button size="sm" variant="ghost" onClick={() => api.downloadExcel(year, month, shop > 0 ? shop : null)} className="text-slate-400 h-7 sm:h-8 px-2">
             <Download size={14} />
           </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-3 overflow-x-auto pb-1">
+      <div className="flex gap-1 mb-2 overflow-x-auto pb-1">
         <button onClick={() => setShop(0)}
-          className={`px-3 py-1 rounded text-xs font-medium ${shop === 0 ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400"}`}>
+          className={`px-2 sm:px-3 py-1 rounded text-xs font-medium whitespace-nowrap ${shop === 0 ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400"}`}>
           Wszystkie
         </button>
         {shops.map(s => (
           <button key={s.id} onClick={() => setShop(s.id)}
-            className={`px-3 py-1 rounded text-xs font-medium ${shop === s.id ? "text-white" : "bg-slate-800 text-slate-400"}`}
+            className={`px-2 sm:px-3 py-1 rounded text-xs font-medium whitespace-nowrap ${shop === s.id ? "text-white" : "bg-slate-800 text-slate-400"}`}
             style={shop === s.id ? { backgroundColor: s.color } : {}}>
             {s.name}
           </button>
@@ -194,129 +194,113 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
       </div>
 
       {/* Month */}
-      <div className="flex items-center justify-center gap-3 mb-3">
-        <Button size="sm" variant="ghost" onClick={prevMonth} className="text-slate-400 h-8 w-8 p-0"><ChevronLeft size={18} /></Button>
-        <span className="text-sm font-semibold text-white min-w-[140px] text-center">{MONTHS_PL[month - 1]} {year}</span>
-        <Button size="sm" variant="ghost" onClick={nextMonth} className="text-slate-400 h-8 w-8 p-0"><ChevronRight size={18} /></Button>
+      <div className="flex items-center justify-center gap-2 mb-2">
+        <Button size="sm" variant="ghost" onClick={prevMonth} className="text-slate-400 h-7 w-7 p-0"><ChevronLeft size={16} /></Button>
+        <span className="text-sm font-semibold text-white min-w-[120px] text-center">{MONTHS_PL[month - 1]} {year}</span>
+        <Button size="sm" variant="ghost" onClick={nextMonth} className="text-slate-400 h-7 w-7 p-0"><ChevronRight size={16} /></Button>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" size={28} /></div>
       ) : stats && (
         <>
-          {/* KPIs */}
-          <div className="grid grid-cols-4 gap-2 mb-3">
-            <div className="bg-slate-900 rounded-lg p-2 border border-slate-800">
-              <p className="text-[10px] text-slate-500">Przychod</p>
-              <p className="text-sm font-bold text-white">{fmt(stats.total_income)} zl</p>
+          {/* KPIs - Compact for mobile */}
+          <div className="grid grid-cols-4 gap-1 sm:gap-2 mb-2">
+            <div className="bg-slate-900 rounded-lg p-1.5 sm:p-2 border border-slate-800">
+              <p className="text-[9px] sm:text-[10px] text-slate-500">Przychod</p>
+              <p className="text-xs sm:text-sm font-bold text-white">{fmt(stats.total_income)}</p>
             </div>
-            <div className="bg-slate-900 rounded-lg p-2 border border-slate-800">
-              <p className="text-[10px] text-slate-500">Koszty</p>
-              <p className="text-sm font-bold text-red-400">{fmt(stats.total_ads)} zl</p>
+            <div className="bg-slate-900 rounded-lg p-1.5 sm:p-2 border border-slate-800">
+              <p className="text-[9px] sm:text-[10px] text-slate-500">Koszty</p>
+              <p className="text-xs sm:text-sm font-bold text-red-400">{fmt(stats.total_ads)}</p>
             </div>
-            <div className="bg-slate-900 rounded-lg p-2 border border-slate-800">
-              <p className="text-[10px] text-slate-500">Zysk</p>
-              <p className={`text-sm font-bold ${stats.total_profit >= 0 ? "text-green-400" : "text-red-400"}`}>{fmt(stats.total_profit)} zl</p>
+            <div className="bg-slate-900 rounded-lg p-1.5 sm:p-2 border border-slate-800">
+              <p className="text-[9px] sm:text-[10px] text-slate-500">Zysk</p>
+              <p className={`text-xs sm:text-sm font-bold ${stats.total_profit >= 0 ? "text-green-400" : "text-red-400"}`}>{fmt(stats.total_profit)}</p>
             </div>
-            <div className="bg-slate-900 rounded-lg p-2 border border-slate-800">
-              <p className="text-[10px] text-slate-500">Na leb</p>
-              <p className="text-sm font-bold text-indigo-400">{fmt(stats.profit_per_person)} zl</p>
+            <div className="bg-slate-900 rounded-lg p-1.5 sm:p-2 border border-slate-800">
+              <p className="text-[9px] sm:text-[10px] text-slate-500">Na leb</p>
+              <p className="text-xs sm:text-sm font-bold text-indigo-400">{fmt(stats.profit_per_person)}</p>
             </div>
           </div>
 
-          {/* Table header */}
-          <div className="bg-slate-800 rounded-t-lg p-2 grid grid-cols-12 gap-1 text-[10px] font-medium text-slate-400">
-            <div className="col-span-1">Dzien</div>
-            <div className="col-span-2">Przychod</div>
-            <div className="col-span-1">TikTok</div>
-            <div className="col-span-1">Meta</div>
-            <div className="col-span-1">Google</div>
-            <div className="col-span-1">Zwroty</div>
-            <div className="col-span-1">Koszty</div>
-            <div className="col-span-1">Zysk</div>
-            <div className="col-span-1">Na leb</div>
-            <div className="col-span-2 text-center">Akcje</div>
+          {/* Excel-like Table - responsive */}
+          <div className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
+            {/* Table Header */}
+            <div className="bg-slate-800 px-2 py-1.5 grid gap-1 text-[9px] sm:text-[10px] font-medium text-slate-400"
+              style={{ gridTemplateColumns: "40px 1fr 1fr 60px" }}>
+              <div>Dzien</div>
+              <div>Przychod</div>
+              <div>Koszty</div>
+              <div className="text-center">Akcje</div>
+            </div>
+
+            {/* Days - ALL DAYS - Excel style rows */}
+            <div className="max-h-[55vh] overflow-y-auto">
+              {stats.days?.map((day, idx) => {
+                const profit = day.profit || 0;
+                const currentShopId = shop > 0 ? shop : 1;
+
+                return (
+                  <div key={day.date} 
+                    className={`grid gap-1 px-2 py-1.5 text-xs items-center border-b border-slate-800/50 ${idx % 2 === 0 ? "bg-slate-900" : "bg-slate-900/60"}`}
+                    style={{ gridTemplateColumns: "40px 1fr 1fr 60px" }}
+                    data-testid={`day-${day.date}`}>
+                    
+                    {/* Date - compact */}
+                    <div className="flex items-baseline gap-0.5">
+                      <span className="font-bold text-white text-sm">{getDayNum(day.date)}</span>
+                      <span className="text-slate-500 text-[8px]">{getDayName(day.date)}</span>
+                    </div>
+
+                    {/* Income with inline add button */}
+                    <div className="flex items-center gap-1">
+                      <span className={`font-medium ${day.income > 0 ? "text-green-400" : "text-slate-600"}`}>
+                        {day.income > 0 ? fmt(day.income) : "0"} zl
+                      </span>
+                      <button onClick={() => openAdd("income", null, day.date, currentShopId)}
+                        className="w-5 h-5 rounded bg-green-600/20 hover:bg-green-600/40 text-green-400 flex items-center justify-center"
+                        data-testid={`add-income-${day.date}`}
+                        title="Dodaj przychod">
+                        <Plus size={12} />
+                      </button>
+                    </div>
+
+                    {/* Costs summary with inline add button */}
+                    <div className="flex items-center gap-1">
+                      <span className={`font-medium ${day.ads_total > 0 ? "text-red-400" : "text-slate-600"}`}>
+                        {day.ads_total > 0 ? `-${fmt(day.ads_total)}` : "0"} zl
+                      </span>
+                      <button onClick={() => openAdd("cost", "tiktok", day.date, currentShopId)}
+                        className="w-5 h-5 rounded bg-red-600/20 hover:bg-red-600/40 text-red-400 flex items-center justify-center"
+                        data-testid={`add-cost-${day.date}`}
+                        title="Dodaj koszt">
+                        <Plus size={12} />
+                      </button>
+                    </div>
+
+                    {/* Actions - expand for details */}
+                    <div className="flex justify-center">
+                      <button onClick={() => openEdit(day.date, currentShopId)}
+                        className="px-2 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px]"
+                        data-testid={`edit-${day.date}`}>
+                        Szczegoly
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Days - ALL DAYS */}
-          <div className="border border-slate-800 rounded-b-lg overflow-hidden">
-            {stats.days?.map((day, idx) => {
-              const hasData = day.income > 0 || day.ads_total > 0;
-              const profit = day.profit || 0;
-              const currentShopId = shop > 0 ? shop : 1;
-
-              return (
-                <div key={day.date} 
-                  className={`grid grid-cols-12 gap-1 p-2 text-xs items-center border-b border-slate-800/50 ${idx % 2 === 0 ? "bg-slate-900/50" : "bg-slate-900/30"} ${hasData ? "" : "opacity-60"}`}
-                  data-testid={`day-${day.date}`}>
-                  
-                  {/* Date */}
-                  <div className="col-span-1">
-                    <span className="font-bold text-white">{getDayNum(day.date)}</span>
-                    <span className="text-slate-500 ml-1 text-[10px]">{getDayName(day.date)}</span>
-                  </div>
-
-                  {/* Income */}
-                  <div className="col-span-2 text-white font-medium">
-                    {day.income > 0 ? fmt(day.income) : "-"}
-                  </div>
-
-                  {/* TikTok */}
-                  <div className="col-span-1 text-cyan-400">
-                    {day.tiktok_ads > 0 ? `-${fmt(day.tiktok_ads)}` : "-"}
-                  </div>
-
-                  {/* Meta */}
-                  <div className="col-span-1 text-blue-400">
-                    {day.meta_ads > 0 ? `-${fmt(day.meta_ads)}` : "-"}
-                  </div>
-
-                  {/* Google */}
-                  <div className="col-span-1 text-yellow-400">
-                    {day.google_ads > 0 ? `-${fmt(day.google_ads)}` : "-"}
-                  </div>
-
-                  {/* Zwroty */}
-                  <div className="col-span-1 text-orange-400">
-                    {day.zwroty > 0 ? `-${fmt(day.zwroty)}` : "-"}
-                  </div>
-
-                  {/* Total costs */}
-                  <div className="col-span-1 text-red-400 font-medium">
-                    {day.ads_total > 0 ? `-${fmt(day.ads_total)}` : "-"}
-                  </div>
-
-                  {/* Profit */}
-                  <div className={`col-span-1 font-bold ${profit > 0 ? "text-green-400" : profit < 0 ? "text-red-400" : "text-slate-500"}`}>
-                    {profit !== 0 ? (profit > 0 ? "+" : "") + fmt(profit) : "-"}
-                  </div>
-
-                  {/* Na leb */}
-                  <div className="col-span-1 text-indigo-400">
-                    {day.profit_pp !== 0 ? fmt(day.profit_pp) : "-"}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="col-span-2 flex gap-1 justify-center">
-                    <button onClick={() => openAdd("income", null, day.date, currentShopId)}
-                      className="px-2 py-1 rounded bg-green-600 hover:bg-green-500 text-white text-[10px] font-medium"
-                      data-testid={`add-income-${day.date}`}>
-                      +Przychod
-                    </button>
-                    <button onClick={() => openAdd("cost", "tiktok", day.date, currentShopId)}
-                      className="px-1.5 py-1 rounded bg-slate-700 hover:bg-slate-600 text-cyan-400 text-[10px]"
-                      data-testid={`add-tiktok-${day.date}`}>
-                      +TT
-                    </button>
-                    <button onClick={() => openEdit(day.date, currentShopId)}
-                      className="px-1.5 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px]"
-                      data-testid={`edit-${day.date}`}>
-                      Edytuj
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+          {/* Quick legend under table */}
+          <div className="flex flex-wrap gap-1 mt-2 text-[9px] text-slate-500">
+            <span>Kategorie kosztow:</span>
+            {allCategories.map(c => (
+              <span key={c.id} className="px-1 rounded" style={{ backgroundColor: c.color + "20", color: c.color }}>
+                {c.name}
+              </span>
+            ))}
           </div>
         </>
       )}
