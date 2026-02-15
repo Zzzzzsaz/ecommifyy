@@ -248,7 +248,6 @@ async def delete_expense(expense_id: str):
 async def get_monthly_stats(shop_id: int = Query(...), year: int = Query(...), month: int = Query(...)):
     prefix = f"{year}-{month:02d}"
     incomes = await db.incomes.find({"shop_id": shop_id, "date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
-    expenses = await db.expenses.find({"shop_id": shop_id, "date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
     costs = await db.costs.find({"shop_id": shop_id, "date": {"$regex": f"^{prefix}"}}, {"_id": 0}).to_list(10000)
     custom_columns = await db.custom_columns.find({}, {"_id": 0}).to_list(100)
     app_s = await get_app_settings()
@@ -259,9 +258,9 @@ async def get_monthly_stats(shop_id: int = Query(...), year: int = Query(...), m
     for d in range(1, days_in_month + 1):
         ds = f"{year}-{month:02d}-{d:02d}"
         days[ds] = {
-            "date": ds, "income": 0, "ads": 0, "netto": 0, "profit": 0, "profit_pp": 0,
-            "tiktok_ads": 0, "meta_ads": 0, "google_ads": 0, "zwroty": 0,
-            "custom_costs": {}
+            "date": ds, "income": 0, "netto": 0, "profit": 0, "profit_pp": 0,
+            "tiktok_ads": 0, "meta_ads": 0, "google_ads": 0, "ads_total": 0,
+            "zwroty": 0, "custom_costs": {}
         }
         for cc in custom_columns:
             days[ds]["custom_costs"][cc["name"]] = 0
@@ -269,9 +268,6 @@ async def get_monthly_stats(shop_id: int = Query(...), year: int = Query(...), m
     for inc in incomes:
         if inc["date"] in days:
             days[inc["date"]]["income"] += inc["amount"]
-    for exp in expenses:
-        if exp["date"] in days:
-            days[exp["date"]]["ads"] += exp["amount"]
     
     for cost in costs:
         dt = cost["date"]
@@ -291,7 +287,6 @@ async def get_monthly_stats(shop_id: int = Query(...), year: int = Query(...), m
                     days[dt]["custom_costs"][cat] += amt
 
     total_income = 0
-    total_ads = 0
     total_tiktok = 0
     total_meta = 0
     total_google = 0
@@ -300,7 +295,8 @@ async def get_monthly_stats(shop_id: int = Query(...), year: int = Query(...), m
     
     for day in days.values():
         day["netto"] = round(day["income"] * 0.77, 2)
-        total_day_costs = day["ads"] + day["tiktok_ads"] + day["meta_ads"] + day["google_ads"] + day["zwroty"]
+        day["ads_total"] = round(day["tiktok_ads"] + day["meta_ads"] + day["google_ads"], 2)
+        total_day_costs = day["ads_total"] + day["zwroty"]
         for cc in custom_columns:
             if cc["column_type"] == "expense":
                 total_day_costs += day["custom_costs"].get(cc["name"], 0)
@@ -308,7 +304,6 @@ async def get_monthly_stats(shop_id: int = Query(...), year: int = Query(...), m
         day["profit_pp"] = round(day["profit"] / split, 2)
         
         total_income += day["income"]
-        total_ads += day["ads"]
         total_tiktok += day["tiktok_ads"]
         total_meta += day["meta_ads"]
         total_google += day["google_ads"]
@@ -317,7 +312,8 @@ async def get_monthly_stats(shop_id: int = Query(...), year: int = Query(...), m
             total_custom[cc["name"]] = total_custom.get(cc["name"], 0) + day["custom_costs"].get(cc["name"], 0)
 
     total_netto = round(total_income * 0.77, 2)
-    total_all_costs = total_ads + total_tiktok + total_meta + total_google + total_zwroty
+    total_ads = round(total_tiktok + total_meta + total_google, 2)
+    total_all_costs = total_ads + total_zwroty
     for cc in custom_columns:
         if cc["column_type"] == "expense":
             total_all_costs += total_custom.get(cc["name"], 0)
@@ -327,7 +323,7 @@ async def get_monthly_stats(shop_id: int = Query(...), year: int = Query(...), m
     return {
         "shop_id": shop_id, "year": year, "month": month,
         "total_income": round(total_income, 2),
-        "total_ads": round(total_ads, 2),
+        "total_ads": total_ads,
         "total_tiktok": round(total_tiktok, 2),
         "total_meta": round(total_meta, 2),
         "total_google": round(total_google, 2),
