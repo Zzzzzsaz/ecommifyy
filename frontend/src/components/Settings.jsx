@@ -24,11 +24,12 @@ export default function Settings({ user, shops = [], appSettings = {}, onSetting
       try {
         const [c, s] = await Promise.all([api.getCompanySettings(), api.getAppSettings()]);
         if (c.data) setCompany(c.data);
-        if (s.data) setSettings({ ...settings, ...s.data });
+        if (s.data) setSettings(prev => ({ ...prev, ...s.data }));
       } catch {}
       setLoading(false);
     };
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const saveCompany = async () => {
