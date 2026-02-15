@@ -31,27 +31,21 @@ Business dashboard "Ecommify Campaign Calculator" for managing e-commerce stores
 - **UI Cleanup**: Removed "Made with Emergent" badge, removed AI from bottom nav
 
 ### Completed (Feb 2026) - Customizable Financial Results
-- **Categorized Costs API** (`/api/costs`):
-  - CRUD operations for categorized costs
-  - Categories: tiktok, meta, google, zwroty, inne, custom column names
-  - Filters: shop_id, date, year+month, category
-- **Custom Columns API** (`/api/custom-columns`):
-  - User-defined financial columns (income or expense type)
-  - Custom colors for columns
-  - Cascade delete: removing column also removes associated costs
-- **Enhanced Stats Endpoints**:
-  - Both `/api/monthly-stats` and `/api/combined-monthly-stats` now return:
-    - `profit_per_person` ("Na łeb")
-    - `total_tiktok`, `total_meta`, `total_google`, `total_zwroty`
-    - `total_custom` (aggregated custom column costs)
-    - `custom_columns` list
-    - Daily breakdown with `tiktok_ads`, `meta_ads`, `google_ads`, `zwroty`, `profit_pp`, `custom_costs`
-- **Wyniki Page UI Updates**:
-  - **"Na łeb" now visible in SINGLE-SHOP view** (previously only in all-shops view)
-  - **Hover buttons on cost cells** (TikTok/Meta/Google/Zwroty/custom) to quickly add costs
-  - **"Kolumny" button** opens custom columns management dialog
-  - Custom columns appear dynamically in the daily metrics grid
-  - Cost add dialog with category name, date, shop badge
+- **Kategoryzowane koszty API** (`/api/costs`):
+  - CRUD dla kosztów: TikTok, Meta, Google, Zwroty + własne kategorie
+  - "Koszty reklam" = suma TikTok + Meta + Google (usunięto stare "Ads")
+- **Własne kolumny API** (`/api/custom-columns`):
+  - Dodawanie/usuwanie własnych kolumn (typ: przychód lub koszt)
+  - Własne kolory dla kolumn
+  - Usunięcie kolumny usuwa też powiązane dane
+- **Odświeżona strona Wyniki**:
+  - Nowoczesny, czytelny design z gradientowym tłem
+  - KPI karty: Przychód brutto, Koszty reklam (suma), Zysk, Na łeb
+  - "Na łeb" widoczne w obu widokach (wszystkie sklepy + pojedynczy sklep)
+  - Kolorowe pigułki z ikonami dla każdej kategorii kosztu (TikTok🎵, Meta📘, Google🔍, Zwroty↩️)
+  - Kliknięcie na pigułkę otwiera dialog dodawania kosztu
+  - Własne kolumny pojawiają się dynamicznie jako pigułki
+  - Dialog zarządzania kolumnami z listą istniejących i przyciskiem usuwania
 
 ### Architecture
 - Backend: FastAPI + MongoDB (Motor)
