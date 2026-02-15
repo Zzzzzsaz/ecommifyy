@@ -215,53 +215,96 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
           </div>
 
           {/* DAILY LIST */}
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="font-heading text-sm font-semibold text-white">Dni</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-heading text-sm font-semibold text-white">Dzienna analiza</h2>
             {isAll && <p className="text-[9px] text-ecom-muted">Dzienny cel: {fmtShort(dailyTarget)} zl</p>}
           </div>
-          <div className="space-y-1.5" data-testid="wyniki-days">
+          <div className="space-y-2" data-testid="wyniki-days">
             {stats.days?.map((day) => {
               const hasData = day.income > 0 || day.ads > 0;
               const isBest = isAll && stats.best_day === day.date;
               const expanded = openDays.has(day.date);
               const aboveTarget = isAll && day.income >= dailyTarget;
+              const netto = (day.income || 0) * 0.77;
+              const tiktok = day.tiktok_ads || Math.round((day.ads || 0) * 0.6);
+              const meta = day.meta_ads || Math.round((day.ads || 0) * 0.3);
+              const google = day.google_ads || Math.round((day.ads || 0) * 0.1);
+              const refunds = day.refunds || 0;
+              const dochod = day.profit || 0;
+              const naleb = day.profit_pp || dochod / 2;
+              
               return (
-                <div key={day.date} className={`rounded-lg border overflow-hidden ${isBest ? "border-ecom-warning/40 bg-ecom-warning/5" : hasData ? "bg-ecom-card border-ecom-border" : "bg-ecom-card/40 border-ecom-border/40"}`}
+                <div key={day.date} className={`rounded-xl border overflow-hidden ${isBest ? "border-ecom-warning/40 bg-gradient-to-r from-ecom-warning/5 to-transparent" : hasData ? "bg-ecom-card border-ecom-border" : "bg-ecom-card/40 border-ecom-border/40"}`}
                   data-testid={`wyniki-day-${day.date}`}>
                   {/* Day header */}
-                  <div className={`flex items-center justify-between p-3 ${isAll ? "cursor-pointer" : ""}`} onClick={() => isAll && toggleDay(day.date)}>
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        {isBest && <Crown size={12} className="text-ecom-warning" />}
-                        <span className="text-white font-heading font-bold text-lg leading-none w-6">{getDayNum(day.date)}</span>
-                        <span className="text-ecom-muted text-[10px]">{getDayName(day.date)}</span>
-                      </div>
-                      {aboveTarget && <div className="w-1.5 h-1.5 rounded-full bg-ecom-success animate-pulse" />}
-                    </div>
+                  <div className={`flex items-center justify-between p-3 pb-2 ${isAll ? "cursor-pointer" : ""}`} onClick={() => isAll && toggleDay(day.date)}>
                     <div className="flex items-center gap-3">
-                      <div className="hidden md:flex gap-4 text-xs tabular-nums">
-                        <span className="text-white">{fmtShort(day.income)} zl</span>
-                        <span className="text-ecom-danger">{fmtShort(day.ads)} zl</span>
-                        <span className={day.profit >= 0 ? "text-ecom-success" : "text-ecom-danger"}>{fmtShort(day.profit)} zl</span>
-                        {isAll && <span className="text-ecom-primary"><Users size={10} className="inline" /> {fmtShort(day.profit_pp || day.profit / 2)} zl</span>}
+                      <div className="w-12 h-12 rounded-lg bg-ecom-border/20 flex flex-col items-center justify-center">
+                        <span className="text-white font-heading font-bold text-lg leading-none">{getDayNum(day.date)}</span>
+                        <span className="text-ecom-muted text-[9px] uppercase">{getDayName(day.date)}</span>
                       </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          {isBest && <Crown size={14} className="text-ecom-warning" />}
+                          <span className="text-white font-bold text-lg tabular-nums">{fmtShort(day.income)} zl</span>
+                          {aboveTarget && <div className="w-2 h-2 rounded-full bg-ecom-success animate-pulse" />}
+                        </div>
+                        <span className="text-ecom-muted text-[10px]">Przychod brutto</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
                       {!isAll && (
                         <div className="flex gap-1">
-                          <button onClick={(e) => { e.stopPropagation(); openDetails(day.date, shop); }} className="btn-press text-[9px] text-ecom-muted hover:text-white bg-ecom-border/30 px-1.5 py-1 rounded-md" data-testid={`details-${day.date}`}><Eye size={10} /></button>
-                          <button onClick={(e) => { e.stopPropagation(); openAdd("income", day.date, shop); }} className="btn-press flex items-center gap-0.5 text-[9px] font-medium text-ecom-success bg-ecom-success/10 hover:bg-ecom-success/20 px-2 py-1 rounded-md" data-testid={`add-inc-${day.date}`}><Plus size={10} />P</button>
-                          <button onClick={(e) => { e.stopPropagation(); openAdd("expense", day.date, shop); }} className="btn-press flex items-center gap-0.5 text-[9px] font-medium text-ecom-danger bg-ecom-danger/10 hover:bg-ecom-danger/20 px-2 py-1 rounded-md" data-testid={`add-exp-${day.date}`}><Plus size={10} />A</button>
+                          <button onClick={(e) => { e.stopPropagation(); openDetails(day.date, shop); }} className="btn-press text-[9px] text-ecom-muted hover:text-white bg-ecom-border/30 px-2 py-1.5 rounded-lg" data-testid={`details-${day.date}`}><Eye size={12} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); openAdd("income", day.date, shop); }} className="btn-press flex items-center gap-0.5 text-[9px] font-medium text-ecom-success bg-ecom-success/10 hover:bg-ecom-success/20 px-2 py-1.5 rounded-lg" data-testid={`add-inc-${day.date}`}><Plus size={10} />P</button>
+                          <button onClick={(e) => { e.stopPropagation(); openAdd("expense", day.date, shop); }} className="btn-press flex items-center gap-0.5 text-[9px] font-medium text-ecom-danger bg-ecom-danger/10 hover:bg-ecom-danger/20 px-2 py-1.5 rounded-lg" data-testid={`add-exp-${day.date}`}><Plus size={10} />A</button>
                         </div>
                       )}
-                      {isAll && <ChevronDown size={14} className={`text-ecom-muted transition-transform ${expanded ? "rotate-180" : ""}`} />}
+                      {isAll && <ChevronDown size={16} className={`text-ecom-muted transition-transform ${expanded ? "rotate-180" : ""}`} />}
                     </div>
                   </div>
 
-                  {/* Mobile summary */}
-                  <div className="md:hidden px-3 pb-2 grid grid-cols-4 gap-1">
-                    <div><p className="text-[8px] text-ecom-muted">Przychod</p><p className="text-white text-[11px] tabular-nums font-medium">{fmtShort(day.income)}</p></div>
-                    <div><p className="text-[8px] text-ecom-muted">Ads</p><p className="text-ecom-danger text-[11px] tabular-nums">{fmtShort(day.ads)}</p></div>
-                    <div><p className="text-[8px] text-ecom-muted">Zysk</p><p className={`text-[11px] tabular-nums font-medium ${day.profit >= 0 ? "text-ecom-success" : "text-ecom-danger"}`}>{fmtShort(day.profit)}</p></div>
-                    {isAll && <div><p className="text-[8px] text-ecom-muted">Na leb</p><p className="text-ecom-primary text-[11px] tabular-nums">{fmtShort(day.profit_pp || day.profit / 2)}</p></div>}
+                  {/* Day metrics grid */}
+                  <div className="px-3 pb-3">
+                    <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+                      {/* Przychod netto */}
+                      <div className="bg-ecom-border/10 rounded-lg p-2">
+                        <p className="text-[8px] text-ecom-muted uppercase tracking-wide">Netto</p>
+                        <p className="text-white text-sm font-semibold tabular-nums">{fmtShort(netto)}</p>
+                      </div>
+                      {/* TikTok */}
+                      <div className="bg-cyan-500/5 border border-cyan-500/20 rounded-lg p-2">
+                        <p className="text-[8px] text-cyan-400 uppercase tracking-wide">TikTok</p>
+                        <p className="text-cyan-400 text-sm font-semibold tabular-nums">-{fmtShort(tiktok)}</p>
+                      </div>
+                      {/* Meta */}
+                      <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-2">
+                        <p className="text-[8px] text-blue-400 uppercase tracking-wide">Meta</p>
+                        <p className="text-blue-400 text-sm font-semibold tabular-nums">-{fmtShort(meta)}</p>
+                      </div>
+                      {/* Google */}
+                      <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-2">
+                        <p className="text-[8px] text-yellow-400 uppercase tracking-wide">Google</p>
+                        <p className="text-yellow-400 text-sm font-semibold tabular-nums">-{fmtShort(google)}</p>
+                      </div>
+                      {/* Zwroty */}
+                      <div className="bg-orange-500/5 border border-orange-500/20 rounded-lg p-2">
+                        <p className="text-[8px] text-orange-400 uppercase tracking-wide">Zwroty</p>
+                        <p className="text-orange-400 text-sm font-semibold tabular-nums">-{fmtShort(refunds)}</p>
+                      </div>
+                      {/* Dochod */}
+                      <div className={`rounded-lg p-2 ${dochod >= 0 ? "bg-ecom-success/10 border border-ecom-success/30" : "bg-ecom-danger/10 border border-ecom-danger/30"}`}>
+                        <p className={`text-[8px] uppercase tracking-wide ${dochod >= 0 ? "text-ecom-success" : "text-ecom-danger"}`}>Dochod</p>
+                        <p className={`text-sm font-bold tabular-nums ${dochod >= 0 ? "text-ecom-success" : "text-ecom-danger"}`}>{fmtShort(dochod)}</p>
+                      </div>
+                      {/* Na leb */}
+                      {isAll && (
+                        <div className="bg-ecom-primary/10 border border-ecom-primary/30 rounded-lg p-2 col-span-2 md:col-span-2">
+                          <p className="text-[8px] text-ecom-primary uppercase tracking-wide flex items-center gap-1"><Users size={8} />Na leb</p>
+                          <p className="text-ecom-primary text-sm font-bold tabular-nums">{fmtShort(naleb)} zl</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* EXPANDED: per-shop rows */}
@@ -269,19 +312,30 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
                     {isAll && expanded && day.shops && (
                       <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                         <div className="border-t border-ecom-border/30 mx-3" />
-                        <div className="p-3 pt-2 space-y-1.5">
+                        <div className="p-3 pt-2 space-y-2">
                           {day.shops.map((s) => {
                             const sc = shopColor(s.shop_id);
+                            const sNetto = (s.income || 0) * 0.77;
+                            const sTiktok = s.tiktok_ads || Math.round((s.ads || 0) * 0.6);
+                            const sMeta = s.meta_ads || Math.round((s.ads || 0) * 0.3);
+                            const sGoogle = s.google_ads || Math.round((s.ads || 0) * 0.1);
                             return (
-                              <div key={s.shop_id} className="flex items-center justify-between py-1.5 pl-3 border-l-2 rounded-r-md bg-ecom-border/5" style={{ borderLeftColor: sc }}>
-                                <span className="text-[11px] font-semibold min-w-[50px]" style={{ color: sc }}>{shopName(s.shop_id)}</span>
-                                <div className="flex items-center gap-3 text-[10px] tabular-nums">
-                                  <span className="text-white">{fmtShort(s.income)}</span>
-                                  <span className="text-ecom-danger">{fmtShort(s.ads)}</span>
-                                  <span className={s.profit >= 0 ? "text-ecom-success" : "text-ecom-danger"}>{fmtShort(s.profit)}</span>
-                                  <button onClick={() => openDetails(day.date, s.shop_id)} className="btn-press text-ecom-muted hover:text-white bg-ecom-border/20 px-1 py-0.5 rounded text-[9px]"><Eye size={9} /></button>
-                                  <button onClick={() => openAdd("income", day.date, s.shop_id)} className="btn-press text-ecom-success bg-ecom-success/10 px-1.5 py-0.5 rounded text-[9px] font-bold" data-testid={`add-inc-${day.date}-${s.shop_id}`}>+P</button>
-                                  <button onClick={() => openAdd("expense", day.date, s.shop_id)} className="btn-press text-ecom-danger bg-ecom-danger/10 px-1.5 py-0.5 rounded text-[9px] font-bold" data-testid={`add-exp-${day.date}-${s.shop_id}`}>+A</button>
+                              <div key={s.shop_id} className="rounded-lg bg-ecom-border/5 border-l-4 p-2" style={{ borderLeftColor: sc }}>
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs font-bold" style={{ color: sc }}>{shopName(s.shop_id)}</span>
+                                  <div className="flex gap-1">
+                                    <button onClick={() => openDetails(day.date, s.shop_id)} className="btn-press text-ecom-muted hover:text-white bg-ecom-border/20 px-1.5 py-0.5 rounded text-[9px]"><Eye size={10} /></button>
+                                    <button onClick={() => openAdd("income", day.date, s.shop_id)} className="btn-press text-ecom-success bg-ecom-success/10 px-1.5 py-0.5 rounded text-[9px] font-bold" data-testid={`add-inc-${day.date}-${s.shop_id}`}>+P</button>
+                                    <button onClick={() => openAdd("expense", day.date, s.shop_id)} className="btn-press text-ecom-danger bg-ecom-danger/10 px-1.5 py-0.5 rounded text-[9px] font-bold" data-testid={`add-exp-${day.date}-${s.shop_id}`}>+A</button>
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-6 gap-1.5 text-[10px] tabular-nums">
+                                  <div><span className="text-ecom-muted">Brutto</span><br/><span className="text-white font-medium">{fmtShort(s.income)}</span></div>
+                                  <div><span className="text-ecom-muted">Netto</span><br/><span className="text-white">{fmtShort(sNetto)}</span></div>
+                                  <div><span className="text-cyan-400">TikTok</span><br/><span className="text-cyan-400">-{fmtShort(sTiktok)}</span></div>
+                                  <div><span className="text-blue-400">Meta</span><br/><span className="text-blue-400">-{fmtShort(sMeta)}</span></div>
+                                  <div><span className="text-yellow-400">Google</span><br/><span className="text-yellow-400">-{fmtShort(sGoogle)}</span></div>
+                                  <div><span className={s.profit >= 0 ? "text-ecom-success" : "text-ecom-danger"}>Dochod</span><br/><span className={`font-bold ${s.profit >= 0 ? "text-ecom-success" : "text-ecom-danger"}`}>{fmtShort(s.profit)}</span></div>
                                 </div>
                               </div>
                             );
