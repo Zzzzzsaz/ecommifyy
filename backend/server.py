@@ -353,13 +353,13 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
     for d in range(1, days_in_month + 1):
         ds = f"{year}-{month:02d}-{d:02d}"
         days[ds] = {
-            "date": ds, "income": 0, "ads": 0,
-            "tiktok_ads": 0, "meta_ads": 0, "google_ads": 0, "zwroty": 0,
-            "custom_costs": {cc["name"]: 0 for cc in custom_columns},
+            "date": ds, "income": 0,
+            "tiktok_ads": 0, "meta_ads": 0, "google_ads": 0, "ads_total": 0,
+            "zwroty": 0, "custom_costs": {cc["name"]: 0 for cc in custom_columns},
             "shops": [{
-                "shop_id": i, "income": 0, "ads": 0,
-                "tiktok_ads": 0, "meta_ads": 0, "google_ads": 0, "zwroty": 0,
-                "custom_costs": {cc["name"]: 0 for cc in custom_columns}
+                "shop_id": i, "income": 0,
+                "tiktok_ads": 0, "meta_ads": 0, "google_ads": 0, "ads_total": 0,
+                "zwroty": 0, "custom_costs": {cc["name"]: 0 for cc in custom_columns}
             } for i in shop_ids]
         }
 
@@ -371,15 +371,6 @@ async def get_combined_monthly_stats(year: int = Query(...), month: int = Query(
             for s in days[dt]["shops"]:
                 if s["shop_id"] == sid:
                     s["income"] += inc["amount"]
-
-    for exp in expenses:
-        dt = exp["date"]
-        if dt in days:
-            days[dt]["ads"] += exp["amount"]
-            sid = exp.get("shop_id", 1)
-            for s in days[dt]["shops"]:
-                if s["shop_id"] == sid:
-                    s["ads"] += exp["amount"]
 
     for cost in costs:
         dt = cost["date"]
