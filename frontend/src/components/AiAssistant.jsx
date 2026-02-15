@@ -53,6 +53,7 @@ export default function AiAssistant({ onDataChange }) {
     if (isOpen && messages.length === 0) {
       fetchHistory();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   useEffect(() => {
