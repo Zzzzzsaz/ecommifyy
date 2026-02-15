@@ -1,0 +1,117 @@
+{
+  "summary": "Completed testing of Ecommify Dashboard new features: Categorized Costs API (/api/costs), Custom Columns API (/api/custom-columns), profit_per_person in stats, and Wyniki page UI updates. All 24 backend tests passed. All frontend features verified working.",
+
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+
+  "passed_tests": [
+    "API: GET /api/costs returns list of costs",
+    "API: POST /api/costs creates TikTok cost",
+    "API: POST /api/costs creates Meta cost",
+    "API: POST /api/costs creates Google cost", 
+    "API: POST /api/costs creates Zwroty cost",
+    "API: GET /api/costs filters by shop_id",
+    "API: GET /api/costs filters by date",
+    "API: GET /api/costs filters by year/month",
+    "API: GET /api/costs filters by category",
+    "API: PUT /api/costs/{id} updates cost amount and description",
+    "API: PUT /api/costs/invalid returns 404",
+    "API: DELETE /api/costs/{id} removes cost",
+    "API: GET /api/custom-columns returns list",
+    "API: POST /api/custom-columns creates expense type column",
+    "API: POST /api/custom-columns creates income type column",
+    "API: POST /api/custom-columns duplicate name returns 400",
+    "API: PUT /api/custom-columns/{id} updates column",
+    "API: DELETE /api/custom-columns/{id} removes column",
+    "API: DELETE /api/custom-columns also removes associated costs",
+    "API: GET /api/monthly-stats returns tiktok_ads, meta_ads, google_ads, zwroty totals",
+    "API: GET /api/monthly-stats returns profit_per_person",
+    "API: GET /api/monthly-stats returns custom_columns list",
+    "API: GET /api/combined-monthly-stats returns categorized costs",
+    "API: Costs aggregated correctly in monthly stats",
+    "API: Custom column costs appear in monthly stats",
+    "UI: Wyniki page loads with all KPIs",
+    "UI: 'Na leb' (profit per person) visible in ALL-SHOPS view KPIs",
+    "UI: 'Na leb' visible in SINGLE-SHOP view KPIs - FEATURE VERIFIED",
+    "UI: Shop tabs (WSZYSTKIE, ecom1-4) switch views correctly",
+    "UI: 'Kolumny' button opens custom columns dialog",
+    "UI: Custom columns dialog shows existing columns (Influencerzy)",
+    "UI: New column input, type dropdown, color picker present in dialog",
+    "UI: Creating new column shows 'Dodano kolumne!' toast",
+    "UI: New custom columns appear in daily metrics grid",
+    "UI: Hover over TikTok cell reveals '+' add cost button",
+    "UI: Clicking add cost button opens cost add dialog",
+    "UI: Cost add dialog shows category name, date, shop badge",
+    "UI: Saving cost shows 'Dodano koszt!' toast",
+    "UI: Added costs reflect in daily grid values"
+  ],
+
+  "test_report_links": [
+    "/app/backend/tests/test_costs_columns_api.py",
+    "/app/test_reports/pytest/costs_columns_results.xml"
+  ],
+
+  "action_items": [],
+
+  "critical_code_review_comments": [],
+
+  "updated_files": [
+    "/app/backend/tests/test_costs_columns_api.py"
+  ],
+
+  "success_rate": {
+    "backend": "100% (24/24 tests passed)",
+    "frontend": "100% (all UI flows working)"
+  },
+
+  "test_credentials": {
+    "Admin": "2409",
+    "Kacper": "2609",
+    "Szymon": "2509"
+  },
+
+  "seed_data_creation": "Created/deleted test costs and custom column 'TEST_Marketing' during testing. All test data cleaned up.",
+
+  "retest_needed": false,
+
+  "should_main_agent_self_test": true,
+
+  "context_for_next_testing_agent": "New features verified: 1) /api/costs supports categories: tiktok, meta, google, zwroty, plus custom column names. 2) /api/custom-columns CRUD with expense/income types. 3) Both /api/monthly-stats and /api/combined-monthly-stats return profit_per_person, total_tiktok/meta/google/zwroty, custom_columns list, and daily breakdown with categorized costs. 4) Wyniki page shows 'Na leb' in both all-shops and single-shop views. 5) Hover buttons on cost cells allow quick cost entry. 6) Custom columns dialog allows adding/deleting user-defined columns. Existing column 'Influencerzy' present from previous data.",
+
+  "mocked_api": {
+    "has_mocked_apis": true,
+    "mocked_apis_list": ["POST /api/sync/shopify/{shop_id}", "POST /api/sync/tiktok/{config_id}"]
+  },
+
+  "features_verified": {
+    "costs_api": {
+      "status": "Fully Working",
+      "endpoints": ["GET /api/costs", "POST /api/costs", "PUT /api/costs/{id}", "DELETE /api/costs/{id}"],
+      "categories": ["tiktok", "meta", "google", "zwroty", "inne", "custom column names"],
+      "filters": ["shop_id", "date", "year+month", "category"]
+    },
+    "custom_columns_api": {
+      "status": "Fully Working",
+      "endpoints": ["GET /api/custom-columns", "POST /api/custom-columns", "PUT /api/custom-columns/{id}", "DELETE /api/custom-columns/{id}"],
+      "column_types": ["expense", "income"],
+      "cascade_delete": "Deleting column removes associated costs"
+    },
+    "monthly_stats": {
+      "new_fields": ["profit_per_person", "total_tiktok", "total_meta", "total_google", "total_zwroty", "total_custom", "custom_columns"],
+      "day_fields": ["tiktok_ads", "meta_ads", "google_ads", "zwroty", "profit_pp", "custom_costs"]
+    },
+    "wyniki_ui": {
+      "na_leb_visible": "In both all-shops and single-shop views",
+      "cost_add_buttons": "Hover to reveal + buttons on TikTok/Meta/Google/Zwroty/custom cells",
+      "custom_columns_dialog": "Accessible via 'Kolumny' button, allows CRUD on user columns"
+    }
+  }
+}
