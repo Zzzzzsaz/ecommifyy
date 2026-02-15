@@ -38,14 +38,15 @@ Business dashboard "Ecommify Campaign Calculator" for managing e-commerce stores
   - Dodawanie/usuwanie własnych kolumn (typ: przychód lub koszt)
   - Własne kolory dla kolumn
   - Usunięcie kolumny usuwa też powiązane dane
-- **Odświeżona strona Wyniki**:
-  - Nowoczesny, czytelny design z gradientowym tłem
-  - KPI karty: Przychód brutto, Koszty reklam (suma), Zysk, Na łeb
-  - "Na łeb" widoczne w obu widokach (wszystkie sklepy + pojedynczy sklep)
-  - Kolorowe pigułki z ikonami dla każdej kategorii kosztu (TikTok🎵, Meta📘, Google🔍, Zwroty↩️)
-  - Kliknięcie na pigułkę otwiera dialog dodawania kosztu
-  - Własne kolumny pojawiają się dynamicznie jako pigułki
-  - Dialog zarządzania kolumnami z listą istniejących i przyciskiem usuwania
+- **Odświeżona strona Wyniki (Feb 15, 2026)**:
+  - **NAPRAWIONY interfejs Excel-like** - użytkownik może dodawać dane do każdego dnia
+  - Uproszczony układ 4-kolumnowy: Dzień | Przychód | Koszty | Akcje
+  - **Widoczne przyciski "+" przy każdym dniu** (zielony dla przychodu, czerwony dla kosztu)
+  - Przycisk "Szczegóły" otwiera dialog z listą wpisów i możliwością usuwania
+  - KPI karty: Przychód, Koszty, Zysk, Na łeb (aktualizują się w czasie rzeczywistym)
+  - Dialog "Szczegóły" z przyciskami szybkiego dodawania: +TikTok, +Meta, +Google, +Zwroty
+  - Pełna responsywność - działa na mobile i desktop
+  - Legenda kategorii kosztów na dole strony
 
 ### Architecture
 - Backend: FastAPI + MongoDB (Motor)
