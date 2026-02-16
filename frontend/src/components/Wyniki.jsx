@@ -7,15 +7,20 @@ import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Plus, Loader2, Trash2, Download, Settings2 } from "lucide-react";
 
-const MONTHS_PL = ["Styczen", "Luty", "Marzec", "Kwiecien", "Maj", "Czerwiec", "Lipiec", "Sierpien", "Wrzesien", "Pazdziernik", "Listopad", "Grudzien"];
-const DAYS_PL = ["Nd", "Pn", "Wt", "Sr", "Cz", "Pt", "So"];
-const fmt = (v) => (v || 0).toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const MONTHS_PL = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
+const DAYS_PL = ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "So"];
+
+// Format with full number and zł
+const fmtZl = (v) => {
+  const num = Math.round(v || 0);
+  return `${num.toLocaleString("pl-PL")} zł`;
+};
 
 const CATEGORIES = [
-  { id: "tiktok", name: "TikTok", color: "#00d4aa", short: "TT" },
-  { id: "meta", name: "Meta", color: "#0088ff", short: "M" },
-  { id: "google", name: "Google", color: "#ffaa00", short: "G" },
-  { id: "zwroty", name: "Zwroty", color: "#ff6600", short: "Zw" },
+  { id: "tiktok", name: "TikTok", color: "#00d4aa" },
+  { id: "meta", name: "Meta", color: "#0088ff" },
+  { id: "google", name: "Google", color: "#ffaa00" },
+  { id: "zwroty", name: "Zwroty", color: "#ff6600" },
 ];
 
 export default function Wyniki({ user, shops = [], appSettings = {} }) {
@@ -46,6 +51,9 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
   const [newColType, setNewColType] = useState("expense");
   const [newColColor, setNewColColor] = useState("#8b5cf6");
 
+  const vatRate = appSettings?.vat_rate || 23;
+  const profitSplit = appSettings?.profit_split || 2;
+
   const fetchStats = useCallback(async () => {
     setLoading(true);
     try {
@@ -54,7 +62,7 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
         : await api.getMonthlyStats({ shop_id: shop, year, month });
       setStats(r.data);
       if (r.data.custom_columns) setCustomColumns(r.data.custom_columns);
-    } catch { toast.error("Blad"); }
+    } catch { toast.error("Błąd"); }
     finally { setLoading(false); }
   }, [shop, year, month]);
 
@@ -62,6 +70,9 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
 
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
+
+  // Calculate netto (without VAT)
+  const calcNetto = (brutto) => Math.round(brutto / (1 + vatRate / 100));
 
   // Open add dialog
   const openAdd = (type, category, date, shopId) => {
@@ -73,7 +84,7 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
   // Save
   const handleSave = async () => {
     const val = parseFloat(amount);
-    if (!val || val <= 0) { toast.error("Podaj kwote"); return; }
+    if (!val || val <= 0) { toast.error("Podaj kwotę"); return; }
     setSaving(true);
     try {
       if (addDialog.type === "income") {
@@ -84,7 +95,7 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
       toast.success("Dodano!");
       setAddDialog({ open: false, type: null, category: null, date: null, shopId: 1 });
       fetchStats();
-    } catch { toast.error("Blad"); }
+    } catch { toast.error("Błąd"); }
     finally { setSaving(false); }
   };
 
@@ -98,39 +109,27 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
         api.getCosts({ shop_id: shopId, date })
       ]);
       setEditData({ incomes: inc.data, costs: costs.data });
-    } catch { toast.error("Blad"); }
+    } catch { toast.error("Błąd"); }
     finally { setEditLoading(false); }
   };
 
-  const refreshEdit = async () => {
-    if (!editDialog.date || !editDialog.shopId) return;
-    try {
-      const [inc, costs] = await Promise.all([
-        api.getIncomes({ shop_id: editDialog.shopId, date: editDialog.date }),
-        api.getCosts({ shop_id: editDialog.shopId, date: editDialog.date })
-      ]);
-      setEditData({ incomes: inc.data, costs: costs.data });
-    } catch {}
-  };
-
+  // Delete income/cost
   const deleteIncome = async (id) => {
-    if (!window.confirm("Usunac?")) return;
     try {
       await api.deleteIncome(id);
-      toast.success("Usunieto");
-      refreshEdit();
+      toast.success("Usunięto");
+      openEdit(editDialog.date, editDialog.shopId);
       fetchStats();
-    } catch { toast.error("Blad"); }
+    } catch { toast.error("Błąd"); }
   };
 
   const deleteCost = async (id) => {
-    if (!window.confirm("Usunac?")) return;
     try {
       await api.deleteCost(id);
-      toast.success("Usunieto");
-      refreshEdit();
+      toast.success("Usunięto");
+      openEdit(editDialog.date, editDialog.shopId);
       fetchStats();
-    } catch { toast.error("Blad"); }
+    } catch { toast.error("Błąd"); }
   };
 
   // Columns
@@ -138,55 +137,53 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
     if (!newColName.trim()) return;
     try {
       await api.createCustomColumn({ name: newColName, column_type: newColType, color: newColColor });
-      toast.success("Dodano");
+      toast.success("Dodano kolumnę");
       setNewColName("");
       fetchStats();
-    } catch (e) { toast.error(e.response?.data?.detail || "Blad"); }
+    } catch { toast.error("Błąd"); }
   };
 
-  const deleteColumn = async (id, name) => {
-    if (!window.confirm(`Usunac "${name}"?`)) return;
+  const deleteColumn = async (id) => {
     try {
       await api.deleteCustomColumn(id);
-      toast.success("Usunieto");
+      toast.success("Usunięto");
       fetchStats();
-    } catch { toast.error("Blad"); }
+    } catch { toast.error("Błąd"); }
   };
 
-  const getDayName = (d) => DAYS_PL[new Date(d + "T12:00:00").getDay()];
-  const getDayNum = (d) => parseInt(d.split("-")[2], 10);
-  const isAll = shop === 0;
-  const shopName = (id) => shops.find(s => s.id === id)?.name || `Sklep ${id}`;
+  const getDayNum = (d) => new Date(d).getDate();
+  const getDayName = (d) => DAYS_PL[new Date(d).getDay()];
+
   const shopColor = (id) => shops.find(s => s.id === id)?.color || "#6366f1";
   const getCatColor = (cat) => CATEGORIES.find(c => c.id === cat)?.color || customColumns.find(c => c.name === cat)?.color || "#888";
   const getCatName = (cat) => CATEGORIES.find(c => c.id === cat)?.name || cat;
 
-  const allCategories = [...CATEGORIES, ...customColumns.filter(c => c.column_type === "expense").map(c => ({ id: c.name, name: c.name, color: c.color, short: c.name.slice(0,2) }))];
+  const allCategories = [...CATEGORIES, ...customColumns.filter(c => c.column_type === "expense").map(c => ({ id: c.name, name: c.name, color: c.color }))];
 
   return (
-    <div className="min-h-screen bg-slate-950 p-2 sm:p-3 pb-28" data-testid="wyniki-page">
+    <div className="min-h-screen bg-slate-950 p-2 sm:p-4 pb-28" data-testid="wyniki-page">
       {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <h1 className="text-base sm:text-lg font-bold text-white">Wyniki</h1>
-        <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={() => setColumnDialog(true)} className="text-slate-400 h-7 sm:h-8 px-2">
-            <Settings2 size={14} />
+      <div className="flex items-center justify-between mb-3">
+        <h1 className="text-lg sm:text-xl font-bold text-white">Wyniki</h1>
+        <div className="flex gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setColumnDialog(true)} className="text-slate-400 h-8 px-2">
+            <Settings2 size={16} />
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => api.downloadExcel(year, month, shop > 0 ? shop : null)} className="text-slate-400 h-7 sm:h-8 px-2">
-            <Download size={14} />
+          <Button size="sm" variant="ghost" onClick={() => api.downloadExcel(year, month, shop > 0 ? shop : null)} className="text-slate-400 h-8 px-2">
+            <Download size={16} />
           </Button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
         <button onClick={() => setShop(0)}
-          className={`px-2 sm:px-3 py-1 rounded text-xs font-medium whitespace-nowrap ${shop === 0 ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400"}`}>
+          className={`px-3 py-1.5 rounded text-sm font-medium whitespace-nowrap ${shop === 0 ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400"}`}>
           Wszystkie
         </button>
         {shops.map(s => (
           <button key={s.id} onClick={() => setShop(s.id)}
-            className={`px-2 sm:px-3 py-1 rounded text-xs font-medium whitespace-nowrap ${shop === s.id ? "text-white" : "bg-slate-800 text-slate-400"}`}
+            className={`px-3 py-1.5 rounded text-sm font-medium whitespace-nowrap ${shop === s.id ? "text-white" : "bg-slate-800 text-slate-400"}`}
             style={shop === s.id ? { backgroundColor: s.color } : {}}>
             {s.name}
           </button>
@@ -194,272 +191,291 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
       </div>
 
       {/* Month */}
-      <div className="flex items-center justify-center gap-2 mb-2">
-        <Button size="sm" variant="ghost" onClick={prevMonth} className="text-slate-400 h-7 w-7 p-0"><ChevronLeft size={16} /></Button>
-        <span className="text-sm font-semibold text-white min-w-[120px] text-center">{MONTHS_PL[month - 1]} {year}</span>
-        <Button size="sm" variant="ghost" onClick={nextMonth} className="text-slate-400 h-7 w-7 p-0"><ChevronRight size={16} /></Button>
+      <div className="flex items-center justify-center gap-4 mb-4">
+        <Button size="sm" variant="ghost" onClick={prevMonth} className="text-slate-400 h-8 w-8 p-0"><ChevronLeft size={20} /></Button>
+        <span className="text-base font-semibold text-white min-w-[140px] text-center">{MONTHS_PL[month - 1]} {year}</span>
+        <Button size="sm" variant="ghost" onClick={nextMonth} className="text-slate-400 h-8 w-8 p-0"><ChevronRight size={20} /></Button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" size={28} /></div>
+        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>
       ) : stats && (
         <>
-          {/* KPIs - Compact for mobile */}
-          <div className="grid grid-cols-4 gap-1 sm:gap-2 mb-2">
-            <div className="bg-slate-900 rounded-lg p-1.5 sm:p-2 border border-slate-800">
-              <p className="text-[9px] sm:text-[10px] text-slate-500">Przychod</p>
-              <p className="text-xs sm:text-sm font-bold text-white">{fmt(stats.total_income)}</p>
+          {/* KPI Summary Cards */}
+          <div className="grid grid-cols-5 gap-2 mb-4">
+            <div className="bg-slate-900 rounded-lg p-3 border border-slate-800">
+              <p className="text-[10px] text-slate-500 mb-1">Przychód brutto</p>
+              <p className="text-sm font-bold text-white">{fmtZl(stats.total_income)}</p>
             </div>
-            <div className="bg-slate-900 rounded-lg p-1.5 sm:p-2 border border-slate-800">
-              <p className="text-[9px] sm:text-[10px] text-slate-500">Koszty</p>
-              <p className="text-xs sm:text-sm font-bold text-red-400">{fmt(stats.total_ads)}</p>
+            <div className="bg-slate-900 rounded-lg p-3 border border-slate-800">
+              <p className="text-[10px] text-slate-500 mb-1">Przychód netto</p>
+              <p className="text-sm font-bold text-blue-400">{fmtZl(calcNetto(stats.total_income))}</p>
             </div>
-            <div className="bg-slate-900 rounded-lg p-1.5 sm:p-2 border border-slate-800">
-              <p className="text-[9px] sm:text-[10px] text-slate-500">Zysk</p>
-              <p className={`text-xs sm:text-sm font-bold ${stats.total_profit >= 0 ? "text-green-400" : "text-red-400"}`}>{fmt(stats.total_profit)}</p>
+            <div className="bg-slate-900 rounded-lg p-3 border border-slate-800">
+              <p className="text-[10px] text-slate-500 mb-1">Koszty Ads</p>
+              <p className="text-sm font-bold text-red-400">{fmtZl(stats.total_ads)}</p>
             </div>
-            <div className="bg-slate-900 rounded-lg p-1.5 sm:p-2 border border-slate-800">
-              <p className="text-[9px] sm:text-[10px] text-slate-500">Na leb</p>
-              <p className="text-xs sm:text-sm font-bold text-indigo-400">{fmt(stats.profit_per_person)}</p>
+            <div className="bg-slate-900 rounded-lg p-3 border border-slate-800">
+              <p className="text-[10px] text-slate-500 mb-1">Dochód</p>
+              <p className={`text-sm font-bold ${stats.total_profit >= 0 ? "text-green-400" : "text-red-400"}`}>{fmtZl(stats.total_profit)}</p>
+            </div>
+            <div className="bg-slate-900 rounded-lg p-3 border border-slate-800">
+              <p className="text-[10px] text-slate-500 mb-1">Dochód na łeb</p>
+              <p className="text-sm font-bold text-indigo-400">{fmtZl(stats.profit_per_person || Math.round(stats.total_profit / profitSplit))}</p>
             </div>
           </div>
 
-          {/* Excel-like Table - responsive */}
+          {/* Excel-like Table */}
           <div className="bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
             {/* Table Header */}
-            <div className="bg-slate-800 px-2 py-1.5 grid gap-1 text-[9px] sm:text-[10px] font-medium text-slate-400"
-              style={{ gridTemplateColumns: "40px 1fr 1fr 60px" }}>
-              <div>Dzien</div>
-              <div>Przychod</div>
-              <div>Koszty</div>
+            <div className="bg-slate-800 px-3 py-2 grid gap-2 text-[11px] font-semibold text-slate-300 uppercase tracking-wide"
+              style={{ gridTemplateColumns: "50px 1fr 1fr 1fr 1fr 1fr 70px" }}>
+              <div>Dzień</div>
+              <div className="text-right">Przychód</div>
+              <div className="text-right">Netto</div>
+              <div className="text-right">Koszty Ads</div>
+              <div className="text-right">Dochód</div>
+              <div className="text-right">Na łeb</div>
               <div className="text-center">Akcje</div>
             </div>
 
-            {/* Days - ALL DAYS - Excel style rows */}
-            <div className="max-h-[55vh] overflow-y-auto">
+            {/* Table Body */}
+            <div className="max-h-[50vh] overflow-y-auto">
               {stats.days?.map((day, idx) => {
-                const profit = day.profit || 0;
+                const income = day.income || 0;
+                const netto = calcNetto(income);
+                const costs = day.ads_total || 0;
+                const profit = netto - costs;
+                const perPerson = Math.round(profit / profitSplit);
                 const currentShopId = shop > 0 ? shop : 1;
 
                 return (
                   <div key={day.date} 
-                    className={`grid gap-1 px-2 py-1.5 text-xs items-center border-b border-slate-800/50 ${idx % 2 === 0 ? "bg-slate-900" : "bg-slate-900/60"}`}
-                    style={{ gridTemplateColumns: "40px 1fr 1fr 60px" }}
+                    className={`grid gap-2 px-3 py-2 text-sm items-center border-b border-slate-800/50 hover:bg-slate-800/30 ${idx % 2 === 0 ? "bg-slate-900" : "bg-slate-900/60"}`}
+                    style={{ gridTemplateColumns: "50px 1fr 1fr 1fr 1fr 1fr 70px" }}
                     data-testid={`day-${day.date}`}>
                     
-                    {/* Date - compact */}
-                    <div className="flex items-baseline gap-0.5">
-                      <span className="font-bold text-white text-sm">{getDayNum(day.date)}</span>
-                      <span className="text-slate-500 text-[8px]">{getDayName(day.date)}</span>
+                    {/* Date */}
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-bold text-white">{getDayNum(day.date)}</span>
+                      <span className="text-slate-500 text-[10px]">{getDayName(day.date)}</span>
                     </div>
 
-                    {/* Income with inline add button */}
-                    <div className="flex items-center gap-1">
-                      <span className={`font-medium ${day.income > 0 ? "text-green-400" : "text-slate-600"}`}>
-                        {day.income > 0 ? fmt(day.income) : "0"} zl
+                    {/* Przychód brutto */}
+                    <div className="text-right flex items-center justify-end gap-1">
+                      <span className={`font-medium ${income > 0 ? "text-white" : "text-slate-600"}`}>
+                        {fmtZl(income)}
                       </span>
                       <button onClick={() => openAdd("income", null, day.date, currentShopId)}
                         className="w-5 h-5 rounded bg-green-600/20 hover:bg-green-600/40 text-green-400 flex items-center justify-center"
-                        data-testid={`add-income-${day.date}`}
-                        title="Dodaj przychod">
+                        data-testid={`add-income-${day.date}`}>
                         <Plus size={12} />
                       </button>
                     </div>
 
-                    {/* Costs summary with inline add button */}
-                    <div className="flex items-center gap-1">
-                      <span className={`font-medium ${day.ads_total > 0 ? "text-red-400" : "text-slate-600"}`}>
-                        {day.ads_total > 0 ? `-${fmt(day.ads_total)}` : "0"} zl
+                    {/* Netto */}
+                    <div className="text-right">
+                      <span className={`font-medium ${netto > 0 ? "text-blue-400" : "text-slate-600"}`}>
+                        {fmtZl(netto)}
+                      </span>
+                    </div>
+
+                    {/* Koszty Ads */}
+                    <div className="text-right flex items-center justify-end gap-1">
+                      <span className={`font-medium ${costs > 0 ? "text-red-400" : "text-slate-600"}`}>
+                        {fmtZl(costs)}
                       </span>
                       <button onClick={() => openAdd("cost", "tiktok", day.date, currentShopId)}
                         className="w-5 h-5 rounded bg-red-600/20 hover:bg-red-600/40 text-red-400 flex items-center justify-center"
-                        data-testid={`add-cost-${day.date}`}
-                        title="Dodaj koszt">
+                        data-testid={`add-cost-${day.date}`}>
                         <Plus size={12} />
                       </button>
                     </div>
 
-                    {/* Actions - expand for details */}
+                    {/* Dochód */}
+                    <div className="text-right">
+                      <span className={`font-bold ${profit > 0 ? "text-green-400" : profit < 0 ? "text-red-400" : "text-slate-600"}`}>
+                        {fmtZl(profit)}
+                      </span>
+                    </div>
+
+                    {/* Na łeb */}
+                    <div className="text-right">
+                      <span className={`font-medium ${perPerson > 0 ? "text-indigo-400" : perPerson < 0 ? "text-red-400" : "text-slate-600"}`}>
+                        {fmtZl(perPerson)}
+                      </span>
+                    </div>
+
+                    {/* Actions */}
                     <div className="flex justify-center">
                       <button onClick={() => openEdit(day.date, currentShopId)}
-                        className="px-2 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px]"
+                        className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px]"
                         data-testid={`edit-${day.date}`}>
-                        Szczegoly
+                        Szczegóły
                       </button>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </div>
 
-          {/* Quick legend under table */}
-          <div className="flex flex-wrap gap-1 mt-2 text-[9px] text-slate-500">
-            <span>Kategorie kosztow:</span>
-            {allCategories.map(c => (
-              <span key={c.id} className="px-1 rounded" style={{ backgroundColor: c.color + "20", color: c.color }}>
-                {c.name}
-              </span>
-            ))}
+            {/* Table Footer - Totals */}
+            <div className="bg-slate-800 px-3 py-2 grid gap-2 text-sm font-bold border-t border-slate-700"
+              style={{ gridTemplateColumns: "50px 1fr 1fr 1fr 1fr 1fr 70px" }}>
+              <div className="text-white">Suma</div>
+              <div className="text-right text-white">{fmtZl(stats.total_income)}</div>
+              <div className="text-right text-blue-400">{fmtZl(calcNetto(stats.total_income))}</div>
+              <div className="text-right text-red-400">{fmtZl(stats.total_ads)}</div>
+              <div className={`text-right ${stats.total_profit >= 0 ? "text-green-400" : "text-red-400"}`}>{fmtZl(stats.total_profit)}</div>
+              <div className="text-right text-indigo-400">{fmtZl(stats.profit_per_person || Math.round(stats.total_profit / profitSplit))}</div>
+              <div></div>
+            </div>
           </div>
         </>
       )}
 
       {/* ADD DIALOG */}
       <Dialog open={addDialog.open} onOpenChange={o => setAddDialog(d => ({ ...d, open: o }))}>
-        <DialogContent className="bg-slate-900 border-slate-700 max-w-xs">
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">
-              {addDialog.type === "income" ? "Dodaj przychod" : `Dodaj ${getCatName(addDialog.category)}`}
+            <DialogTitle className="text-white">
+              {addDialog.type === "income" ? "Dodaj przychód" : `Dodaj koszt`}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-xs text-slate-400">{addDialog.date} - {shopName(addDialog.shopId)}</p>
-            
-            {addDialog.type === "cost" && (
-              <Select value={addDialog.category} onValueChange={v => setAddDialog(d => ({ ...d, category: v }))}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-white h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  {allCategories.map(c => (
-                    <SelectItem key={c.id} value={c.id}>
-                      <span style={{ color: c.color }}>{c.name}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+          <p className="text-slate-400 text-sm">{addDialog.date} - {shops.find(s => s.id === addDialog.shopId)?.name || "ecom1"}</p>
+          
+          {addDialog.type === "income" ? (
+            <Select value={String(addDialog.shopId)} onValueChange={v => setAddDialog(d => ({ ...d, shopId: parseInt(v) }))}>
+              <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-slate-800 border-slate-700">
+                {shops.map(s => <SelectItem key={s.id} value={String(s.id)} className="text-white">{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Select value={addDialog.category || "tiktok"} onValueChange={v => setAddDialog(d => ({ ...d, category: v }))}>
+              <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-slate-800 border-slate-700">
+                {allCategories.map(c => <SelectItem key={c.id} value={c.id} className="text-white">{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
 
-            {isAll && (
-              <Select value={String(addDialog.shopId)} onValueChange={v => setAddDialog(d => ({ ...d, shopId: parseInt(v) }))}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-white h-9 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  {shops.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            )}
-
-            <Input type="number" placeholder="Kwota" value={amount} onChange={e => setAmount(e.target.value)} 
-              className="bg-slate-800 border-slate-700 text-white h-9" autoFocus />
-            <Input placeholder="Opis" value={desc} onChange={e => setDesc(e.target.value)} 
-              className="bg-slate-800 border-slate-700 text-white h-9" />
-            <Button onClick={handleSave} disabled={saving} className="w-full h-9 bg-indigo-600 hover:bg-indigo-500">
-              {saving ? <Loader2 className="animate-spin mr-1" size={14} /> : null} Zapisz
-            </Button>
-          </div>
+          <Input type="number" placeholder="Kwota" value={amount} onChange={e => setAmount(e.target.value)} className="bg-slate-800 border-slate-700 text-white" />
+          <Input placeholder="Opis (opcjonalnie)" value={desc} onChange={e => setDesc(e.target.value)} className="bg-slate-800 border-slate-700 text-white" />
+          
+          <Button onClick={handleSave} disabled={saving} className="w-full bg-indigo-600 hover:bg-indigo-500">
+            {saving ? <Loader2 className="animate-spin" size={16} /> : "Zapisz"}
+          </Button>
         </DialogContent>
       </Dialog>
 
-      {/* EDIT DIALOG - Szczegoly */}
+      {/* EDIT DIALOG - Szczegóły */}
       <Dialog open={editDialog.open} onOpenChange={o => setEditDialog(d => ({ ...d, open: o }))}>
         <DialogContent className="bg-slate-900 border-slate-700 max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Szczegoly: {editDialog.date}</DialogTitle>
+            <DialogTitle className="text-white text-base">Szczegóły: {editDialog.date}</DialogTitle>
           </DialogHeader>
-          
+
           {editLoading ? (
-            <div className="py-8 flex justify-center"><Loader2 className="animate-spin text-indigo-500" /></div>
+            <div className="flex justify-center py-4"><Loader2 className="animate-spin text-indigo-500" /></div>
           ) : (
-            <div className="space-y-4">
-              {/* INCOMES */}
-              <div>
+            <>
+              {/* Incomes */}
+              <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-green-400">Przychody ({editData.incomes.length})</span>
-                  <button onClick={() => { setEditDialog(d => ({ ...d, open: false })); openAdd("income", null, editDialog.date, editDialog.shopId); }}
-                    className="px-2 py-1 rounded bg-green-600 text-white text-xs">+ Dodaj</button>
+                  <h3 className="text-sm font-semibold text-white">Przychody ({editData.incomes.length})</h3>
+                  <Button size="sm" onClick={() => openAdd("income", null, editDialog.date, editDialog.shopId)} className="h-6 text-xs bg-green-600 hover:bg-green-500">
+                    + Dodaj
+                  </Button>
                 </div>
-                {editData.incomes.length > 0 ? editData.incomes.map(i => (
-                  <div key={i.id} className="flex justify-between items-center p-2 mb-1 bg-slate-800 rounded">
-                    <div>
-                      <span className="text-white text-sm font-medium">{fmt(i.amount)} zl</span>
-                      {i.description && <span className="text-slate-500 text-xs ml-2">{i.description}</span>}
-                    </div>
-                    <button onClick={() => deleteIncome(i.id)} className="p-1 text-slate-500 hover:text-red-400">
-                      <Trash2 size={14} />
-                    </button>
+                {editData.incomes.length === 0 ? (
+                  <p className="text-slate-500 text-sm">Brak</p>
+                ) : (
+                  <div className="space-y-1">
+                    {editData.incomes.map(i => (
+                      <div key={i.id} className="flex justify-between items-center bg-slate-800 rounded px-2 py-1">
+                        <span className="text-green-400 font-medium">{fmtZl(i.amount)}</span>
+                        <span className="text-slate-400 text-xs flex-1 mx-2 truncate">{i.description || "-"}</span>
+                        <button onClick={() => deleteIncome(i.id)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
+                      </div>
+                    ))}
                   </div>
-                )) : <p className="text-slate-500 text-xs">Brak</p>}
+                )}
               </div>
 
-              {/* COSTS */}
+              {/* Costs */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-red-400">Koszty ({editData.costs.length})</span>
+                  <h3 className="text-sm font-semibold text-white">Koszty ({editData.costs.length})</h3>
                 </div>
-                {editData.costs.length > 0 ? editData.costs.map(c => (
-                  <div key={c.id} className="flex justify-between items-center p-2 mb-1 bg-slate-800 rounded">
-                    <div>
-                      <span className="text-sm font-medium" style={{ color: getCatColor(c.category) }}>{fmt(c.amount)} zl</span>
-                      <span className="text-slate-500 text-xs ml-2">{getCatName(c.category)}</span>
-                      {c.description && <span className="text-slate-600 text-xs ml-1">- {c.description}</span>}
-                    </div>
-                    <button onClick={() => deleteCost(c.id)} className="p-1 text-slate-500 hover:text-red-400">
-                      <Trash2 size={14} />
-                    </button>
+                {editData.costs.length === 0 ? (
+                  <p className="text-slate-500 text-sm">Brak</p>
+                ) : (
+                  <div className="space-y-1">
+                    {editData.costs.map(c => (
+                      <div key={c.id} className="flex justify-between items-center bg-slate-800 rounded px-2 py-1">
+                        <span className="text-red-400 font-medium">{fmtZl(c.amount)}</span>
+                        <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ backgroundColor: getCatColor(c.category) + "30", color: getCatColor(c.category) }}>{getCatName(c.category)}</span>
+                        <span className="text-slate-400 text-xs flex-1 mx-2 truncate">{c.description || "-"}</span>
+                        <button onClick={() => deleteCost(c.id)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
+                      </div>
+                    ))}
                   </div>
-                )) : <p className="text-slate-500 text-xs">Brak</p>}
+                )}
 
                 {/* Quick add buttons */}
-                <div className="flex flex-wrap gap-1 mt-2">
+                <div className="flex flex-wrap gap-1 mt-3">
                   {allCategories.map(c => (
-                    <button key={c.id} onClick={() => { setEditDialog(d => ({ ...d, open: false })); openAdd("cost", c.id, editDialog.date, editDialog.shopId); }}
-                      className="px-2 py-1 rounded text-[10px] border"
-                      style={{ borderColor: c.color, color: c.color }}>
+                    <button key={c.id} onClick={() => openAdd("cost", c.id, editDialog.date, editDialog.shopId)}
+                      className="px-2 py-1 rounded text-[10px] font-medium" 
+                      style={{ backgroundColor: c.color + "20", color: c.color }}>
                       + {c.name}
                     </button>
                   ))}
                 </div>
               </div>
-            </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* COLUMNS DIALOG */}
+      {/* COLUMN MANAGER DIALOG */}
       <Dialog open={columnDialog} onOpenChange={setColumnDialog}>
         <DialogContent className="bg-slate-900 border-slate-700 max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Kolumny kosztow</DialogTitle>
+            <DialogTitle className="text-white">Zarządzaj kolumnami</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            {customColumns.length > 0 && (
-              <div className="space-y-1">
-                {customColumns.map(c => (
-                  <div key={c.id} className="flex justify-between items-center p-2 bg-slate-800 rounded">
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded" style={{ backgroundColor: c.color }} />
-                      <span className="text-white text-sm">{c.name}</span>
-                    </div>
-                    <button onClick={() => deleteColumn(c.id, c.name)} className="text-slate-500 hover:text-red-400">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                ))}
+
+          {/* Existing columns */}
+          <div className="space-y-2 mb-4">
+            {customColumns.map(c => (
+              <div key={c.id} className="flex justify-between items-center bg-slate-800 rounded px-2 py-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: c.color }} />
+                  <span className="text-white text-sm">{c.name}</span>
+                  <span className="text-slate-500 text-xs">({c.column_type === "expense" ? "koszt" : "przychód"})</span>
+                </div>
+                <button onClick={() => deleteColumn(c.id)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
               </div>
-            )}
-            <div className="border-t border-slate-700 pt-3 space-y-2">
-              <Input placeholder="Nazwa" value={newColName} onChange={e => setNewColName(e.target.value)} 
-                className="bg-slate-800 border-slate-700 text-white h-9" />
-              <div className="flex gap-2">
-                <Select value={newColType} onValueChange={setNewColType}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white h-9 flex-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    <SelectItem value="expense">Koszt</SelectItem>
-                    <SelectItem value="income">Przychod</SelectItem>
-                  </SelectContent>
-                </Select>
-                <input type="color" value={newColColor} onChange={e => setNewColColor(e.target.value)} 
-                  className="w-9 h-9 rounded border border-slate-700 bg-slate-800 cursor-pointer" />
-              </div>
-              <Button onClick={addColumn} className="w-full h-9 bg-indigo-600 hover:bg-indigo-500">
-                Dodaj kolumne
-              </Button>
+            ))}
+            {customColumns.length === 0 && <p className="text-slate-500 text-sm">Brak własnych kolumn</p>}
+          </div>
+
+          {/* Add new column */}
+          <div className="space-y-2 border-t border-slate-700 pt-3">
+            <p className="text-slate-400 text-xs">Dodaj nową kolumnę:</p>
+            <Input placeholder="Nazwa" value={newColName} onChange={e => setNewColName(e.target.value)} className="bg-slate-800 border-slate-700 text-white" />
+            <div className="flex gap-2">
+              <Select value={newColType} onValueChange={setNewColType}>
+                <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectItem value="expense" className="text-white">Koszt</SelectItem>
+                  <SelectItem value="income" className="text-white">Przychód</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input type="color" value={newColColor} onChange={e => setNewColColor(e.target.value)} className="w-14 p-1 bg-slate-800 border-slate-700" />
             </div>
+            <Button onClick={addColumn} className="w-full bg-indigo-600 hover:bg-indigo-500">Dodaj kolumnę</Button>
           </div>
         </DialogContent>
       </Dialog>
