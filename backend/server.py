@@ -17,9 +17,13 @@ from fastapi.responses import StreamingResponse
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ.get('MONGO_URL', '')
+if not mongo_url:
+    print("WARNING: MONGO_URL not set, using placeholder")
+    mongo_url = "mongodb://localhost:27017"
+    
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+db = client[os.environ.get('DB_NAME', 'ecommify_db')]
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
