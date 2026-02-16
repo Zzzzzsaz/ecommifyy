@@ -840,47 +840,8 @@ async def execute_action(action_str: str):
 
 @api_router.post("/ai-assistant")
 async def ai_assistant_endpoint(msg: AssistantMessage):
-    from openai import OpenAI
-    
-    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="Brak klucza OpenAI")
-    
-    # Save user message
-    user_doc = {"id": str(uuid.uuid4()), "role": "user", "content": msg.message, "created_at": datetime.now(timezone.utc).isoformat()}
-    await db.ai_assistant_history.insert_one(user_doc)
-    
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    system_msg = f"""Jestes AI Asystentem aplikacji Ecommify - dashboardu e-commerce do zarzadzania presale.
-Odpowiadasz po polsku, krotko i konkretnie.
-Mozesz wykonywac akcje uzywajac specjalnych komend w odpowiedzi.
-Dzisiejsza data: {today}
-
-{AVAILABLE_ACTIONS}
-
-Przyklad uzycia:
-- Uzytkownik: "pokaz mi produkty" -> Odpowiedz: "Pobieram produkty... [ACTION:get_products]"
-- Uzytkownik: "dodaj produkt Bluza za 100zl z doplata 30zl do sklepu 1" -> "Dodaje produkt... [ACTION:create_product:Bluza:100:30:1]"
-- Uzytkownik: "usun produkt abc-123" -> "Usuwam... [ACTION:delete_product:abc-123]"
-
-Zawsze informuj uzytkownika co robisz i uzyj odpowiedniej komendy [ACTION:...].
-Jesli uzytkownik pyta o cos bez potrzeby akcji, odpowiedz normalnie bez komend.
-Mozesz uzyc wielu akcji w jednej odpowiedzi."""
-
-    client = OpenAI(api_key=api_key)
-    
-    try:
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_msg},
-                {"role": "user", "content": msg.message}
-            ]
-        )
-        response = completion.choices[0].message.content
-    except Exception as e:
-        logger.error(f"AI Assistant error: {e}")
-        raise HTTPException(status_code=500, detail=f"Blad AI: {str(e)}")
+    # AI disabled - no OpenAI key
+    return {"response": "AI asystent jest wyłączony na tej instancji.", "actions": []}
     
     # Parse and execute actions from response
     import re
