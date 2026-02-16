@@ -695,42 +695,8 @@ async def sync_all(year: int = Query(...), month: int = Query(...)):
 # ===== AI CHAT =====
 @api_router.post("/chat")
 async def chat_endpoint(msg: ChatMessage):
-    from openai import OpenAI
-
-    api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="Brak klucza OpenAI")
-
-    user_doc = {
-        "id": str(uuid.uuid4()), "shop_id": msg.shop_id, "role": "user",
-        "content": msg.message, "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.chat_history.insert_one(user_doc)
-
-    shop_names = {1: "ecom1", 2: "ecom2", 3: "ecom3", 4: "ecom4"}
-    shop_name = shop_names.get(msg.shop_id, "ogolny")
-
-    system_msg = (
-        f"Jestes ekspertem e-commerce i marketingu cyfrowego. Specjalizujesz sie w Shopify, TikTok Ads i optymalizacji ROI. "
-        f"Odpowiadasz po polsku, konkretnie i z praktycznymi poradami. "
-        f"Pomagasz zespolowi zarzadzajacemu 4 sklepami Shopify (ecom1-4) z reklamami TikTok. "
-        f"Aktualnie rozmawiasz o sklepie: {shop_name}. Twoje odpowiedzi sa krotkie i merytoryczne."
-    )
-
-    client = OpenAI(api_key=api_key)
-
-    try:
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_msg},
-                {"role": "user", "content": msg.message}
-            ]
-        )
-        response = completion.choices[0].message.content
-    except Exception as e:
-        logger.error(f"LLM error: {e}")
-        raise HTTPException(status_code=500, detail=f"Blad AI: {str(e)}")
+    # AI disabled - no OpenAI key
+    return {"response": "AI chat jest wyłączony na tej instancji."}
 
     assistant_doc = {
         "id": str(uuid.uuid4()), "shop_id": msg.shop_id, "role": "assistant",
