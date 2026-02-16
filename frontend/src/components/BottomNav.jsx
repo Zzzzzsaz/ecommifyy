@@ -1,9 +1,10 @@
-import { Gamepad2, BarChart3, ShoppingCart, CalendarDays } from "lucide-react";
+import { Gamepad2, BarChart3, ShoppingCart, CalendarDays, ClipboardList } from "lucide-react";
 
 const tabs = [
   { id: "dashboard", label: "Menu", icon: Gamepad2 },
   { id: "wyniki", label: "Wyniki", icon: BarChart3 },
-  { id: "orders", label: "Zamowienia", icon: ShoppingCart },
+  { id: "orders", label: "Zamówienia", icon: ShoppingCart },
+  { id: "tasks", label: "Zadania", icon: ClipboardList },
   { id: "calendar", label: "Kalendarz", icon: CalendarDays },
 ];
 
