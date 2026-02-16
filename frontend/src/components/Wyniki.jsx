@@ -10,10 +10,10 @@ import { ChevronLeft, ChevronRight, Plus, Loader2, Trash2, Download, Settings2 }
 const MONTHS_PL = ["Styczeń", "Luty", "Marzec", "Kwiecień", "Maj", "Czerwiec", "Lipiec", "Sierpień", "Wrzesień", "Październik", "Listopad", "Grudzień"];
 const DAYS_PL = ["Nd", "Pn", "Wt", "Śr", "Cz", "Pt", "So"];
 
-// Format with full number and zł
+// Format with full number and zł (with grosze)
 const fmtZl = (v) => {
-  const num = Math.round(v || 0);
-  return `${num.toLocaleString("pl-PL")} zł`;
+  const num = v || 0;
+  return `${num.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`;
 };
 
 const CATEGORIES = [
