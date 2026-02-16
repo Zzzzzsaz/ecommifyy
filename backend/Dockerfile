@@ -21,8 +21,9 @@ RUN pip install --no-cache-dir \
     httpx==0.27.0 \
     openai==1.12.0
 
-COPY . .
+# Copy server file explicitly
+COPY server.py /app/server.py
 
 EXPOSE 8001
 
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
