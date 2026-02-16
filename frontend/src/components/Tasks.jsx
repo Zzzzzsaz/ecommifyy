@@ -1,41 +1,32 @@
 import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, ChevronRight, ChevronLeft, Check, Trash2, Loader2 } from "lucide-react";
+import { Plus, Check, Trash2, Loader2, Clock, User } from "lucide-react";
 
-const COLUMNS = [
-  { id: "todo", label: "Do zrobienia", color: "#f59e0b" },
-  { id: "in_progress", label: "W trakcie", color: "#6366f1" },
-  { id: "done", label: "Gotowe", color: "#10b981" },
+const PRIORITIES = [
+  { id: "high", label: "Wysoki", color: "#ef4444" },
+  { id: "medium", label: "Średni", color: "#f59e0b" },
+  { id: "low", label: "Niski", color: "#22c55e" },
 ];
 
-const ASSIGNEE_COLORS = { kacper: "#6366f1", szymon: "#ec4899", oboje: "#f59e0b" };
-
-const sendNotification = (title, body) => {
-  if ("Notification" in window && Notification.permission === "granted") {
-    new Notification(title, { body });
-  }
-};
+const ASSIGNEES = [
+  { id: "kacper", label: "Kacper", color: "#6366f1" },
+  { id: "szymon", label: "Szymon", color: "#ec4899" },
+  { id: "oboje", label: "Oboje", color: "#f59e0b" },
+];
 
 export default function Tasks({ user }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ title: "", description: "", assigned_to: "oboje", due_date: "" });
+  const [form, setForm] = useState({ title: "", description: "", assigned_to: "oboje", due_date: "", priority: "medium" });
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  }, []);
+  const [filter, setFilter] = useState("all"); // all, todo, done
 
   const fetchTasks = useCallback(async () => {
     setLoading(true);
@@ -43,7 +34,7 @@ export default function Tasks({ user }) {
       const r = await api.getTasks();
       setTasks(r.data);
     } catch {
-      toast.error("Blad ladowania zadan");
+      toast.error("Błąd ładowania zadań");
     } finally {
       setLoading(false);
     }
@@ -52,164 +43,228 @@ export default function Tasks({ user }) {
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
   const addTask = async () => {
-    if (!form.title.trim()) { toast.error("Podaj tytul"); return; }
+    if (!form.title.trim()) { toast.error("Podaj tytuł"); return; }
     setSaving(true);
     try {
-      await api.createTask({ ...form, created_by: user.name, due_date: form.due_date || null });
+      await api.createTask({ 
+        ...form, 
+        created_by: user.name, 
+        due_date: form.due_date || null,
+        status: "todo"
+      });
       toast.success("Zadanie dodane!");
-      sendNotification("Nowe zadanie", `${form.title} - przypisane do: ${form.assigned_to}`);
       setShowAdd(false);
-      setForm({ title: "", description: "", assigned_to: "oboje", due_date: "" });
+      setForm({ title: "", description: "", assigned_to: "oboje", due_date: "", priority: "medium" });
       fetchTasks();
     } catch {
-      toast.error("Blad dodawania");
+      toast.error("Błąd dodawania");
     } finally {
       setSaving(false);
     }
   };
 
-  const moveTask = async (taskId, newStatus) => {
+  const toggleTask = async (taskId, currentStatus) => {
+    const newStatus = currentStatus === "done" ? "todo" : "done";
     try {
       await api.updateTask(taskId, { status: newStatus });
-      const task = tasks.find((t) => t.id === taskId);
-      const col = COLUMNS.find((c) => c.id === newStatus);
-      sendNotification("Zadanie przeniesione", `${task?.title} -> ${col?.label}`);
+      toast.success(newStatus === "done" ? "Zrobione!" : "Przywrócono");
       fetchTasks();
     } catch {
-      toast.error("Blad aktualizacji");
+      toast.error("Błąd aktualizacji");
     }
   };
 
   const deleteTask = async (taskId) => {
     try {
       await api.deleteTask(taskId);
-      toast.success("Usunieto");
+      toast.success("Usunięto");
       fetchTasks();
     } catch {
-      toast.error("Blad usuwania");
+      toast.error("Błąd usuwania");
     }
   };
 
-  const getTasksByStatus = (status) => tasks.filter((t) => t.status === status);
+  const filteredTasks = tasks.filter(t => {
+    if (filter === "all") return true;
+    if (filter === "todo") return t.status !== "done";
+    if (filter === "done") return t.status === "done";
+    return true;
+  }).sort((a, b) => {
+    // Sort by status (todo first), then by priority, then by date
+    if (a.status === "done" && b.status !== "done") return 1;
+    if (a.status !== "done" && b.status === "done") return -1;
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
+  });
+
+  const todoCount = tasks.filter(t => t.status !== "done").length;
+  const doneCount = tasks.filter(t => t.status === "done").length;
+
+  const getPriorityColor = (p) => PRIORITIES.find(pr => pr.id === p)?.color || "#f59e0b";
+  const getAssigneeColor = (a) => ASSIGNEES.find(as => as.id === a)?.color || "#6366f1";
 
   return (
-    <div className="p-4 pb-24 animate-fade-in" data-testid="tasks-page">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-heading text-2xl font-bold text-white">Zadania</h1>
-        <Button onClick={() => setShowAdd(true)} size="sm" className="bg-ecom-primary hover:bg-ecom-primary/80" data-testid="add-task-btn">
+    <div className="min-h-screen bg-slate-950 p-4 pb-28" data-testid="tasks-page">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-bold text-white">Zadania</h1>
+        <Button onClick={() => setShowAdd(true)} size="sm" className="bg-indigo-600 hover:bg-indigo-500" data-testid="add-task-btn">
           <Plus size={16} className="mr-1" /> Dodaj
         </Button>
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <button 
+          onClick={() => setFilter("all")}
+          className={`p-3 rounded-lg border text-center ${filter === "all" ? "bg-slate-800 border-indigo-500" : "bg-slate-900 border-slate-800"}`}>
+          <p className="text-2xl font-bold text-white">{tasks.length}</p>
+          <p className="text-xs text-slate-400">Wszystkie</p>
+        </button>
+        <button 
+          onClick={() => setFilter("todo")}
+          className={`p-3 rounded-lg border text-center ${filter === "todo" ? "bg-slate-800 border-yellow-500" : "bg-slate-900 border-slate-800"}`}>
+          <p className="text-2xl font-bold text-yellow-400">{todoCount}</p>
+          <p className="text-xs text-slate-400">Do zrobienia</p>
+        </button>
+        <button 
+          onClick={() => setFilter("done")}
+          className={`p-3 rounded-lg border text-center ${filter === "done" ? "bg-slate-800 border-green-500" : "bg-slate-900 border-slate-800"}`}>
+          <p className="text-2xl font-bold text-green-400">{doneCount}</p>
+          <p className="text-xs text-slate-400">Zrobione</p>
+        </button>
+      </div>
+
+      {/* Tasks List */}
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-ecom-primary" size={32} /></div>
+        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="kanban-board">
-          {COLUMNS.map((col) => (
-            <div key={col.id} className="kanban-col" data-testid={`kanban-col-${col.id}`}>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }} />
-                <h2 className="font-heading text-sm font-semibold text-white uppercase tracking-wider">{col.label}</h2>
-                <Badge variant="secondary" className="text-[10px] ml-auto">{getTasksByStatus(col.id).length}</Badge>
-              </div>
-              <div className="space-y-2">
-                {getTasksByStatus(col.id).map((task) => (
-                  <Card
-                    key={task.id}
-                    className="bg-ecom-card border-ecom-border border-l-[3px] animate-fade-in"
-                    style={{ borderLeftColor: ASSIGNEE_COLORS[task.assigned_to] || "#6366f1" }}
-                    data-testid={`task-card-${task.id}`}
-                  >
-                    <CardContent className="p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm font-medium truncate">{task.title}</p>
-                          {task.description && <p className="text-ecom-muted text-xs mt-1 line-clamp-2">{task.description}</p>}
-                        </div>
-                        <button onClick={() => deleteTask(task.id)} className="text-ecom-muted hover:text-ecom-danger shrink-0" data-testid={`delete-task-${task.id}`}>
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-[10px] capitalize" style={{ borderColor: ASSIGNEE_COLORS[task.assigned_to], color: ASSIGNEE_COLORS[task.assigned_to] }}>
-                            {task.assigned_to}
-                          </Badge>
-                          {task.due_date && <span className="text-ecom-muted text-[10px]">{task.due_date}</span>}
-                        </div>
-                        <div className="flex gap-1">
-                          {col.id !== "todo" && (
-                            <button
-                              onClick={() => moveTask(task.id, col.id === "in_progress" ? "todo" : "in_progress")}
-                              className="w-6 h-6 rounded flex items-center justify-center bg-ecom-border/50 hover:bg-ecom-border text-ecom-muted hover:text-white"
-                              data-testid={`move-left-${task.id}`}
-                            >
-                              <ChevronLeft size={14} />
-                            </button>
-                          )}
-                          {col.id !== "done" && (
-                            <button
-                              onClick={() => moveTask(task.id, col.id === "todo" ? "in_progress" : "done")}
-                              className="w-6 h-6 rounded flex items-center justify-center bg-ecom-border/50 hover:bg-ecom-border text-ecom-muted hover:text-white"
-                              data-testid={`move-right-${task.id}`}
-                            >
-                              {col.id === "in_progress" ? <Check size={14} /> : <ChevronRight size={14} />}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                {getTasksByStatus(col.id).length === 0 && (
-                  <div className="text-center py-8 text-ecom-muted text-xs border border-dashed border-ecom-border rounded-lg">Brak zadan</div>
-                )}
-              </div>
+        <div className="space-y-2">
+          {filteredTasks.length === 0 ? (
+            <div className="text-center py-12 text-slate-500">
+              <p className="text-lg mb-2">Brak zadań</p>
+              <p className="text-sm">Kliknij "Dodaj" aby utworzyć nowe zadanie</p>
             </div>
-          ))}
+          ) : (
+            filteredTasks.map((task) => (
+              <div
+                key={task.id}
+                className={`bg-slate-900 rounded-lg border border-slate-800 p-3 flex items-start gap-3 ${task.status === "done" ? "opacity-60" : ""}`}
+                data-testid={`task-card-${task.id}`}
+              >
+                {/* Checkbox */}
+                <button
+                  onClick={() => toggleTask(task.id, task.status)}
+                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                    task.status === "done" 
+                      ? "bg-green-500 border-green-500 text-white" 
+                      : "border-slate-600 hover:border-indigo-500"
+                  }`}
+                  data-testid={`toggle-task-${task.id}`}
+                >
+                  {task.status === "done" && <Check size={14} />}
+                </button>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <p className={`text-white font-medium ${task.status === "done" ? "line-through text-slate-400" : ""}`}>
+                    {task.title}
+                  </p>
+                  {task.description && (
+                    <p className="text-slate-400 text-sm mt-1 line-clamp-2">{task.description}</p>
+                  )}
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    {/* Priority */}
+                    <span 
+                      className="px-2 py-0.5 rounded text-[10px] font-medium"
+                      style={{ backgroundColor: getPriorityColor(task.priority) + "20", color: getPriorityColor(task.priority) }}
+                    >
+                      {PRIORITIES.find(p => p.id === task.priority)?.label || "Średni"}
+                    </span>
+                    {/* Assignee */}
+                    <span 
+                      className="px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1"
+                      style={{ backgroundColor: getAssigneeColor(task.assigned_to) + "20", color: getAssigneeColor(task.assigned_to) }}
+                    >
+                      <User size={10} />
+                      {task.assigned_to}
+                    </span>
+                    {/* Due date */}
+                    {task.due_date && (
+                      <span className="text-slate-500 text-[10px] flex items-center gap-1">
+                        <Clock size={10} />
+                        {task.due_date}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Delete */}
+                <button 
+                  onClick={() => deleteTask(task.id)} 
+                  className="text-slate-600 hover:text-red-400 shrink-0"
+                  data-testid={`delete-task-${task.id}`}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))
+          )}
         </div>
       )}
 
       {/* Add Task Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="bg-ecom-card border-ecom-border max-w-sm" data-testid="add-task-dialog">
+        <DialogContent className="bg-slate-900 border-slate-700 max-w-sm" data-testid="add-task-dialog">
           <DialogHeader>
-            <DialogTitle className="font-heading text-white">Nowe zadanie</DialogTitle>
+            <DialogTitle className="text-white">Nowe zadanie</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 mt-2">
             <Input
-              placeholder="Tytul"
+              placeholder="Tytuł zadania"
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              className="bg-ecom-bg border-ecom-border text-white"
+              className="bg-slate-800 border-slate-700 text-white"
               data-testid="task-title-input"
             />
             <Textarea
               placeholder="Opis (opcjonalnie)"
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              className="bg-ecom-bg border-ecom-border text-white resize-none"
+              className="bg-slate-800 border-slate-700 text-white resize-none"
               rows={3}
               data-testid="task-desc-input"
             />
-            <Select value={form.assigned_to} onValueChange={(v) => setForm((f) => ({ ...f, assigned_to: v }))}>
-              <SelectTrigger className="bg-ecom-bg border-ecom-border text-white" data-testid="task-assignee-select">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-ecom-card border-ecom-border">
-                <SelectItem value="kacper">Kacper</SelectItem>
-                <SelectItem value="szymon">Szymon</SelectItem>
-                <SelectItem value="oboje">Oboje</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={form.assigned_to} onValueChange={(v) => setForm((f) => ({ ...f, assigned_to: v }))}>
+                <SelectTrigger className="bg-slate-800 border-slate-700 text-white" data-testid="task-assignee-select">
+                  <SelectValue placeholder="Przypisz do" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700">
+                  {ASSIGNEES.map(a => (
+                    <SelectItem key={a.id} value={a.id} className="text-white">{a.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={form.priority} onValueChange={(v) => setForm((f) => ({ ...f, priority: v }))}>
+                <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                  <SelectValue placeholder="Priorytet" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-700">
+                  {PRIORITIES.map(p => (
+                    <SelectItem key={p.id} value={p.id} className="text-white">{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <Input
               type="date"
               value={form.due_date}
               onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
-              className="bg-ecom-bg border-ecom-border text-white"
+              className="bg-slate-800 border-slate-700 text-white"
               data-testid="task-due-date-input"
             />
-            <Button onClick={addTask} disabled={saving} className="w-full bg-ecom-primary hover:bg-ecom-primary/80" data-testid="task-save-btn">
+            <Button onClick={addTask} disabled={saving} className="w-full bg-indigo-600 hover:bg-indigo-500" data-testid="task-save-btn">
               {saving ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
               Dodaj zadanie
             </Button>
