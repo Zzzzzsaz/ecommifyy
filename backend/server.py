@@ -543,6 +543,45 @@ async def delete_task(task_id: str):
         raise HTTPException(status_code=404, detail="Nie znaleziono")
     return {"status": "ok"}
 
+# ===== IDEAS =====
+@api_router.get("/ideas")
+async def get_ideas():
+    ideas = await db.ideas.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return ideas
+
+@api_router.post("/ideas")
+async def create_idea(idea: IdeaCreate):
+    doc = {
+        "id": str(uuid.uuid4()),
+        "title": idea.title,
+        "description": idea.description,
+        "category": idea.category,
+        "link": idea.link,
+        "priority": idea.priority,
+        "created_by": idea.created_by,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.ideas.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/ideas/{idea_id}")
+async def update_idea(idea_id: str, update: IdeaUpdate):
+    update_data = {k: v for k, v in update.dict().items() if v is not None}
+    if update_data:
+        await db.ideas.update_one({"id": idea_id}, {"$set": update_data})
+    idea = await db.ideas.find_one({"id": idea_id}, {"_id": 0})
+    if not idea:
+        raise HTTPException(status_code=404, detail="Nie znaleziono")
+    return idea
+
+@api_router.delete("/ideas/{idea_id}")
+async def delete_idea(idea_id: str):
+    result = await db.ideas.delete_one({"id": idea_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Nie znaleziono")
+    return {"status": "ok"}
+
 # ===== SHOPIFY CONFIGS =====
 @api_router.get("/shopify-configs")
 async def get_shopify_configs():
