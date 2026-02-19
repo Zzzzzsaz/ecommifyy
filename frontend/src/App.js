@@ -7,6 +7,7 @@ import Dashboard from "@/components/Dashboard";
 import Wyniki from "@/components/Wyniki";
 import Orders from "@/components/Orders";
 import Tasks from "@/components/Tasks";
+import Ideas from "@/components/Ideas";
 import CalendarPage from "@/components/CalendarPage";
 import Stores from "@/components/Stores";
 import Settings from "@/components/Settings";
