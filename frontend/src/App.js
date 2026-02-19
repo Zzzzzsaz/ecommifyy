@@ -69,6 +69,7 @@ function App() {
       case "wyniki": return <Wyniki key={refreshKey} user={user} shops={shops} appSettings={appSettings} />;
       case "orders": return <Orders key={refreshKey} user={user} shops={shops} />;
       case "tasks": return <Tasks user={user} />;
+      case "ideas": return <Ideas user={user} />;
       case "calendar": return <CalendarPage user={user} />;
       case "stores": return <Stores shops={shops} onShopsChange={refreshShops} />;
       case "settings": return <Settings user={user} shops={shops} appSettings={appSettings} onSettingsChange={refreshSettings} onShopsChange={refreshShops} onLogout={handleLogout} />;
