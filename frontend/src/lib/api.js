@@ -33,6 +33,11 @@ export const api = {
   updateTask: (id, data) => axios.put(`${API}/tasks/${id}`, data),
   deleteTask: (id) => axios.delete(`${API}/tasks/${id}`),
 
+  getIdeas: () => axios.get(`${API}/ideas`),
+  createIdea: (data) => axios.post(`${API}/ideas`, data),
+  updateIdea: (id, data) => axios.put(`${API}/ideas/${id}`, data),
+  deleteIdea: (id) => axios.delete(`${API}/ideas/${id}`),
+
   getReminders: () => axios.get(`${API}/reminders`),
   createReminder: (data) => axios.post(`${API}/reminders`, data),
   updateReminder: (id, data) => axios.put(`${API}/reminders/${id}`, data),
