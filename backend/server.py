@@ -101,6 +101,22 @@ class TaskUpdate(BaseModel):
     assigned_to: Optional[str] = None
     status: Optional[str] = None
     due_date: Optional[str] = None
+    priority: Optional[str] = None
+
+class IdeaCreate(BaseModel):
+    title: str
+    description: str = ""
+    category: str = "inne"
+    link: str = ""
+    priority: bool = False
+    created_by: str = "Admin"
+
+class IdeaUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[str] = None
+    link: Optional[str] = None
+    priority: Optional[bool] = None
 
 class ShopifyConfigCreate(BaseModel):
     shop_id: int
