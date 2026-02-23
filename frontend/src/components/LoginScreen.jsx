@@ -49,7 +49,7 @@ export default function LoginScreen({ onLogin }) {
             <span className="text-white text-2xl font-bold">E</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Ecommify</h1>
-          <p className="text-slate-500 text-sm mt-1">Panel zarządzania</p>
+          <p className="text-slate-500 text-sm mt-1">Panel Ecommify</p>
         </div>
 
         {/* PIN Card */}
