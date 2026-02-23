@@ -107,7 +107,7 @@ export default function LoginScreen({ onLogin }) {
 
         {/* Footer */}
         <p className="text-xs text-slate-400">
-          Wersja 2.0 &bull; Profesjonalny Panel E-commerce
+          Wersja 2.0 &bull; Panel Ecommify
         </p>
       </div>
     </div>
