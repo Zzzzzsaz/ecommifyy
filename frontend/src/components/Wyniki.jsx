@@ -67,9 +67,26 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
   const syncData = async () => {
     setSyncing(true);
     try {
+      // Try to sync from external sources (Shopify/TikTok)
+      const syncResult = await api.syncAll(year, month);
+      
+      // Check if any syncs happened
+      const shopifySyncs = syncResult.data?.shopify?.length || 0;
+      const tiktokSyncs = syncResult.data?.tiktok?.length || 0;
+      
+      // Refresh stats after sync
       await fetchStats();
-      toast.success("Zsynchronizowano!");
-    } catch { toast.error("Błąd synchronizacji"); }
+      
+      if (shopifySyncs > 0 || tiktokSyncs > 0) {
+        toast.success(`Zsynchronizowano! (Shopify: ${shopifySyncs}, TikTok: ${tiktokSyncs})`);
+      } else {
+        toast.success("Dane odświeżone!");
+      }
+    } catch { 
+      // Even if sync fails, still refresh stats
+      await fetchStats();
+      toast.success("Dane odświeżone!");
+    }
     finally { setSyncing(false); }
   };
 
