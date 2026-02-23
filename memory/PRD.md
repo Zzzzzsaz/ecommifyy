@@ -1,142 +1,100 @@
-# Ecommify Campaign Calculator - PRD
+# Ecommify - Professional E-Commerce Dashboard PRD
 
 ## Original Problem Statement
-Business dashboard "Ecommify Campaign Calculator" for managing e-commerce stores (Shopify). Everything in Polish, PLN currency, 23% VAT.
+Business dashboard "Ecommify" for managing e-commerce stores (Shopify). Polish language, PLN currency, 23% VAT.
 
 ## What's Been Implemented
 
-### Completed (Dec 2025)
-- **Authentication**: PIN-based login (3 users: Admin/2409, Kacper/2609, Szymon/2509)
-- **Dashboard**: Game-style menu with weekly stats, reminders, rank display, **PRODUCTS section**
-- **Products Management**: Full CRUD in Dashboard with:
-  - Name, SKU, Price, Extra Payment (doplata), Shop, Category
-  - Automatic extra_payment calculation when creating orders
-  - Cyan-colored highlight for doplata field
-- **Results (Wyniki)**: Stats, CS:GO ranks, dynamic target, profit/person, entries, Excel export
-- **Orders (Zamowienia)**: 4 tabs:
-  - **Zamowienia**: Full orders with customer info, add/delete, status tracking
-  - **Ewidencja sprzedazy**: **AUTO-CREATED** from orders + manual, daily/monthly PDF
-  - **Zwroty**: Mark orders as returned, **"Cofnij" button restores order to list**
-  - **Realizacja zamowien**: Presale pipeline with automatic extra_payment, **DELETE button on each stage**
-- **Calendar (Kalendarz)**: Full month calendar, recurring reminders, notes
-- **Dynamic Shops**: Add/edit/delete, auto-detected everywhere
-- **Stores (Sklepy)**: Shop management, Shopify config per shop, TikTok Ads
-- **Settings (Ustawienia)**: Target revenue, profit split, VAT rate, currency, company data
-- **AI Assistant (Floating Bubble)**: 
-  - Replaced old AI Expert tab with floating purple bubble
-  - Can execute actions: view/delete orders, products, returns, fulfillment, reminders
-  - Can create products and reminders
-  - Shows action badges for executed operations
-- **Data**: MongoDB persistent storage
-- **UI Cleanup**: Removed "Made with Emergent" badge, removed AI from bottom nav
+### Version 2.0 - Complete Redesign (Feb 23, 2026)
 
-### Completed (Feb 2026) - Customizable Financial Results
-- **Kategoryzowane koszty API** (`/api/costs`):
-  - CRUD dla kosztów: TikTok, Meta, Google, Zwroty + własne kategorie
-  - "Koszty reklam" = suma TikTok + Meta + Google (usunięto stare "Ads")
-- **Własne kolumny API** (`/api/custom-columns`):
-  - Dodawanie/usuwanie własnych kolumn (typ: przychód lub koszt)
-  - Własne kolory dla kolumn
-  - Usunięcie kolumny usuwa też powiązane dane
-- **Odświeżona strona Wyniki (Feb 15, 2026)**:
-  - **NAPRAWIONY interfejs Excel-like** - użytkownik może dodawać dane do każdego dnia
-  - Uproszczony układ 4-kolumnowy: Dzień | Przychód | Koszty | Akcje
-  - **Widoczne przyciski "+" przy każdym dniu** (zielony dla przychodu, czerwony dla kosztu)
-  - Przycisk "Szczegóły" otwiera dialog z listą wpisów i możliwością usuwania
-  - KPI karty: Przychód, Koszty, Zysk, Na łeb (aktualizują się w czasie rzeczywistym)
-  - Dialog "Szczegóły" z przyciskami szybkiego dodawania: +TikTok, +Meta, +Google, +Zwroty
-  - Pełna responsywność - działa na mobile i desktop
-  - Legenda kategorii kosztów na dole strony
+**🎨 New Professional Light Theme:**
+- Switched from dark gaming theme to professional white/light design
+- Removed all gaming elements (CS:GO ranks, confetti effects, game-style UI)
+- Clean, minimalist design with slate-50 background (#f8fafc)
+- Professional typography using Inter font
+- Consistent card and table styling across all pages
 
-### Architecture
-- Backend: FastAPI + MongoDB (Motor)
-- Frontend: React 19 + TailwindCSS + Shadcn/UI
-- PDF: fpdf2, Excel: openpyxl
-- LLM: OpenAI GPT-4o via emergentintegrations
+**🧭 New Sidebar Navigation:**
+- Desktop: Fixed 256px sidebar on left
+- Mobile: Hamburger menu with slide-in sidebar
+- Navigation items: Panel główny, Wyniki, Zamówienia, Zadania, Pomysły, Kalendarz, Sklepy, Ustawienia
+- User avatar and logout at bottom
 
-## Key Features
+**📊 Dashboard:**
+- KPI Cards: Przychód miesięczny, Zysk, Koszty reklam, Cel miesięczny
+- Today stats: Przychód, Koszty, Zysk, Na osobę
+- Quick actions: Wyniki, Zamówienia, Zadania, Kalendarz
+- Products section with CRUD
+- Reminders widget with overdue alerts
+- Weekly summary
 
-### AI Assistant Actions
-Available commands:
-- get_orders, get_products, get_returns, get_fulfillment, get_shops, get_reminders
-- delete_product, delete_order, delete_return, delete_fulfillment, delete_reminder
-- create_product (name:price:extra:shop_id), create_reminder (title:date)
-- update_fulfillment (id:status)
+**💰 Wyniki (Financial Results):**
+- Clean data table with columns: Dzień, Przychód, Netto, Koszty, Zysk, Na osobę, Akcje
+- KPI summary cards at top
+- Month navigation
+- Shop selector dropdown
+- Sync, Settings, and Export buttons
+- Add income/cost buttons per day
+- Details dialog for viewing/editing entries
 
-### Products & Doplata
-- Products have: id, name, sku, price, extra_payment, shop_id, category
-- When order is created, system matches items by name with products table
-- Total extra_payment = SUM(product.extra_payment * item.quantity)
-- Stored in fulfillment.extra_payment for presale pipeline
+**💡 Pomysły (Ideas):**
+- Grid layout for idea cards
+- Category filters: Wszystkie, Ważne, Produkt, Marketing, Sklep, Inne
+- Priority star marking
+- CRUD with dialog forms
+- Link support with external link indicator
 
-### Auto Sales Records (Ewidencja)
-- When order is created, sales records are automatically generated from order items
-- Deleting order also removes related sales records
+**✅ Zadania (Tasks):**
+- List view with checkbox toggles
+- Priority badges (Wysoki, Średni, Niski)
+- Assignee (Kacper, Szymon, Oboje)
+- Due date with overdue indication
+- Status filter (Wszystkie, Aktywne, Ukończone)
 
-### Returns Undo & Fulfillment Delete
-- "Cofnij" button on returns restores order status to "new"
-- Delete button on each fulfillment stage removes from pipeline
+### Previous Features (Still Working)
+- **Authentication**: PIN-based login (Admin/2409, Kacper/2609, Szymon/2509)
+- **Orders (Zamówienia)**: 4 tabs - Orders, Sales records, Returns, Fulfillment
+- **Calendar (Kalendarz)**: Month calendar with reminders and notes
+- **Stores (Sklepy)**: Shop management with Shopify/TikTok config
+- **Settings (Ustawienia)**: Target revenue, profit split, VAT rate, company data
+- **Products**: Full CRUD with extra payment (dopłata) for presale
 
-### Categorized Costs System
-- Categories: tiktok, meta, google, zwroty, inne, user-defined
-- Daily cost breakdown in Wyniki page
-- **Widoczne przyciski "+" przy każdym dniu** do dodawania przychodów i kosztów
-- Dialog "Szczegóły" z listą wpisów, usuwaniem i szybkim dodawaniem kategorii
-- Custom columns with income/expense types and custom colors
+### Removed Features
+- ❌ AI Assistant (disabled for deployment simplification)
+- ❌ CS:GO-style ranks
+- ❌ Gaming UI elements (confetti, neon colors, etc.)
+- ❌ Bottom navigation (replaced by sidebar)
 
-## Prioritized Backlog
+## Technical Stack
+- **Frontend**: React, Tailwind CSS, Shadcn/UI components
+- **Backend**: FastAPI, Python
+- **Database**: MongoDB Atlas (external persistent)
+- **Deployment**: Railway.app
 
-### P0 (Done)
-- Products & Dynamic Top-ups - COMPLETED
-- Auto Sales Records from Orders - COMPLETED  
-- Returns Undo functionality - COMPLETED
-- Delete from Fulfillment - COMPLETED
-- AI Assistant with Actions - COMPLETED
-- **Customizable Financial Results - COMPLETED**
-- **Excel-like Wyniki Page UX Fix - COMPLETED (Feb 15, 2026)**
-- **Pomysły (Ideas) Page - COMPLETED (Feb 23, 2026)**
-  - Full CRUD API for ideas with categories: produkt, marketing, sklep, inne
-  - Priority/important flag with star
-  - Filter by category
-  - Grid layout with cards
-- **Bug Fix: Ideas Adding - FIXED (Feb 23, 2026)** - Removed created_at from frontend request
-- **Bug Fix: Sync Button - FIXED (Feb 23, 2026)** - Now calls api.syncAll() properly
-- **UI/UX Improvement: Shop Selector - COMPLETED (Feb 23, 2026)**
-  - Added dropdown selector in Wyniki header
-  - Quick shop tabs below for desktop
-  - Better mobile UX
+## API Endpoints
+- `/api/auth/login` - POST
+- `/api/monthly-stats`, `/api/combined-monthly-stats` - GET
+- `/api/costs`, `/api/incomes` - CRUD
+- `/api/ideas` - CRUD
+- `/api/tasks` - CRUD
+- `/api/products` - CRUD
+- `/api/reminders` - CRUD
+- `/api/custom-columns` - CRUD
+- `/api/sync/all` - POST
 
-### P1
-- Shopify Product Sync (endpoint + UI button)
-- Real Shopify Order API integration
-- Tasks (Zadania) page improvements
+## Backlog
 
-### P2
+### P1 (Next)
+- Shopify Product Sync (real API integration)
+- Real-time Shopify order sync
+
+### P2 (Future)
 - TikTok API integration
-- Expand AI Assistant with more actions
-- Re-enable AI Assistant (currently disabled)
-
-## MOCKED: Shopify sync, TikTok sync (need API keys)
+- Re-enable AI Assistant (optional)
+- Automated payment reminders
+- Backend refactoring (split server.py into modules)
 
 ## Test Credentials
 - Admin: PIN 2409
 - Kacper: PIN 2609
 - Szymon: PIN 2509
-
-## API Endpoints Reference
-
-### Costs API
-- `GET /api/costs` - List costs (params: shop_id, date, year, month, category)
-- `POST /api/costs` - Create cost (body: date, shop_id, category, amount, description)
-- `PUT /api/costs/{id}` - Update cost (body: amount, description)
-- `DELETE /api/costs/{id}` - Delete cost
-
-### Custom Columns API
-- `GET /api/custom-columns` - List user-defined columns
-- `POST /api/custom-columns` - Create column (body: name, column_type: income|expense, color)
-- `PUT /api/custom-columns/{id}` - Update column
-- `DELETE /api/custom-columns/{id}` - Delete column (also removes associated costs)
-
-### Stats Endpoints (Updated)
-- `GET /api/monthly-stats` - Single shop stats with categorized costs
-- `GET /api/combined-monthly-stats` - All shops combined stats
