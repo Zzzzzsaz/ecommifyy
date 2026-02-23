@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,50 +6,51 @@
 
 @layer base {
   :root {
-    --background: 240 27% 8%;
-    --foreground: 220 13% 91%;
-    --card: 240 28% 14%;
-    --card-foreground: 220 13% 91%;
-    --popover: 240 28% 14%;
-    --popover-foreground: 220 13% 91%;
-    --primary: 239 84% 67%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 20% 22%;
-    --secondary-foreground: 215 20% 65%;
-    --muted: 240 28% 14%;
-    --muted-foreground: 215 16% 65%;
-    --accent: 239 84% 67%;
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 11%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 217 91% 60%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 240 20% 22%;
-    --input: 240 20% 22%;
-    --ring: 239 84% 67%;
-    --radius: 0.75rem;
-    --chart-1: 239 84% 67%;
-    --chart-2: 160 59% 52%;
-    --chart-3: 38 92% 65%;
-    --chart-4: 330 81% 60%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+    --chart-1: 217 91% 60%;
+    --chart-2: 160 84% 39%;
+    --chart-3: 43 96% 56%;
+    --chart-4: 262 83% 58%;
     --chart-5: 0 84% 60%;
   }
 }
 
 html {
-  background-color: #0f0f1a;
+  background-color: #f8fafc;
 }
 
 body {
   margin: 0;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0f0f1a;
-  color: #e2e8f0;
+  background-color: #f8fafc;
+  color: #0f172a;
   overflow-x: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
 }
 
 .tabular-nums {
@@ -77,18 +78,27 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Scrollbar styling */
+/* Scrollbar styling - Light theme */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #0f0f1a;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2d2d44;
+  background: #cbd5e1;
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #6366f1;
+  background: #94a3b8;
+}
+
+/* Professional card hover effect */
+.card-hover {
+  transition: all 0.2s ease;
+}
+.card-hover:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
 }
