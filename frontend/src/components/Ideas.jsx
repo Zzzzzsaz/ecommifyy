@@ -66,15 +66,19 @@ export default function Ideas({ user }) {
     setSaving(true);
     try {
       await api.createIdea({ 
-        ...form, 
-        created_by: user.name,
-        created_at: new Date().toISOString()
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        link: form.link,
+        priority: form.priority,
+        created_by: user?.name || "Admin"
       });
       toast.success("Pomysł dodany!");
       setShowAdd(false);
       resetForm();
       fetchIdeas();
-    } catch {
+    } catch (err) {
+      console.error("Error adding idea:", err);
       toast.error("Błąd dodawania");
     } finally {
       setSaving(false);
