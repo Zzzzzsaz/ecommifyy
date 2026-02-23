@@ -94,14 +94,27 @@ Available commands:
 - AI Assistant with Actions - COMPLETED
 - **Customizable Financial Results - COMPLETED**
 - **Excel-like Wyniki Page UX Fix - COMPLETED (Feb 15, 2026)**
+- **Pomysły (Ideas) Page - COMPLETED (Feb 23, 2026)**
+  - Full CRUD API for ideas with categories: produkt, marketing, sklep, inne
+  - Priority/important flag with star
+  - Filter by category
+  - Grid layout with cards
+- **Bug Fix: Ideas Adding - FIXED (Feb 23, 2026)** - Removed created_at from frontend request
+- **Bug Fix: Sync Button - FIXED (Feb 23, 2026)** - Now calls api.syncAll() properly
+- **UI/UX Improvement: Shop Selector - COMPLETED (Feb 23, 2026)**
+  - Added dropdown selector in Wyniki header
+  - Quick shop tabs below for desktop
+  - Better mobile UX
 
 ### P1
 - Shopify Product Sync (endpoint + UI button)
 - Real Shopify Order API integration
+- Tasks (Zadania) page improvements
 
 ### P2
 - TikTok API integration
 - Expand AI Assistant with more actions
+- Re-enable AI Assistant (currently disabled)
 
 ## MOCKED: Shopify sync, TikTok sync (need API keys)
 
