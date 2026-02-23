@@ -1,78 +1,45 @@
 import { useState, useEffect } from "react";
 import { api } from "@/lib/api";
-import { getRank, getNextRank, getRankProgress } from "@/lib/ranks";
-import { motion, AnimatePresence } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
-  BarChart3, ClipboardList, Store, Sparkles, LogOut, ChevronRight,
-  Target, Settings, Flame, TrendingUp, Crown, Users, CalendarDays,
-  Plus, Check, Trash2, ShoppingCart, ArrowUp, ArrowDown, Package, Edit2, X
+  TrendingUp, TrendingDown, DollarSign, ShoppingCart, Target,
+  Plus, Check, Trash2, Edit2, Package, Calendar, ChevronRight,
+  BarChart3, AlertCircle
 } from "lucide-react";
 
-const LOGO_URL = "https://customer-assets.emergentagent.com/job_d80f261d-499e-4117-b40a-11f7363e88f3/artifacts/gvqot30h_ecommify%20logo.png";
 const fmtPLN = (v) => (v || 0).toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtK = (v) => (v || 0) >= 1000 ? ((v / 1000).toFixed(1) + "k") : (v || 0).toFixed(0);
 
-const MENU_ITEMS = [
-  { id: "wyniki", title: "WYNIKI", desc: "Przychody, zyski, ROI", icon: BarChart3, color: "#6366f1", accent: "rgba(99,102,241," },
-  { id: "orders", title: "ZAMOWIENIA", desc: "Zamowienia i ewidencja", icon: ShoppingCart, color: "#10b981", accent: "rgba(16,185,129," },
-  { id: "calendar", title: "KALENDARZ", desc: "Przypomnienia i notatki", icon: CalendarDays, color: "#f59e0b", accent: "rgba(245,158,11," },
-  { id: "stores", title: "SKLEPY", desc: "Shopify & TikTok", icon: Store, color: "#8b5cf6", accent: "rgba(139,92,246," },
-  { id: "ai", title: "AI EXPERT", desc: "Marketing GPT-5.2", icon: Sparkles, color: "#ec4899", accent: "rgba(236,72,153," },
-];
-
-const ConfettiEffect = () => (
-  <div className="fixed inset-0 pointer-events-none z-[60]">
-    {Array.from({ length: 50 }, (_, i) => (
-      <div key={i} className="confetti-piece" style={{ left: Math.random() * 100 + "%", animationDelay: Math.random() * 1.5 + "s", animationDuration: (Math.random() * 2 + 2) + "s", backgroundColor: ["#6366f1", "#10b981", "#f59e0b", "#ec4899", "#FFD700"][i % 5], width: Math.random() * 8 + 4 + "px", height: Math.random() * 8 + 4 + "px", borderRadius: Math.random() > 0.5 ? "50%" : "2px" }} />
-    ))}
-  </div>
-);
-
-export default function Dashboard({ user, shops = [], appSettings = {}, onNavigate, onLogout }) {
+export default function Dashboard({ user, shops = [], appSettings = {}, onNavigate }) {
   const [stats, setStats] = useState(null);
-  const [taskCount, setTaskCount] = useState(0);
   const [reminders, setReminders] = useState([]);
   const [weekly, setWeekly] = useState(null);
-  const [showRankUp, setShowRankUp] = useState(false);
-  const [rankUpData, setRankUpData] = useState(null);
-  const [showAddReminder, setShowAddReminder] = useState(false);
-  const [remForm, setRemForm] = useState({ title: "", date: "" });
   const [products, setProducts] = useState([]);
-  const [showProducts, setShowProducts] = useState(false);
+  const [showAddReminder, setShowAddReminder] = useState(false);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [remForm, setRemForm] = useState({ title: "", date: "" });
   const [productForm, setProductForm] = useState({ name: "", sku: "", price: 0, extra_payment: 0, shop_id: 1, category: "" });
 
   useEffect(() => {
     const now = new Date();
-    api.getCombinedStats({ year: now.getFullYear(), month: now.getMonth() + 1 }).then((r) => {
-      const prev = sessionStorage.getItem("ec_rank");
-      const curr = getRank(r.data.total_income);
-      if (prev && prev !== curr.name) { setRankUpData(curr); setShowRankUp(true); setTimeout(() => setShowRankUp(false), 4000); }
-      sessionStorage.setItem("ec_rank", curr.name);
-      setStats(r.data);
-    }).catch(() => {});
-    api.getTasks().then((r) => setTaskCount(r.data.filter((t) => t.status !== "done").length)).catch(() => {});
-    api.getReminders().then((r) => setReminders(r.data)).catch(() => {});
-    api.getWeeklyStats().then((r) => setWeekly(r.data)).catch(() => {});
-    api.getProducts().then((r) => setProducts(r.data)).catch(() => {});
+    api.getCombinedStats({ year: now.getFullYear(), month: now.getMonth() + 1 }).then(r => setStats(r.data)).catch(() => {});
+    api.getReminders().then(r => setReminders(r.data)).catch(() => {});
+    api.getWeeklyStats().then(r => setWeekly(r.data)).catch(() => {});
+    api.getProducts().then(r => setProducts(r.data)).catch(() => {});
   }, []);
 
   const addReminder = async () => {
-    if (!remForm.title || !remForm.date) { toast.error("Wypelnij pola"); return; }
+    if (!remForm.title || !remForm.date) { toast.error("Wypełnij wszystkie pola"); return; }
     await api.createReminder({ ...remForm, created_by: user.name });
     const r = await api.getReminders();
     setReminders(r.data);
     setShowAddReminder(false);
     setRemForm({ title: "", date: "" });
-    toast.success("Przypomnienie dodane!");
+    toast.success("Przypomnienie dodane");
   };
 
   const toggleReminder = async (id, done) => {
@@ -83,269 +50,388 @@ export default function Dashboard({ user, shops = [], appSettings = {}, onNaviga
 
   const deleteReminder = async (id) => {
     await api.deleteReminder(id);
-    setReminders((p) => p.filter((r) => r.id !== id));
-  };
-
-  const refreshProducts = async () => {
-    const r = await api.getProducts();
-    setProducts(r.data);
+    setReminders(p => p.filter(r => r.id !== id));
   };
 
   const saveProduct = async () => {
-    if (!productForm.name) { toast.error("Podaj nazwe produktu"); return; }
+    if (!productForm.name) { toast.error("Podaj nazwę produktu"); return; }
     try {
       if (editingProduct) {
         await api.updateProduct(editingProduct.id, productForm);
-        toast.success("Produkt zaktualizowany!");
+        toast.success("Produkt zaktualizowany");
       } else {
         await api.createProduct(productForm);
-        toast.success("Produkt dodany!");
+        toast.success("Produkt dodany");
       }
-      await refreshProducts();
+      const r = await api.getProducts();
+      setProducts(r.data);
       setShowAddProduct(false);
       setEditingProduct(null);
       setProductForm({ name: "", sku: "", price: 0, extra_payment: 0, shop_id: shops[0]?.id || 1, category: "" });
-    } catch (e) { toast.error("Blad zapisu produktu"); }
+    } catch { toast.error("Błąd zapisu"); }
   };
 
   const deleteProduct = async (id) => {
-    if (!window.confirm("Usunac produkt?")) return;
+    if (!window.confirm("Usunąć produkt?")) return;
     await api.deleteProduct(id);
-    await refreshProducts();
-    toast.success("Produkt usuniety");
-  };
-
-  const openEditProduct = (p) => {
-    setProductForm({ name: p.name, sku: p.sku || "", price: p.price || 0, extra_payment: p.extra_payment || 0, shop_id: p.shop_id, category: p.category || "" });
-    setEditingProduct(p);
-    setShowAddProduct(true);
+    const r = await api.getProducts();
+    setProducts(r.data);
+    toast.success("Produkt usunięty");
   };
 
   const TARGET = appSettings.target_revenue || 250000;
-  const rank = getRank(stats?.total_income || 0);
-  const nextRank = getNextRank(stats?.total_income || 0);
-  const rp = getRankProgress(stats?.total_income || 0);
-  const tp = stats ? Math.min((stats.total_income / TARGET) * 100, 100) : 0;
+  const progress = stats ? Math.min((stats.total_income / TARGET) * 100, 100) : 0;
   const todayStr = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; })();
-  const td = stats?.days?.find((d) => d.date === todayStr);
-
-  const upcomingReminders = reminders.filter((r) => !r.done && r.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
-  const overdueReminders = reminders.filter((r) => !r.done && r.date < todayStr);
+  const td = stats?.days?.find(d => d.date === todayStr);
+  const upcomingReminders = reminders.filter(r => !r.done && r.date >= todayStr).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 5);
+  const overdueReminders = reminders.filter(r => !r.done && r.date < todayStr);
 
   return (
-    <div className="game-grid min-h-screen p-4 pb-24" data-testid="menu-page">
-      <AnimatePresence>
-        {showRankUp && rankUpData && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
-            <motion.div initial={{ scale: 0.3, rotate: -15 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: "spring", stiffness: 200, damping: 12 }} className="text-center">
-              <p className="font-heading text-4xl font-bold text-ecom-warning mb-6 tracking-[0.3em] rank-up-text">RANK UP!</p>
-              <div className="w-28 h-28 rounded-2xl border-3 mx-auto flex items-center justify-center font-heading font-bold text-4xl rank-up-badge" style={{ borderColor: rankUpData.color, color: rankUpData.color, background: rankUpData.color + "15", boxShadow: `0 0 60px ${rankUpData.color}40` }}>{rankUpData.icon}</div>
-              <p className="font-heading font-bold text-white text-2xl mt-5">{rankUpData.name}</p>
-            </motion.div>
-            <ConfettiEffect />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* HEADER */}
-      <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between mb-5 pt-2">
-        <div>
-          <img src={LOGO_URL} alt="Ecommify" className="h-10 object-contain mb-2" data-testid="menu-logo" />
-          <h1 className="font-heading text-4xl sm:text-5xl font-bold text-white leading-none">Witaj, <span className="text-ecom-primary">{user.name}</span></h1>
-        </div>
-        <div className="flex gap-2 pt-1">
-          <button onClick={() => onNavigate("settings")} className="w-8 h-8 rounded-lg bg-ecom-card border border-ecom-border flex items-center justify-center text-ecom-muted hover:text-white transition-colors" data-testid="menu-settings-btn"><Settings size={14} /></button>
-          <button onClick={onLogout} className="w-8 h-8 rounded-lg bg-ecom-card border border-ecom-border flex items-center justify-center text-ecom-muted hover:text-ecom-danger transition-colors" data-testid="menu-logout-btn"><LogOut size={14} /></button>
-        </div>
-      </motion.div>
-
-      {/* RANK + TARGET */}
-      <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.06 }}
-        className="mb-3 p-4 rounded-xl border relative overflow-hidden" style={{ borderColor: rank.color + "30", background: `linear-gradient(135deg, ${rank.color}08, #1a1a2e 50%)` }} data-testid="rank-card">
-        <div className="scan-line-anim absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-        <div className="flex items-center gap-4 relative z-10">
-          <div className="w-14 h-14 rounded-xl border-2 flex items-center justify-center font-heading font-bold text-xl shrink-0" style={{ borderColor: rank.color, color: rank.color, background: rank.color + "12" }}>{rank.icon}</div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between"><p className="font-heading font-bold text-white text-base">{rank.name}</p><span className="text-[10px] text-ecom-muted tabular-nums">{tp.toFixed(1)}% z 250k</span></div>
-            {nextRank && <div className="mt-1"><div className="h-1.5 bg-ecom-border/50 rounded-full overflow-hidden"><motion.div initial={{ width: 0 }} animate={{ width: `${rp}%` }} transition={{ duration: 1.5 }} className="h-full rounded-full" style={{ backgroundColor: rank.color }} /></div><p className="text-[9px] text-ecom-muted mt-0.5 tabular-nums">{fmtK(stats?.total_income)} / {fmtK(nextRank.min)} zl do {nextRank.name}</p></div>}
-          </div>
-        </div>
-      </motion.div>
-
-      {/* REMINDERS */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="mb-3 p-4 rounded-xl bg-ecom-card border border-ecom-border" data-testid="reminders-section">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5"><CalendarDays size={14} className="text-ecom-primary" /><span className="text-[10px] text-ecom-muted uppercase tracking-wider font-semibold">PRZYPOMNIENIA</span></div>
-          <button onClick={() => setShowAddReminder(true)} className="text-ecom-primary hover:text-white" data-testid="add-reminder-btn"><Plus size={16} /></button>
-        </div>
-        {overdueReminders.length > 0 && overdueReminders.map((r) => (
-          <div key={r.id} className="flex items-center gap-2 py-1.5 border-l-2 border-ecom-danger pl-2 mb-1 rounded-r bg-ecom-danger/5">
-            <button onClick={() => toggleReminder(r.id, r.done)} className="w-4 h-4 rounded border border-ecom-danger shrink-0" />
-            <span className="text-xs text-ecom-danger flex-1 truncate">{r.title}</span>
-            <span className="text-[9px] text-ecom-danger tabular-nums">{r.date.slice(5)}</span>
-            <button onClick={() => deleteReminder(r.id)} className="text-ecom-muted hover:text-ecom-danger"><Trash2 size={10} /></button>
-          </div>
-        ))}
-        {upcomingReminders.length > 0 ? upcomingReminders.map((r) => (
-          <div key={r.id} className="flex items-center gap-2 py-1.5">
-            <button onClick={() => toggleReminder(r.id, r.done)} className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center ${r.done ? "bg-ecom-success border-ecom-success" : "border-ecom-border"}`}>
-              {r.done && <Check size={10} className="text-white" />}
-            </button>
-            <span className={`text-xs flex-1 truncate ${r.done ? "line-through text-ecom-muted" : "text-white"}`}>{r.title}</span>
-            <span className="text-[9px] text-ecom-muted tabular-nums">{r.date === todayStr ? "Dzisiaj" : r.date.slice(5)}</span>
-            <button onClick={() => deleteReminder(r.id)} className="text-ecom-muted hover:text-ecom-danger"><Trash2 size={10} /></button>
-          </div>
-        )) : <p className="text-ecom-muted text-[10px]">Brak przypomnienek</p>}
-      </motion.div>
-
-      {/* TODAY + WEEKLY */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.14 }}>
-        <div className="flex items-center justify-between mb-1.5 px-0.5">
-          <p className="text-[9px] text-ecom-muted uppercase tracking-[0.2em] font-semibold">DZISIAJ</p>
-          <div className="flex items-center gap-2">
-            {stats?.streak > 0 && <span className="flex items-center gap-0.5 text-[9px] text-orange-400 font-bold"><Flame size={10} />{stats.streak}d</span>}
-            <span className="flex items-center gap-0.5 text-[9px] text-ecom-primary font-bold"><Users size={10} />{fmtPLN(td?.profit_pp || 0)} /os</span>
-          </div>
-        </div>
-        <div className="grid grid-cols-4 gap-1.5 mb-3">
-          {[{ l: "Przychod", v: td?.income, c: "text-white" }, { l: "Ads", v: td?.ads, c: "text-ecom-danger" }, { l: "Zysk", v: td?.profit, c: (td?.profit || 0) >= 0 ? "text-ecom-success" : "text-ecom-danger" }, { l: "Na leb", v: td?.profit_pp, c: "text-ecom-primary" }].map((s, i) => (
-            <Card key={i} className="bg-ecom-card/60 border-ecom-border"><CardContent className="p-2"><p className="text-ecom-muted text-[8px] uppercase tracking-wider">{s.l}</p><p className={`font-heading font-bold text-xs tabular-nums ${s.c}`}>{fmtPLN(s.v || 0)}</p></CardContent></Card>
-          ))}
-        </div>
-        {weekly && (
-          <div className="grid grid-cols-2 gap-1.5 mb-3">
-            <Card className="bg-ecom-card/60 border-ecom-border"><CardContent className="p-2">
-              <p className="text-[8px] text-ecom-muted uppercase">Ten tydzien</p>
-              <p className="text-white font-heading font-bold text-xs tabular-nums">{fmtPLN(weekly.current.income)}</p>
-              <p className="flex items-center gap-0.5 text-[9px] tabular-nums" style={{ color: weekly.income_change >= 0 ? "#10b981" : "#ef4444" }}>{weekly.income_change >= 0 ? <ArrowUp size={9} /> : <ArrowDown size={9} />}{Math.abs(weekly.income_change)}%</p>
-            </CardContent></Card>
-            <Card className="bg-ecom-card/60 border-ecom-border"><CardContent className="p-2">
-              <p className="text-[8px] text-ecom-muted uppercase">Zysk tyg.</p>
-              <p className={`font-heading font-bold text-xs tabular-nums ${weekly.current.profit >= 0 ? "text-ecom-success" : "text-ecom-danger"}`}>{fmtPLN(weekly.current.profit)}</p>
-              <p className="flex items-center gap-0.5 text-[9px] tabular-nums" style={{ color: weekly.profit_change >= 0 ? "#10b981" : "#ef4444" }}>{weekly.profit_change >= 0 ? <ArrowUp size={9} /> : <ArrowDown size={9} />}{Math.abs(weekly.profit_change)}%</p>
-            </CardContent></Card>
-          </div>
-        )}
-      </motion.div>
-
-      {/* PRODUCTS SECTION */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.16 }} className="mb-3">
-        <div className="flex items-center justify-between mb-2 px-0.5">
-          <div className="flex items-center gap-1.5">
-            <Package size={14} className="text-cyan-400" />
-            <span className="text-[10px] text-ecom-muted uppercase tracking-wider font-semibold">PRODUKTY</span>
-            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-cyan-500/30 text-cyan-400">{products.length}</Badge>
-          </div>
-          <div className="flex items-center gap-1">
-            <button onClick={() => setShowProducts(!showProducts)} className="text-[9px] text-ecom-muted hover:text-white transition-colors" data-testid="toggle-products-btn">
-              {showProducts ? "Zwiń" : "Rozwin"}
-            </button>
-            <button onClick={() => { setEditingProduct(null); setProductForm({ name: "", sku: "", price: 0, extra_payment: 0, shop_id: shops[0]?.id || 1, category: "" }); setShowAddProduct(true); }} className="text-cyan-400 hover:text-white" data-testid="add-product-btn">
-              <Plus size={16} />
-            </button>
-          </div>
-        </div>
-        {showProducts && (
-          <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-            {products.length === 0 ? (
-              <p className="text-ecom-muted text-[10px] text-center py-3">Brak produktow. Dodaj pierwszy!</p>
-            ) : products.map((p) => {
-              const shop = shops.find(s => s.id === p.shop_id);
-              return (
-                <div key={p.id} className="flex items-center gap-2 p-2 rounded-lg bg-ecom-card/60 border border-ecom-border/50 group" data-testid={`product-item-${p.id}`}>
-                  <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: shop?.color || "#666" }} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-white truncate">{p.name}</p>
-                    <p className="text-[9px] text-ecom-muted">{p.sku && `SKU: ${p.sku} | `}Cena: {fmtPLN(p.price)} zl</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[10px] text-cyan-400 font-semibold">+{fmtPLN(p.extra_payment)} zl</p>
-                    <p className="text-[8px] text-ecom-muted">doplata</p>
-                  </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => openEditProduct(p)} className="text-ecom-muted hover:text-white"><Edit2 size={12} /></button>
-                    <button onClick={() => deleteProduct(p.id)} className="text-ecom-muted hover:text-ecom-danger"><Trash2 size={12} /></button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </motion.div>
-
-      {/* MENU TILES */}
-      <div className="grid grid-cols-2 gap-2.5 mb-4" data-testid="menu-tiles">
-        {MENU_ITEMS.map((item, i) => {
-          const Icon = item.icon;
-          return (
-            <motion.button key={item.id} initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 + i * 0.05, type: "spring", stiffness: 180, damping: 18 }}
-              onClick={() => onNavigate(item.id)} className="menu-tile group relative rounded-xl border border-ecom-border p-3.5 text-left h-[110px] flex flex-col justify-between overflow-hidden" style={{ backgroundColor: "#1a1a2e" }} data-testid={`menu-tile-${item.id}`}>
-              <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ background: `radial-gradient(ellipse at 20% 20%, ${item.accent}0.1), transparent 70%)` }} />
-              <div className="relative z-10">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-1.5" style={{ backgroundColor: `${item.accent}0.08)` }}><Icon size={16} style={{ color: item.color }} /></div>
-                <h3 className="font-heading font-bold text-white text-xs tracking-wider">{item.title}</h3>
-                <p className="text-ecom-muted text-[9px]">{item.desc}</p>
-              </div>
-              <ChevronRight size={12} className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-60 transition-all" style={{ color: item.color }} />
-            </motion.button>
-          );
-        })}
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8" data-testid="dashboard-page">
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-900">Witaj, {user.name}</h1>
+        <p className="text-slate-500 mt-1">Panel zarządzania Twoim e-commerce</p>
       </div>
 
-      {/* BEST DAY */}
-      {stats?.best_day && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="p-2.5 rounded-xl bg-ecom-card/40 border border-ecom-border/50 flex items-center gap-2" data-testid="best-day-badge">
-        <Crown size={14} className="text-ecom-warning shrink-0" /><p className="text-[10px] text-ecom-muted">Najlepszy dzien: <span className="text-white font-medium">{stats.best_day}</span> - <span className="text-ecom-success tabular-nums">{fmtPLN(stats.days.find(d => d.date === stats.best_day)?.profit || 0)}</span></p>
-      </motion.div>}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="kpi-card" data-testid="kpi-income">
+          <div className="flex items-center justify-between mb-3">
+            <span className="kpi-label">Przychód miesięczny</span>
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <DollarSign size={16} className="text-blue-600" />
+            </div>
+          </div>
+          <p className="kpi-value">{fmtPLN(stats?.total_income)} zł</p>
+          {weekly && (
+            <p className={`text-xs mt-2 flex items-center gap-1 ${weekly.income_change >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+              {weekly.income_change >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+              {Math.abs(weekly.income_change)}% vs poprzedni tydzień
+            </p>
+          )}
+        </div>
 
-      {/* ADD REMINDER DIALOG */}
+        <div className="kpi-card" data-testid="kpi-profit">
+          <div className="flex items-center justify-between mb-3">
+            <span className="kpi-label">Zysk</span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <TrendingUp size={16} className="text-emerald-600" />
+            </div>
+          </div>
+          <p className={`kpi-value ${(stats?.total_profit || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+            {fmtPLN(stats?.total_profit)} zł
+          </p>
+          <p className="text-xs text-slate-500 mt-2">
+            Na osobę: {fmtPLN(stats?.profit_per_person)} zł
+          </p>
+        </div>
+
+        <div className="kpi-card" data-testid="kpi-orders">
+          <div className="flex items-center justify-between mb-3">
+            <span className="kpi-label">Koszty reklam</span>
+            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+              <ShoppingCart size={16} className="text-orange-600" />
+            </div>
+          </div>
+          <p className="kpi-value text-orange-600">{fmtPLN(stats?.total_ads)} zł</p>
+          <p className="text-xs text-slate-500 mt-2">
+            ROI: {stats?.roi || 0}%
+          </p>
+        </div>
+
+        <div className="kpi-card" data-testid="kpi-target">
+          <div className="flex items-center justify-between mb-3">
+            <span className="kpi-label">Cel miesięczny</span>
+            <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
+              <Target size={16} className="text-violet-600" />
+            </div>
+          </div>
+          <p className="kpi-value">{progress.toFixed(0)}%</p>
+          <div className="progress-bar mt-3">
+            <div className="progress-bar-fill" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Today Stats */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Today Card */}
+          <div className="pro-card p-6" data-testid="today-stats">
+            <h2 className="font-semibold text-slate-900 mb-4">Dzisiaj</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Przychód</p>
+                <p className="text-lg font-semibold text-slate-900">{fmtPLN(td?.income)} zł</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Koszty</p>
+                <p className="text-lg font-semibold text-orange-600">{fmtPLN(td?.ads_total)} zł</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Zysk</p>
+                <p className={`text-lg font-semibold ${(td?.profit || 0) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {fmtPLN(td?.profit)} zł
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Na osobę</p>
+                <p className="text-lg font-semibold text-slate-900">{fmtPLN(td?.profit_pp)} zł</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="pro-card p-6" data-testid="quick-actions">
+            <h2 className="font-semibold text-slate-900 mb-4">Szybkie akcje</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[
+                { id: "wyniki", label: "Wyniki", icon: BarChart3, color: "bg-blue-50 text-blue-600" },
+                { id: "orders", label: "Zamówienia", icon: ShoppingCart, color: "bg-emerald-50 text-emerald-600" },
+                { id: "tasks", label: "Zadania", icon: Check, color: "bg-violet-50 text-violet-600" },
+                { id: "calendar", label: "Kalendarz", icon: Calendar, color: "bg-orange-50 text-orange-600" },
+              ].map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => onNavigate(item.id)}
+                  className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all group"
+                  data-testid={`quick-action-${item.id}`}
+                >
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${item.color}`}>
+                    <item.icon size={18} />
+                  </div>
+                  <span className="font-medium text-slate-700 text-sm">{item.label}</span>
+                  <ChevronRight size={16} className="text-slate-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Products */}
+          <div className="pro-card p-6" data-testid="products-section">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-slate-900">Produkty ({products.length})</h2>
+              <Button
+                size="sm"
+                onClick={() => { setEditingProduct(null); setProductForm({ name: "", sku: "", price: 0, extra_payment: 0, shop_id: shops[0]?.id || 1, category: "" }); setShowAddProduct(true); }}
+                className="btn-primary h-8 text-xs"
+                data-testid="add-product-btn"
+              >
+                <Plus size={14} className="mr-1" /> Dodaj
+              </Button>
+            </div>
+            {products.length === 0 ? (
+              <p className="text-sm text-slate-500 text-center py-6">Brak produktów. Dodaj pierwszy!</p>
+            ) : (
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {products.slice(0, 5).map(p => {
+                  const shop = shops.find(s => s.id === p.shop_id);
+                  return (
+                    <div key={p.id} className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 group" data-testid={`product-${p.id}`}>
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: shop?.color || "#64748b" }} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-900 truncate">{p.name}</p>
+                        <p className="text-xs text-slate-500">{fmtPLN(p.price)} zł</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-blue-600">+{fmtPLN(p.extra_payment)} zł</p>
+                        <p className="text-[10px] text-slate-400">dopłata</p>
+                      </div>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => { setProductForm({ name: p.name, sku: p.sku || "", price: p.price || 0, extra_payment: p.extra_payment || 0, shop_id: p.shop_id, category: p.category || "" }); setEditingProduct(p); setShowAddProduct(true); }} className="p-1 text-slate-400 hover:text-slate-600">
+                          <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => deleteProduct(p.id)} className="p-1 text-slate-400 hover:text-red-600">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {products.length > 5 && (
+                  <p className="text-xs text-slate-500 text-center py-2">+{products.length - 5} więcej produktów</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Sidebar - Reminders */}
+        <div className="space-y-6">
+          {/* Reminders */}
+          <div className="pro-card p-6" data-testid="reminders-section">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-slate-900">Przypomnienia</h2>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowAddReminder(true)}
+                className="h-8 w-8 p-0"
+                data-testid="add-reminder-btn"
+              >
+                <Plus size={16} />
+              </Button>
+            </div>
+
+            {/* Overdue */}
+            {overdueReminders.length > 0 && (
+              <div className="mb-4">
+                <p className="text-xs font-medium text-red-600 mb-2 flex items-center gap-1">
+                  <AlertCircle size={12} /> Zaległe ({overdueReminders.length})
+                </p>
+                {overdueReminders.map(r => (
+                  <div key={r.id} className="flex items-center gap-2 py-2 px-3 mb-1 rounded-lg bg-red-50 border border-red-100">
+                    <button onClick={() => toggleReminder(r.id, r.done)} className="w-4 h-4 rounded border border-red-300 shrink-0" />
+                    <span className="text-sm text-red-700 flex-1 truncate">{r.title}</span>
+                    <span className="text-xs text-red-500">{r.date.slice(5)}</span>
+                    <button onClick={() => deleteReminder(r.id)} className="text-red-400 hover:text-red-600">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upcoming */}
+            {upcomingReminders.length > 0 ? (
+              <div className="space-y-1">
+                {upcomingReminders.map(r => (
+                  <div key={r.id} className="flex items-center gap-2 py-2">
+                    <button
+                      onClick={() => toggleReminder(r.id, r.done)}
+                      className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center ${r.done ? "bg-emerald-500 border-emerald-500" : "border-slate-300"}`}
+                    >
+                      {r.done && <Check size={10} className="text-white" />}
+                    </button>
+                    <span className={`text-sm flex-1 truncate ${r.done ? "line-through text-slate-400" : "text-slate-700"}`}>
+                      {r.title}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {r.date === todayStr ? "Dzisiaj" : r.date.slice(5)}
+                    </span>
+                    <button onClick={() => deleteReminder(r.id)} className="text-slate-300 hover:text-red-500">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500 text-center py-4">Brak przypomnień</p>
+            )}
+          </div>
+
+          {/* Weekly Summary */}
+          {weekly && (
+            <div className="pro-card p-6" data-testid="weekly-summary">
+              <h2 className="font-semibold text-slate-900 mb-4">Podsumowanie tygodnia</h2>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Przychód</span>
+                  <span className="font-semibold text-slate-900">{fmtPLN(weekly.current.income)} zł</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Zysk</span>
+                  <span className={`font-semibold ${weekly.current.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {fmtPLN(weekly.current.profit)} zł
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Zmiana</span>
+                  <span className={`flex items-center gap-1 font-medium ${weekly.profit_change >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {weekly.profit_change >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+                    {Math.abs(weekly.profit_change)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Add Reminder Dialog */}
       <Dialog open={showAddReminder} onOpenChange={setShowAddReminder}>
-        <DialogContent className="bg-ecom-card border-ecom-border max-w-xs" data-testid="add-reminder-dialog">
-          <DialogHeader><DialogTitle className="font-heading text-white">Nowe przypomnienie</DialogTitle><DialogDescription className="text-ecom-muted text-xs">Dodaj zadanie lub termin</DialogDescription></DialogHeader>
-          <div className="space-y-3 mt-1">
-            <Input placeholder="Tytul (np. Wyslac faktury)" value={remForm.title} onChange={(e) => setRemForm(f => ({ ...f, title: e.target.value }))} className="bg-ecom-bg border-ecom-border text-white" data-testid="reminder-title" />
-            <Input type="date" value={remForm.date} onChange={(e) => setRemForm(f => ({ ...f, date: e.target.value }))} className="bg-ecom-bg border-ecom-border text-white" data-testid="reminder-date" />
-            <Button onClick={addReminder} className="w-full bg-ecom-primary hover:bg-ecom-primary/80" data-testid="reminder-save">Dodaj</Button>
+        <DialogContent className="bg-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Nowe przypomnienie</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <Input
+              placeholder="Tytuł przypomnienia"
+              value={remForm.title}
+              onChange={e => setRemForm(f => ({ ...f, title: e.target.value }))}
+              data-testid="reminder-title-input"
+            />
+            <Input
+              type="date"
+              value={remForm.date}
+              onChange={e => setRemForm(f => ({ ...f, date: e.target.value }))}
+              data-testid="reminder-date-input"
+            />
+            <Button onClick={addReminder} className="w-full btn-primary" data-testid="save-reminder-btn">
+              Dodaj przypomnienie
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* ADD/EDIT PRODUCT DIALOG */}
-      <Dialog open={showAddProduct} onOpenChange={(v) => { setShowAddProduct(v); if (!v) setEditingProduct(null); }}>
-        <DialogContent className="bg-ecom-card border-ecom-border max-w-sm" data-testid="product-dialog">
+      {/* Add/Edit Product Dialog */}
+      <Dialog open={showAddProduct} onOpenChange={v => { setShowAddProduct(v); if (!v) setEditingProduct(null); }}>
+        <DialogContent className="bg-white max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-heading text-white">{editingProduct ? "Edytuj produkt" : "Nowy produkt"}</DialogTitle>
-            <DialogDescription className="text-ecom-muted text-xs">Ustaw doplaty dla produktow presale</DialogDescription>
+            <DialogTitle>{editingProduct ? "Edytuj produkt" : "Nowy produkt"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 mt-1">
+          <div className="space-y-4 mt-2">
             <div>
-              <label className="text-[10px] text-ecom-muted uppercase mb-1 block">Nazwa produktu *</label>
-              <Input placeholder="np. Bluza Premium" value={productForm.name} onChange={(e) => setProductForm(f => ({ ...f, name: e.target.value }))} className="bg-ecom-bg border-ecom-border text-white" data-testid="product-name" />
+              <label className="text-xs text-slate-500 mb-1 block">Nazwa produktu *</label>
+              <Input
+                placeholder="np. Bluza Premium"
+                value={productForm.name}
+                onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))}
+                data-testid="product-name-input"
+              />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] text-ecom-muted uppercase mb-1 block">SKU</label>
-                <Input placeholder="ABC-123" value={productForm.sku} onChange={(e) => setProductForm(f => ({ ...f, sku: e.target.value }))} className="bg-ecom-bg border-ecom-border text-white" data-testid="product-sku" />
+                <label className="text-xs text-slate-500 mb-1 block">SKU</label>
+                <Input
+                  placeholder="ABC-123"
+                  value={productForm.sku}
+                  onChange={e => setProductForm(f => ({ ...f, sku: e.target.value }))}
+                />
               </div>
               <div>
-                <label className="text-[10px] text-ecom-muted uppercase mb-1 block">Cena (zl)</label>
-                <Input type="number" step="0.01" value={productForm.price} onChange={(e) => setProductForm(f => ({ ...f, price: parseFloat(e.target.value) || 0 }))} className="bg-ecom-bg border-ecom-border text-white" data-testid="product-price" />
+                <label className="text-xs text-slate-500 mb-1 block">Cena (zł)</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={productForm.price}
+                  onChange={e => setProductForm(f => ({ ...f, price: parseFloat(e.target.value) || 0 }))}
+                />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[10px] text-cyan-400 uppercase mb-1 block font-semibold">Doplata (zl) *</label>
-                <Input type="number" step="0.01" value={productForm.extra_payment} onChange={(e) => setProductForm(f => ({ ...f, extra_payment: parseFloat(e.target.value) || 0 }))} className="bg-ecom-bg border-cyan-500/30 text-cyan-400" data-testid="product-extra-payment" />
+                <label className="text-xs text-blue-600 font-medium mb-1 block">Dopłata (zł) *</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={productForm.extra_payment}
+                  onChange={e => setProductForm(f => ({ ...f, extra_payment: parseFloat(e.target.value) || 0 }))}
+                  className="border-blue-200 focus:border-blue-400"
+                  data-testid="product-extra-input"
+                />
               </div>
               <div>
-                <label className="text-[10px] text-ecom-muted uppercase mb-1 block">Sklep</label>
-                <Select value={String(productForm.shop_id)} onValueChange={(v) => setProductForm(f => ({ ...f, shop_id: parseInt(v) }))}>
-                  <SelectTrigger className="bg-ecom-bg border-ecom-border text-white h-9" data-testid="product-shop">
+                <label className="text-xs text-slate-500 mb-1 block">Sklep</label>
+                <Select value={String(productForm.shop_id)} onValueChange={v => setProductForm(f => ({ ...f, shop_id: parseInt(v) }))}>
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-ecom-card border-ecom-border">
-                    {shops.map((s) => (
-                      <SelectItem key={s.id} value={String(s.id)} className="text-white">
+                  <SelectContent>
+                    {shops.map(s => (
+                      <SelectItem key={s.id} value={String(s.id)}>
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
                           {s.name}
@@ -356,17 +442,12 @@ export default function Dashboard({ user, shops = [], appSettings = {}, onNaviga
                 </Select>
               </div>
             </div>
-            <div>
-              <label className="text-[10px] text-ecom-muted uppercase mb-1 block">Kategoria</label>
-              <Input placeholder="np. Odziez" value={productForm.category} onChange={(e) => setProductForm(f => ({ ...f, category: e.target.value }))} className="bg-ecom-bg border-ecom-border text-white" data-testid="product-category" />
-            </div>
-            <Button onClick={saveProduct} className="w-full bg-cyan-600 hover:bg-cyan-500" data-testid="product-save">
+            <Button onClick={saveProduct} className="w-full btn-primary" data-testid="save-product-btn">
               {editingProduct ? "Zapisz zmiany" : "Dodaj produkt"}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 }
