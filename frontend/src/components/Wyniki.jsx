@@ -177,24 +177,49 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
 
   return (
     <div className="min-h-screen bg-slate-950 p-2 sm:p-4 pb-28" data-testid="wyniki-page">
-      {/* Header */}
+      {/* Header with Shop Selector */}
       <div className="flex items-center justify-between mb-3">
-        <h1 className="text-lg sm:text-xl font-bold text-white">Wyniki</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg sm:text-xl font-bold text-white">Wyniki</h1>
+          <Select value={String(shop)} onValueChange={v => setShop(parseInt(v))}>
+            <SelectTrigger className="w-[130px] sm:w-[160px] h-8 bg-slate-800 border-slate-700 text-white text-xs sm:text-sm">
+              <SelectValue>
+                {shop === 0 ? "Wszystkie sklepy" : shops.find(s => s.id === shop)?.name || "Sklep"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="bg-slate-800 border-slate-700">
+              <SelectItem value="0" className="text-white">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                  Wszystkie sklepy
+                </span>
+              </SelectItem>
+              {shops.map(s => (
+                <SelectItem key={s.id} value={String(s.id)} className="text-white">
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                    {s.name}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={syncData} disabled={syncing} className="text-slate-400 h-8 px-2">
+          <Button size="sm" variant="ghost" onClick={syncData} disabled={syncing} className="text-slate-400 h-8 px-2" title="Synchronizuj">
             <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => setColumnDialog(true)} className="text-slate-400 h-8 px-2">
+          <Button size="sm" variant="ghost" onClick={() => setColumnDialog(true)} className="text-slate-400 h-8 px-2" title="Ustawienia kolumn">
             <Settings2 size={16} />
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => api.downloadExcel(year, month, shop > 0 ? shop : null)} className="text-slate-400 h-8 px-2">
+          <Button size="sm" variant="ghost" onClick={() => api.downloadExcel(year, month, shop > 0 ? shop : null)} className="text-slate-400 h-8 px-2" title="Pobierz Excel">
             <Download size={16} />
           </Button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 sm:gap-2 mb-3 overflow-x-auto pb-1 -mx-2 px-2">
+      {/* Quick Shop Tabs - visible only on larger screens */}
+      <div className="hidden sm:flex gap-1 sm:gap-2 mb-3 overflow-x-auto pb-1 -mx-2 px-2">
         <button onClick={() => setShop(0)}
           className={`px-2 sm:px-3 py-1.5 rounded text-xs sm:text-sm font-medium whitespace-nowrap shrink-0 ${shop === 0 ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400"}`}>
           Wszystkie
