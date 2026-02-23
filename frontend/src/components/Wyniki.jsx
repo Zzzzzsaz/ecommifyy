@@ -45,7 +45,7 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
   
   const [newColName, setNewColName] = useState("");
   const [newColType, setNewColType] = useState("expense");
-  const [newColColor, setNewColColor] = useState("#8b5cf6");
+  const [newColColor, setNewColColor] = useState("#6366f1");
 
   const vatRate = appSettings?.vat_rate || 23;
   const profitSplit = appSettings?.profit_split || 2;
@@ -58,7 +58,7 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
         : await api.getMonthlyStats({ shop_id: shop, year, month });
       setStats(r.data);
       if (r.data.custom_columns) setCustomColumns(r.data.custom_columns);
-    } catch { toast.error("Błąd"); }
+    } catch { toast.error("Błąd ładowania danych"); }
     finally { setLoading(false); }
   }, [shop, year, month]);
 
@@ -67,23 +67,16 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
   const syncData = async () => {
     setSyncing(true);
     try {
-      // Try to sync from external sources (Shopify/TikTok)
       const syncResult = await api.syncAll(year, month);
-      
-      // Check if any syncs happened
       const shopifySyncs = syncResult.data?.shopify?.length || 0;
       const tiktokSyncs = syncResult.data?.tiktok?.length || 0;
-      
-      // Refresh stats after sync
       await fetchStats();
-      
       if (shopifySyncs > 0 || tiktokSyncs > 0) {
         toast.success(`Zsynchronizowano! (Shopify: ${shopifySyncs}, TikTok: ${tiktokSyncs})`);
       } else {
         toast.success("Dane odświeżone!");
       }
     } catch { 
-      // Even if sync fails, still refresh stats
       await fetchStats();
       toast.success("Dane odświeżone!");
     }
@@ -170,32 +163,30 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
   const getDayNum = (d) => new Date(d).getDate();
   const getDayName = (d) => DAYS_PL[new Date(d).getDay()];
 
-  const getCatColor = (cat) => CATEGORIES.find(c => c.id === cat)?.color || customColumns.find(c => c.name === cat)?.color || "#888";
+  const getCatColor = (cat) => CATEGORIES.find(c => c.id === cat)?.color || customColumns.find(c => c.name === cat)?.color || "#64748b";
   const getCatName = (cat) => CATEGORIES.find(c => c.id === cat)?.name || cat;
 
   const allCategories = [...CATEGORIES, ...customColumns.filter(c => c.column_type === "expense").map(c => ({ id: c.name, name: c.name, color: c.color }))];
 
   return (
-    <div className="min-h-screen bg-slate-950 p-2 sm:p-4 pb-28" data-testid="wyniki-page">
-      {/* Header with Shop Selector */}
-      <div className="flex items-center justify-between mb-3">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8" data-testid="wyniki-page">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Wyniki finansowe</h1>
+          <p className="text-slate-500 text-sm mt-1">Przegląd przychodów i kosztów</p>
+        </div>
         <div className="flex items-center gap-2">
-          <h1 className="text-lg sm:text-xl font-bold text-white">Wyniki</h1>
           <Select value={String(shop)} onValueChange={v => setShop(parseInt(v))}>
-            <SelectTrigger className="w-[130px] sm:w-[160px] h-8 bg-slate-800 border-slate-700 text-white text-xs sm:text-sm">
+            <SelectTrigger className="w-[160px] bg-white" data-testid="shop-selector">
               <SelectValue>
                 {shop === 0 ? "Wszystkie sklepy" : shops.find(s => s.id === shop)?.name || "Sklep"}
               </SelectValue>
             </SelectTrigger>
-            <SelectContent className="bg-slate-800 border-slate-700">
-              <SelectItem value="0" className="text-white">
-                <span className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                  Wszystkie sklepy
-                </span>
-              </SelectItem>
+            <SelectContent>
+              <SelectItem value="0">Wszystkie sklepy</SelectItem>
               {shops.map(s => (
-                <SelectItem key={s.id} value={String(s.id)} className="text-white">
+                <SelectItem key={s.id} value={String(s.id)}>
                   <span className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
                     {s.name}
@@ -204,144 +195,70 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="flex gap-1">
-          <Button size="sm" variant="ghost" onClick={syncData} disabled={syncing} className="text-slate-400 h-8 px-2" title="Synchronizuj">
+          <Button size="sm" variant="outline" onClick={syncData} disabled={syncing} className="bg-white" data-testid="sync-btn">
             <RefreshCw size={16} className={syncing ? "animate-spin" : ""} />
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => setColumnDialog(true)} className="text-slate-400 h-8 px-2" title="Ustawienia kolumn">
+          <Button size="sm" variant="outline" onClick={() => setColumnDialog(true)} className="bg-white">
             <Settings2 size={16} />
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => api.downloadExcel(year, month, shop > 0 ? shop : null)} className="text-slate-400 h-8 px-2" title="Pobierz Excel">
+          <Button size="sm" variant="outline" onClick={() => api.downloadExcel(year, month, shop > 0 ? shop : null)} className="bg-white">
             <Download size={16} />
           </Button>
         </div>
       </div>
 
-      {/* Quick Shop Tabs - visible only on larger screens */}
-      <div className="hidden sm:flex gap-1 sm:gap-2 mb-3 overflow-x-auto pb-1 -mx-2 px-2">
-        <button onClick={() => setShop(0)}
-          className={`px-2 sm:px-3 py-1.5 rounded text-xs sm:text-sm font-medium whitespace-nowrap shrink-0 ${shop === 0 ? "bg-indigo-600 text-white" : "bg-slate-800 text-slate-400"}`}>
-          Wszystkie
-        </button>
-        {shops.map(s => (
-          <button key={s.id} onClick={() => setShop(s.id)}
-            className={`px-2 sm:px-3 py-1.5 rounded text-xs sm:text-sm font-medium whitespace-nowrap shrink-0 ${shop === s.id ? "text-white" : "bg-slate-800 text-slate-400"}`}
-            style={shop === s.id ? { backgroundColor: s.color } : {}}>
-            {s.name}
-          </button>
-        ))}
-      </div>
-
-      {/* Month */}
-      <div className="flex items-center justify-center gap-2 sm:gap-4 mb-4">
-        <Button size="sm" variant="ghost" onClick={prevMonth} className="text-slate-400 h-8 w-8 p-0"><ChevronLeft size={20} /></Button>
-        <span className="text-sm sm:text-base font-semibold text-white min-w-[120px] sm:min-w-[140px] text-center">{MONTHS_PL[month - 1]} {year}</span>
-        <Button size="sm" variant="ghost" onClick={nextMonth} className="text-slate-400 h-8 w-8 p-0"><ChevronRight size={20} /></Button>
+      {/* Month Navigation */}
+      <div className="flex items-center justify-center gap-4 mb-6">
+        <Button size="sm" variant="ghost" onClick={prevMonth}><ChevronLeft size={20} /></Button>
+        <span className="text-lg font-semibold text-slate-900 min-w-[160px] text-center">{MONTHS_PL[month - 1]} {year}</span>
+        <Button size="sm" variant="ghost" onClick={nextMonth}><ChevronRight size={20} /></Button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>
+        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-slate-400" size={32} /></div>
       ) : stats && (
         <>
-          {/* KPI Summary Cards - Mobile friendly */}
-          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 sm:gap-2 mb-4">
-            <div className="bg-slate-900 rounded-lg p-2 sm:p-3 border border-slate-800">
-              <p className="text-[8px] sm:text-[10px] text-slate-500 mb-0.5">Przychód</p>
-              <p className="text-xs sm:text-sm font-bold text-white truncate">{fmtZl(stats.total_income)}</p>
+          {/* KPI Summary */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+            <div className="kpi-card">
+              <p className="kpi-label">Przychód</p>
+              <p className="kpi-value text-slate-900">{fmtZl(stats.total_income)}</p>
             </div>
-            <div className="bg-slate-900 rounded-lg p-2 sm:p-3 border border-slate-800">
-              <p className="text-[8px] sm:text-[10px] text-slate-500 mb-0.5">Netto</p>
-              <p className="text-xs sm:text-sm font-bold text-blue-400 truncate">{fmtZl(calcNetto(stats.total_income))}</p>
+            <div className="kpi-card">
+              <p className="kpi-label">Netto</p>
+              <p className="kpi-value text-blue-600">{fmtZl(calcNetto(stats.total_income))}</p>
             </div>
-            <div className="bg-slate-900 rounded-lg p-2 sm:p-3 border border-slate-800">
-              <p className="text-[8px] sm:text-[10px] text-slate-500 mb-0.5">Koszty</p>
-              <p className="text-xs sm:text-sm font-bold text-red-400 truncate">{fmtZl(stats.total_ads)}</p>
+            <div className="kpi-card">
+              <p className="kpi-label">Koszty</p>
+              <p className="kpi-value text-orange-600">{fmtZl(stats.total_ads)}</p>
             </div>
-            <div className="bg-slate-900 rounded-lg p-2 sm:p-3 border border-slate-800 col-span-1.5 sm:col-span-1">
-              <p className="text-[8px] sm:text-[10px] text-slate-500 mb-0.5">Dochód</p>
-              <p className={`text-xs sm:text-sm font-bold truncate ${stats.total_profit >= 0 ? "text-green-400" : "text-red-400"}`}>{fmtZl(stats.total_profit)}</p>
+            <div className="kpi-card">
+              <p className="kpi-label">Zysk</p>
+              <p className={`kpi-value ${stats.total_profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmtZl(stats.total_profit)}</p>
             </div>
-            <div className="bg-slate-900 rounded-lg p-2 sm:p-3 border border-slate-800 col-span-1.5 sm:col-span-1">
-              <p className="text-[8px] sm:text-[10px] text-slate-500 mb-0.5">Na łeb</p>
-              <p className="text-xs sm:text-sm font-bold text-indigo-400 truncate">{fmtZl(stats.profit_per_person || Math.round(stats.total_profit / profitSplit))}</p>
+            <div className="kpi-card">
+              <p className="kpi-label">Na osobę</p>
+              <p className="kpi-value text-violet-600">{fmtZl(stats.profit_per_person || Math.round(stats.total_profit / profitSplit))}</p>
             </div>
           </div>
 
-          {/* Mobile Table - Card style */}
-          <div className="block sm:hidden space-y-2">
-            {stats.days?.map((day) => {
-              const income = day.income || 0;
-              const netto = calcNetto(income);
-              const costs = day.ads_total || 0;
-              const profit = netto - costs;
-              const perPerson = Math.round(profit / profitSplit);
-              const currentShopId = shop > 0 ? shop : 1;
-
-              return (
-                <div key={day.date} 
-                  className="bg-slate-900 rounded-lg border border-slate-800 p-3"
-                  data-testid={`day-${day.date}`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-baseline gap-1">
-                      <span className="font-bold text-white text-lg">{getDayNum(day.date)}</span>
-                      <span className="text-slate-500 text-xs">{getDayName(day.date)}</span>
-                    </div>
-                    <button onClick={() => openEdit(day.date, currentShopId)}
-                      className="px-2 py-1 rounded bg-slate-700 text-slate-300 text-xs">
-                      Szczegóły
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Przychód:</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-white font-medium">{fmtZl(income)}</span>
-                        <button onClick={() => openAdd("income", null, day.date, currentShopId)}
-                          className="w-4 h-4 rounded bg-green-600/30 text-green-400 flex items-center justify-center">
-                          <Plus size={10} />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Netto:</span>
-                      <span className="text-blue-400 font-medium">{fmtZl(netto)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Koszty:</span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-red-400 font-medium">{fmtZl(costs)}</span>
-                        <button onClick={() => openAdd("cost", "tiktok", day.date, currentShopId)}
-                          className="w-4 h-4 rounded bg-red-600/30 text-red-400 flex items-center justify-center">
-                          <Plus size={10} />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Dochód:</span>
-                      <span className={`font-bold ${profit >= 0 ? "text-green-400" : "text-red-400"}`}>{fmtZl(profit)}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Desktop Table */}
-          <div className="hidden sm:block bg-slate-900 rounded-lg border border-slate-800 overflow-hidden">
-            <div className="bg-slate-800 px-3 py-2 grid gap-2 text-[11px] font-semibold text-slate-300 uppercase tracking-wide"
-              style={{ gridTemplateColumns: "50px 1fr 1fr 1fr 1fr 1fr 70px" }}>
+          {/* Data Table */}
+          <div className="data-table">
+            {/* Header */}
+            <div className="data-table-header px-4 py-3 grid gap-3 text-xs font-medium text-slate-500 uppercase tracking-wide"
+              style={{ gridTemplateColumns: "60px 1fr 1fr 1fr 1fr 1fr 80px" }}>
               <div>Dzień</div>
               <div className="text-right">Przychód</div>
               <div className="text-right">Netto</div>
               <div className="text-right">Koszty</div>
-              <div className="text-right">Dochód</div>
-              <div className="text-right">Na łeb</div>
+              <div className="text-right">Zysk</div>
+              <div className="text-right">Na osobę</div>
               <div className="text-center">Akcje</div>
             </div>
 
+            {/* Rows */}
             <div className="max-h-[50vh] overflow-y-auto">
-              {stats.days?.map((day, idx) => {
+              {stats.days?.map((day) => {
                 const income = day.income || 0;
                 const netto = calcNetto(income);
                 const costs = day.ads_total || 0;
@@ -350,47 +267,50 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
                 const currentShopId = shop > 0 ? shop : 1;
 
                 return (
-                  <div key={day.date} 
-                    className={`grid gap-2 px-3 py-2 text-sm items-center border-b border-slate-800/50 hover:bg-slate-800/30 ${idx % 2 === 0 ? "bg-slate-900" : "bg-slate-900/60"}`}
-                    style={{ gridTemplateColumns: "50px 1fr 1fr 1fr 1fr 1fr 70px" }}
+                  <div key={day.date} className="data-table-row grid gap-3 px-4 py-3 text-sm items-center"
+                    style={{ gridTemplateColumns: "60px 1fr 1fr 1fr 1fr 1fr 80px" }}
                     data-testid={`day-${day.date}`}>
                     
                     <div className="flex items-baseline gap-1">
-                      <span className="font-bold text-white">{getDayNum(day.date)}</span>
-                      <span className="text-slate-500 text-[10px]">{getDayName(day.date)}</span>
+                      <span className="font-semibold text-slate-900">{getDayNum(day.date)}</span>
+                      <span className="text-slate-400 text-xs">{getDayName(day.date)}</span>
                     </div>
 
                     <div className="text-right flex items-center justify-end gap-1">
-                      <span className={`font-medium ${income > 0 ? "text-white" : "text-slate-600"}`}>{fmtZl(income)}</span>
+                      <span className={income > 0 ? "font-medium text-slate-900" : "text-slate-400"}>{fmtZl(income)}</span>
                       <button onClick={() => openAdd("income", null, day.date, currentShopId)}
-                        className="w-5 h-5 rounded bg-green-600/20 hover:bg-green-600/40 text-green-400 flex items-center justify-center">
-                        <Plus size={12} />
+                        className="w-6 h-6 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                        <Plus size={14} />
                       </button>
                     </div>
 
                     <div className="text-right">
-                      <span className={`font-medium ${netto > 0 ? "text-blue-400" : "text-slate-600"}`}>{fmtZl(netto)}</span>
+                      <span className={netto > 0 ? "font-medium text-blue-600" : "text-slate-400"}>{fmtZl(netto)}</span>
                     </div>
 
                     <div className="text-right flex items-center justify-end gap-1">
-                      <span className={`font-medium ${costs > 0 ? "text-red-400" : "text-slate-600"}`}>{fmtZl(costs)}</span>
+                      <span className={costs > 0 ? "font-medium text-orange-600" : "text-slate-400"}>{fmtZl(costs)}</span>
                       <button onClick={() => openAdd("cost", "tiktok", day.date, currentShopId)}
-                        className="w-5 h-5 rounded bg-red-600/20 hover:bg-red-600/40 text-red-400 flex items-center justify-center">
-                        <Plus size={12} />
+                        className="w-6 h-6 rounded-md bg-orange-50 hover:bg-orange-100 text-orange-600 flex items-center justify-center">
+                        <Plus size={14} />
                       </button>
                     </div>
 
                     <div className="text-right">
-                      <span className={`font-bold ${profit > 0 ? "text-green-400" : profit < 0 ? "text-red-400" : "text-slate-600"}`}>{fmtZl(profit)}</span>
+                      <span className={`font-semibold ${profit > 0 ? "text-emerald-600" : profit < 0 ? "text-red-600" : "text-slate-400"}`}>
+                        {fmtZl(profit)}
+                      </span>
                     </div>
 
                     <div className="text-right">
-                      <span className={`font-medium ${perPerson > 0 ? "text-indigo-400" : perPerson < 0 ? "text-red-400" : "text-slate-600"}`}>{fmtZl(perPerson)}</span>
+                      <span className={perPerson > 0 ? "font-medium text-violet-600" : perPerson < 0 ? "text-red-600" : "text-slate-400"}>
+                        {fmtZl(perPerson)}
+                      </span>
                     </div>
 
                     <div className="flex justify-center">
                       <button onClick={() => openEdit(day.date, currentShopId)}
-                        className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-300 text-[10px]">
+                        className="px-3 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-medium">
                         Szczegóły
                       </button>
                     </div>
@@ -399,112 +319,112 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
               })}
             </div>
 
-            <div className="bg-slate-800 px-3 py-2 grid gap-2 text-sm font-bold border-t border-slate-700"
-              style={{ gridTemplateColumns: "50px 1fr 1fr 1fr 1fr 1fr 70px" }}>
-              <div className="text-white">Suma</div>
-              <div className="text-right text-white">{fmtZl(stats.total_income)}</div>
-              <div className="text-right text-blue-400">{fmtZl(calcNetto(stats.total_income))}</div>
-              <div className="text-right text-red-400">{fmtZl(stats.total_ads)}</div>
-              <div className={`text-right ${stats.total_profit >= 0 ? "text-green-400" : "text-red-400"}`}>{fmtZl(stats.total_profit)}</div>
-              <div className="text-right text-indigo-400">{fmtZl(stats.profit_per_person || Math.round(stats.total_profit / profitSplit))}</div>
+            {/* Footer/Total */}
+            <div className="data-table-header px-4 py-3 grid gap-3 text-sm font-semibold border-t"
+              style={{ gridTemplateColumns: "60px 1fr 1fr 1fr 1fr 1fr 80px" }}>
+              <div className="text-slate-900">Suma</div>
+              <div className="text-right text-slate-900">{fmtZl(stats.total_income)}</div>
+              <div className="text-right text-blue-600">{fmtZl(calcNetto(stats.total_income))}</div>
+              <div className="text-right text-orange-600">{fmtZl(stats.total_ads)}</div>
+              <div className={`text-right ${stats.total_profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>{fmtZl(stats.total_profit)}</div>
+              <div className="text-right text-violet-600">{fmtZl(stats.profit_per_person || Math.round(stats.total_profit / profitSplit))}</div>
               <div></div>
             </div>
           </div>
         </>
       )}
 
-      {/* ADD DIALOG */}
+      {/* Add Dialog */}
       <Dialog open={addDialog.open} onOpenChange={o => setAddDialog(d => ({ ...d, open: o }))}>
-        <DialogContent className="bg-slate-900 border-slate-700 max-w-sm">
+        <DialogContent className="bg-white max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-white">
-              {addDialog.type === "income" ? "Dodaj przychód" : `Dodaj koszt`}
-            </DialogTitle>
+            <DialogTitle>{addDialog.type === "income" ? "Dodaj przychód" : "Dodaj koszt"}</DialogTitle>
           </DialogHeader>
-          <p className="text-slate-400 text-sm">{addDialog.date}</p>
+          <p className="text-slate-500 text-sm">{addDialog.date}</p>
           
           {addDialog.type === "income" ? (
             <Select value={String(addDialog.shopId)} onValueChange={v => setAddDialog(d => ({ ...d, shopId: parseInt(v) }))}>
-              <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
-                {shops.map(s => <SelectItem key={s.id} value={String(s.id)} className="text-white">{s.name}</SelectItem>)}
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {shops.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
           ) : (
             <Select value={addDialog.category || "tiktok"} onValueChange={v => setAddDialog(d => ({ ...d, category: v }))}>
-              <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
-                {allCategories.map(c => <SelectItem key={c.id} value={c.id} className="text-white">{c.name}</SelectItem>)}
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {allCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
 
-          <Input type="number" placeholder="Kwota" value={amount} onChange={e => setAmount(e.target.value)} className="bg-slate-800 border-slate-700 text-white" />
-          <Input placeholder="Opis (opcjonalnie)" value={desc} onChange={e => setDesc(e.target.value)} className="bg-slate-800 border-slate-700 text-white" />
+          <Input type="number" placeholder="Kwota" value={amount} onChange={e => setAmount(e.target.value)} />
+          <Input placeholder="Opis (opcjonalnie)" value={desc} onChange={e => setDesc(e.target.value)} />
           
-          <Button onClick={handleSave} disabled={saving} className="w-full bg-indigo-600 hover:bg-indigo-500">
+          <Button onClick={handleSave} disabled={saving} className="w-full btn-primary">
             {saving ? <Loader2 className="animate-spin" size={16} /> : "Zapisz"}
           </Button>
         </DialogContent>
       </Dialog>
 
-      {/* EDIT DIALOG */}
+      {/* Edit Dialog */}
       <Dialog open={editDialog.open} onOpenChange={o => setEditDialog(d => ({ ...d, open: o }))}>
-        <DialogContent className="bg-slate-900 border-slate-700 max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogContent className="bg-white max-w-md max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Szczegóły: {editDialog.date}</DialogTitle>
+            <DialogTitle>Szczegóły: {editDialog.date}</DialogTitle>
           </DialogHeader>
 
           {editLoading ? (
-            <div className="flex justify-center py-4"><Loader2 className="animate-spin text-indigo-500" /></div>
+            <div className="flex justify-center py-4"><Loader2 className="animate-spin text-slate-400" /></div>
           ) : (
             <>
+              {/* Incomes */}
               <div className="mb-4">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm font-semibold text-white">Przychody ({editData.incomes.length})</h3>
-                  <Button size="sm" onClick={() => openAdd("income", null, editDialog.date, editDialog.shopId)} className="h-6 text-xs bg-green-600 hover:bg-green-500">
+                  <h3 className="text-sm font-semibold text-slate-900">Przychody ({editData.incomes.length})</h3>
+                  <Button size="sm" onClick={() => openAdd("income", null, editDialog.date, editDialog.shopId)} className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700">
                     + Dodaj
                   </Button>
                 </div>
                 {editData.incomes.length === 0 ? (
-                  <p className="text-slate-500 text-sm">Brak</p>
+                  <p className="text-slate-400 text-sm">Brak</p>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {editData.incomes.map(i => (
-                      <div key={i.id} className="flex justify-between items-center bg-slate-800 rounded px-2 py-1">
-                        <span className="text-green-400 font-medium">{fmtZl(i.amount)}</span>
+                      <div key={i.id} className="flex justify-between items-center bg-slate-50 rounded-lg px-3 py-2">
+                        <span className="text-emerald-600 font-medium">{fmtZl(i.amount)}</span>
                         <span className="text-slate-400 text-xs flex-1 mx-2 truncate">{i.description || "-"}</span>
-                        <button onClick={() => deleteIncome(i.id)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
+                        <button onClick={() => deleteIncome(i.id)} className="text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
 
+              {/* Costs */}
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm font-semibold text-white">Koszty ({editData.costs.length})</h3>
-                </div>
+                <h3 className="text-sm font-semibold text-slate-900 mb-2">Koszty ({editData.costs.length})</h3>
                 {editData.costs.length === 0 ? (
-                  <p className="text-slate-500 text-sm">Brak</p>
+                  <p className="text-slate-400 text-sm">Brak</p>
                 ) : (
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {editData.costs.map(c => (
-                      <div key={c.id} className="flex justify-between items-center bg-slate-800 rounded px-2 py-1">
-                        <span className="text-red-400 font-medium">{fmtZl(c.amount)}</span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px]" style={{ backgroundColor: getCatColor(c.category) + "30", color: getCatColor(c.category) }}>{getCatName(c.category)}</span>
+                      <div key={c.id} className="flex justify-between items-center bg-slate-50 rounded-lg px-3 py-2">
+                        <span className="text-orange-600 font-medium">{fmtZl(c.amount)}</span>
+                        <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: getCatColor(c.category) + "20", color: getCatColor(c.category) }}>{getCatName(c.category)}</span>
                         <span className="text-slate-400 text-xs flex-1 mx-2 truncate">{c.description || "-"}</span>
-                        <button onClick={() => deleteCost(c.id)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
+                        <button onClick={() => deleteCost(c.id)} className="text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
                       </div>
                     ))}
                   </div>
                 )}
 
-                <div className="flex flex-wrap gap-1 mt-3">
+                {/* Quick add buttons */}
+                <div className="flex flex-wrap gap-2 mt-4">
                   {allCategories.map(c => (
                     <button key={c.id} onClick={() => openAdd("cost", c.id, editDialog.date, editDialog.shopId)}
-                      className="px-2 py-1 rounded text-[10px] font-medium" 
-                      style={{ backgroundColor: c.color + "20", color: c.color }}>
+                      className="px-3 py-1.5 rounded-md text-xs font-medium border" 
+                      style={{ borderColor: c.color + "40", color: c.color, backgroundColor: c.color + "10" }}>
                       + {c.name}
                     </button>
                   ))}
@@ -515,39 +435,39 @@ export default function Wyniki({ user, shops = [], appSettings = {} }) {
         </DialogContent>
       </Dialog>
 
-      {/* COLUMN MANAGER */}
+      {/* Column Manager Dialog */}
       <Dialog open={columnDialog} onOpenChange={setColumnDialog}>
-        <DialogContent className="bg-slate-900 border-slate-700 max-w-sm">
+        <DialogContent className="bg-white max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-white">Zarządzaj kolumnami</DialogTitle>
+            <DialogTitle>Zarządzaj kolumnami</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-2 mb-4">
             {customColumns.map(c => (
-              <div key={c.id} className="flex justify-between items-center bg-slate-800 rounded px-2 py-1">
+              <div key={c.id} className="flex justify-between items-center bg-slate-50 rounded-lg px-3 py-2">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded" style={{ backgroundColor: c.color }} />
-                  <span className="text-white text-sm">{c.name}</span>
+                  <span className="text-sm text-slate-900">{c.name}</span>
                 </div>
-                <button onClick={() => deleteColumn(c.id)} className="text-red-400 hover:text-red-300"><Trash2 size={14} /></button>
+                <button onClick={() => deleteColumn(c.id)} className="text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
               </div>
             ))}
-            {customColumns.length === 0 && <p className="text-slate-500 text-sm">Brak własnych kolumn</p>}
+            {customColumns.length === 0 && <p className="text-slate-400 text-sm">Brak własnych kolumn</p>}
           </div>
 
-          <div className="space-y-2 border-t border-slate-700 pt-3">
-            <Input placeholder="Nazwa" value={newColName} onChange={e => setNewColName(e.target.value)} className="bg-slate-800 border-slate-700 text-white" />
+          <div className="space-y-3 border-t pt-4">
+            <Input placeholder="Nazwa kolumny" value={newColName} onChange={e => setNewColName(e.target.value)} />
             <div className="flex gap-2">
               <Select value={newColType} onValueChange={setNewColType}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-white"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700">
-                  <SelectItem value="expense" className="text-white">Koszt</SelectItem>
-                  <SelectItem value="income" className="text-white">Przychód</SelectItem>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expense">Koszt</SelectItem>
+                  <SelectItem value="income">Przychód</SelectItem>
                 </SelectContent>
               </Select>
-              <Input type="color" value={newColColor} onChange={e => setNewColColor(e.target.value)} className="w-14 p-1 bg-slate-800 border-slate-700" />
+              <Input type="color" value={newColColor} onChange={e => setNewColColor(e.target.value)} className="w-14 p-1" />
             </div>
-            <Button onClick={addColumn} className="w-full bg-indigo-600 hover:bg-indigo-500">Dodaj kolumnę</Button>
+            <Button onClick={addColumn} className="w-full btn-primary">Dodaj kolumnę</Button>
           </div>
         </DialogContent>
       </Dialog>
