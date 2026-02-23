@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Check, Trash2, Loader2, Clock, User, Edit2 } from "lucide-react";
+import { Plus, Check, Trash2, Loader2, Clock, User, Edit2, Circle, CheckCircle2 } from "lucide-react";
 
 const PRIORITIES = [
   { id: "high", label: "Wysoki", color: "#ef4444" },
@@ -20,13 +20,19 @@ const ASSIGNEES = [
   { id: "oboje", label: "Oboje", color: "#f59e0b" },
 ];
 
+const STATUS_OPTIONS = [
+  { id: "todo", label: "Do zrobienia" },
+  { id: "in_progress", label: "W trakcie" },
+  { id: "done", label: "Zrobione" },
+];
+
 export default function Tasks({ user }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  const [form, setForm] = useState({ title: "", description: "", assigned_to: "oboje", due_date: "", priority: "medium" });
+  const [form, setForm] = useState({ title: "", description: "", assigned_to: "oboje", due_date: "", priority: "medium", status: "todo" });
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState("all");
 
@@ -34,7 +40,7 @@ export default function Tasks({ user }) {
     setLoading(true);
     try {
       const r = await api.getTasks();
-      setTasks(r.data);
+      setTasks(r.data || []);
     } catch {
       toast.error("Błąd ładowania zadań");
     } finally {
@@ -45,22 +51,18 @@ export default function Tasks({ user }) {
   useEffect(() => { fetchTasks(); }, [fetchTasks]);
 
   const resetForm = () => {
-    setForm({ title: "", description: "", assigned_to: "oboje", due_date: "", priority: "medium" });
-  };
-
-  const openAdd = () => {
-    resetForm();
-    setShowAdd(true);
+    setForm({ title: "", description: "", assigned_to: "oboje", due_date: "", priority: "medium", status: "todo" });
   };
 
   const openEdit = (task) => {
     setEditingTask(task);
     setForm({
-      title: task.title || "",
+      title: task.title,
       description: task.description || "",
       assigned_to: task.assigned_to || "oboje",
       due_date: task.due_date || "",
-      priority: task.priority || "medium"
+      priority: task.priority || "medium",
+      status: task.status || "todo"
     });
     setShowEdit(true);
   };
@@ -69,135 +71,155 @@ export default function Tasks({ user }) {
     if (!form.title.trim()) { toast.error("Podaj tytuł"); return; }
     setSaving(true);
     try {
-      await api.createTask({ 
-        ...form, 
-        created_by: user.name, 
-        due_date: form.due_date || null,
-        status: "todo"
-      });
+      await api.createTask(form);
       toast.success("Zadanie dodane!");
       setShowAdd(false);
       resetForm();
       fetchTasks();
     } catch {
-      toast.error("Błąd dodawania");
+      toast.error("Błąd");
     } finally {
       setSaving(false);
     }
   };
 
   const updateTask = async () => {
-    if (!form.title.trim()) { toast.error("Podaj tytuł"); return; }
-    if (!editingTask) return;
+    if (!form.title.trim() || !editingTask) return;
     setSaving(true);
     try {
-      await api.updateTask(editingTask.id, {
-        title: form.title,
-        description: form.description,
-        assigned_to: form.assigned_to,
-        due_date: form.due_date || null,
-        priority: form.priority
-      });
-      toast.success("Zadanie zaktualizowane!");
+      await api.updateTask(editingTask.id, form);
+      toast.success("Zaktualizowano!");
       setShowEdit(false);
       setEditingTask(null);
       resetForm();
       fetchTasks();
     } catch {
-      toast.error("Błąd aktualizacji");
+      toast.error("Błąd");
     } finally {
       setSaving(false);
     }
   };
 
-  const toggleTask = async (e, taskId, currentStatus) => {
-    e.stopPropagation();
-    const newStatus = currentStatus === "done" ? "todo" : "done";
+  const toggleDone = async (task) => {
+    const newStatus = task.status === "done" ? "todo" : "done";
     try {
-      await api.updateTask(taskId, { status: newStatus });
-      toast.success(newStatus === "done" ? "Zrobione!" : "Przywrócono");
+      await api.updateTask(task.id, { status: newStatus });
       fetchTasks();
     } catch {
-      toast.error("Błąd aktualizacji");
+      toast.error("Błąd");
     }
   };
 
-  const deleteTask = async (e, taskId) => {
-    e.stopPropagation();
+  const deleteTask = async (id) => {
     try {
-      await api.deleteTask(taskId);
+      await api.deleteTask(id);
       toast.success("Usunięto");
       fetchTasks();
     } catch {
-      toast.error("Błąd usuwania");
+      toast.error("Błąd");
     }
   };
 
+  const getPriorityColor = (p) => PRIORITIES.find(x => x.id === p)?.color || "#f59e0b";
+  const getPriorityLabel = (p) => PRIORITIES.find(x => x.id === p)?.label || "Średni";
+  const getAssigneeColor = (a) => ASSIGNEES.find(x => x.id === a)?.color || "#6366f1";
+  const getAssigneeLabel = (a) => ASSIGNEES.find(x => x.id === a)?.label || a;
+
   const filteredTasks = tasks.filter(t => {
     if (filter === "all") return true;
-    if (filter === "todo") return t.status !== "done";
+    if (filter === "active") return t.status !== "done";
     if (filter === "done") return t.status === "done";
     return true;
   }).sort((a, b) => {
+    // Done tasks at bottom
     if (a.status === "done" && b.status !== "done") return 1;
     if (a.status !== "done" && b.status === "done") return -1;
+    // Sort by priority
     const priorityOrder = { high: 0, medium: 1, low: 2 };
-    return (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1);
+    return priorityOrder[a.priority] - priorityOrder[b.priority];
   });
 
-  const todoCount = tasks.filter(t => t.status !== "done").length;
-  const doneCount = tasks.filter(t => t.status === "done").length;
-
-  const getPriorityColor = (p) => PRIORITIES.find(pr => pr.id === p)?.color || "#f59e0b";
-  const getAssigneeColor = (a) => ASSIGNEES.find(as => as.id === a)?.color || "#6366f1";
+  const activeTasks = tasks.filter(t => t.status !== "done").length;
+  const doneTasks = tasks.filter(t => t.status === "done").length;
 
   const TaskForm = ({ onSave, isEdit }) => (
-    <div className="space-y-3 mt-2">
+    <div className="space-y-4 mt-2">
       <Input
-        placeholder="Tytuł zadania"
+        placeholder="Tytuł zadania..."
         value={form.title}
-        onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-        className="bg-slate-800 border-slate-700 text-white"
+        onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
         data-testid="task-title-input"
       />
       <Textarea
         placeholder="Opis (opcjonalnie)"
         value={form.description}
-        onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-        className="bg-slate-800 border-slate-700 text-white resize-none"
+        onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
         rows={3}
-        data-testid="task-desc-input"
       />
-      <div className="grid grid-cols-2 gap-2">
-        <Select value={form.assigned_to} onValueChange={(v) => setForm((f) => ({ ...f, assigned_to: v }))}>
-          <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-            <SelectValue placeholder="Przypisz do" />
-          </SelectTrigger>
-          <SelectContent className="bg-slate-800 border-slate-700">
-            {ASSIGNEES.map(a => (
-              <SelectItem key={a.id} value={a.id} className="text-white">{a.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={form.priority} onValueChange={(v) => setForm((f) => ({ ...f, priority: v }))}>
-          <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-            <SelectValue placeholder="Priorytet" />
-          </SelectTrigger>
-          <SelectContent className="bg-slate-800 border-slate-700">
-            {PRIORITIES.map(p => (
-              <SelectItem key={p.id} value={p.id} className="text-white">{p.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs text-slate-500 mb-1 block">Priorytet</label>
+          <Select value={form.priority} onValueChange={(v) => setForm(f => ({ ...f, priority: v }))}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PRIORITIES.map(p => (
+                <SelectItem key={p.id} value={p.id}>
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
+                    {p.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <label className="text-xs text-slate-500 mb-1 block">Przypisane do</label>
+          <Select value={form.assigned_to} onValueChange={(v) => setForm(f => ({ ...f, assigned_to: v }))}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ASSIGNEES.map(a => (
+                <SelectItem key={a.id} value={a.id}>
+                  <span className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: a.color }} />
+                    {a.label}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
-      <Input
-        type="date"
-        value={form.due_date}
-        onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))}
-        className="bg-slate-800 border-slate-700 text-white"
-        data-testid="task-due-date-input"
-      />
-      <Button onClick={onSave} disabled={saving} className="w-full bg-indigo-600 hover:bg-indigo-500">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs text-slate-500 mb-1 block">Termin</label>
+          <Input
+            type="date"
+            value={form.due_date}
+            onChange={(e) => setForm(f => ({ ...f, due_date: e.target.value }))}
+          />
+        </div>
+        {isEdit && (
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Status</label>
+            <Select value={form.status} onValueChange={(v) => setForm(f => ({ ...f, status: v }))}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+      <Button onClick={onSave} disabled={saving} className="w-full btn-primary" data-testid="save-task-btn">
         {saving ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
         {isEdit ? "Zapisz zmiany" : "Dodaj zadanie"}
       </Button>
@@ -205,131 +227,144 @@ export default function Tasks({ user }) {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 p-4 pb-28" data-testid="tasks-page">
+    <div className="min-h-screen bg-slate-50 p-4 md:p-8" data-testid="tasks-page">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold text-white">Zadania</h1>
-        <Button onClick={openAdd} size="sm" className="bg-indigo-600 hover:bg-indigo-500" data-testid="add-task-btn">
-          <Plus size={16} className="mr-1" /> Dodaj
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Zadania</h1>
+          <p className="text-slate-500 text-sm mt-1">
+            {activeTasks} aktywnych, {doneTasks} ukończonych
+          </p>
+        </div>
+        <Button onClick={() => { resetForm(); setShowAdd(true); }} className="btn-primary" data-testid="add-task-btn">
+          <Plus size={16} className="mr-2" /> Nowe zadanie
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
-        <button 
-          onClick={() => setFilter("all")}
-          className={`p-3 rounded-lg border text-center ${filter === "all" ? "bg-slate-800 border-indigo-500" : "bg-slate-900 border-slate-800"}`}>
-          <p className="text-2xl font-bold text-white">{tasks.length}</p>
-          <p className="text-xs text-slate-400">Wszystkie</p>
-        </button>
-        <button 
-          onClick={() => setFilter("todo")}
-          className={`p-3 rounded-lg border text-center ${filter === "todo" ? "bg-slate-800 border-yellow-500" : "bg-slate-900 border-slate-800"}`}>
-          <p className="text-2xl font-bold text-yellow-400">{todoCount}</p>
-          <p className="text-xs text-slate-400">Do zrobienia</p>
-        </button>
-        <button 
-          onClick={() => setFilter("done")}
-          className={`p-3 rounded-lg border text-center ${filter === "done" ? "bg-slate-800 border-green-500" : "bg-slate-900 border-slate-800"}`}>
-          <p className="text-2xl font-bold text-green-400">{doneCount}</p>
-          <p className="text-xs text-slate-400">Zrobione</p>
-        </button>
+      {/* Filters */}
+      <div className="flex gap-2 mb-6">
+        {[
+          { id: "all", label: `Wszystkie (${tasks.length})` },
+          { id: "active", label: `Aktywne (${activeTasks})` },
+          { id: "done", label: `Ukończone (${doneTasks})` },
+        ].map(f => (
+          <button
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              filter === f.id 
+                ? "bg-slate-900 text-white" 
+                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+            }`}>
+            {f.label}
+          </button>
+        ))}
       </div>
 
-      {/* Tasks List */}
+      {/* Task List */}
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-indigo-500" size={32} /></div>
+        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-slate-400" size={32} /></div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filteredTasks.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
-              <p className="text-lg mb-2">Brak zadań</p>
-              <p className="text-sm">Kliknij "Dodaj" aby utworzyć nowe zadanie</p>
+            <div className="text-center py-12">
+              <Check size={48} className="mx-auto mb-3 text-slate-300" />
+              <p className="text-lg text-slate-600 mb-2">Brak zadań</p>
+              <p className="text-sm text-slate-400">Kliknij "Nowe zadanie" aby dodać</p>
             </div>
           ) : (
-            filteredTasks.map((task) => (
-              <div
-                key={task.id}
-                onClick={() => openEdit(task)}
-                className={`bg-slate-900 rounded-lg border border-slate-800 p-3 flex items-start gap-3 cursor-pointer hover:bg-slate-800/50 transition-colors ${task.status === "done" ? "opacity-60" : ""}`}
-                data-testid={`task-card-${task.id}`}
-              >
-                {/* Checkbox */}
-                <button
-                  onClick={(e) => toggleTask(e, task.id, task.status)}
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 ${
-                    task.status === "done" 
-                      ? "bg-green-500 border-green-500 text-white" 
-                      : "border-slate-600 hover:border-indigo-500"
-                  }`}
-                  data-testid={`toggle-task-${task.id}`}
-                >
-                  {task.status === "done" && <Check size={14} />}
-                </button>
+            filteredTasks.map((task) => {
+              const isDone = task.status === "done";
+              const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !isDone;
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className={`text-white font-medium ${task.status === "done" ? "line-through text-slate-400" : ""}`}>
-                      {task.title}
-                    </p>
-                    <Edit2 size={12} className="text-slate-500" />
-                  </div>
-                  {task.description && (
-                    <p className="text-slate-400 text-sm mt-1 line-clamp-2">{task.description}</p>
-                  )}
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <span 
-                      className="px-2 py-0.5 rounded text-[10px] font-medium"
-                      style={{ backgroundColor: getPriorityColor(task.priority) + "20", color: getPriorityColor(task.priority) }}
-                    >
-                      {PRIORITIES.find(p => p.id === task.priority)?.label || "Średni"}
-                    </span>
-                    <span 
-                      className="px-2 py-0.5 rounded text-[10px] font-medium flex items-center gap-1"
-                      style={{ backgroundColor: getAssigneeColor(task.assigned_to) + "20", color: getAssigneeColor(task.assigned_to) }}
-                    >
-                      <User size={10} />
-                      {task.assigned_to}
-                    </span>
-                    {task.due_date && (
-                      <span className="text-slate-500 text-[10px] flex items-center gap-1">
-                        <Clock size={10} />
-                        {task.due_date}
+              return (
+                <div
+                  key={task.id}
+                  className={`pro-card p-4 flex items-start gap-4 transition-all ${isDone ? "opacity-60" : ""}`}
+                  data-testid={`task-${task.id}`}
+                >
+                  {/* Checkbox */}
+                  <button
+                    onClick={() => toggleDone(task)}
+                    className={`mt-0.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                      isDone 
+                        ? "bg-emerald-500 border-emerald-500 text-white" 
+                        : "border-slate-300 hover:border-emerald-500"
+                    }`}
+                    data-testid={`task-toggle-${task.id}`}
+                  >
+                    {isDone && <Check size={14} />}
+                  </button>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0" onClick={() => openEdit(task)}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className={`font-medium ${isDone ? "line-through text-slate-400" : "text-slate-900"}`}>
+                        {task.title}
+                      </h3>
+                      <span 
+                        className="px-2 py-0.5 rounded text-xs font-medium"
+                        style={{ backgroundColor: getPriorityColor(task.priority) + "15", color: getPriorityColor(task.priority) }}>
+                        {getPriorityLabel(task.priority)}
                       </span>
+                    </div>
+                    {task.description && (
+                      <p className="text-sm text-slate-500 mb-2 line-clamp-1">{task.description}</p>
                     )}
+                    <div className="flex items-center gap-4 text-xs">
+                      <span 
+                        className="flex items-center gap-1"
+                        style={{ color: getAssigneeColor(task.assigned_to) }}>
+                        <User size={12} />
+                        {getAssigneeLabel(task.assigned_to)}
+                      </span>
+                      {task.due_date && (
+                        <span className={`flex items-center gap-1 ${isOverdue ? "text-red-500" : "text-slate-400"}`}>
+                          <Clock size={12} />
+                          {task.due_date}
+                          {isOverdue && " (zaległe)"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => openEdit(task)}
+                      className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => deleteTask(task.id)}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
-
-                {/* Delete */}
-                <button 
-                  onClick={(e) => deleteTask(e, task.id)} 
-                  className="text-slate-600 hover:text-red-400 shrink-0"
-                  data-testid={`delete-task-${task.id}`}
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}
 
-      {/* Add Task Dialog */}
+      {/* Add Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="bg-slate-900 border-slate-700 max-w-sm" data-testid="add-task-dialog">
+        <DialogContent className="bg-white max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">Nowe zadanie</DialogTitle>
+            <DialogTitle>Nowe zadanie</DialogTitle>
           </DialogHeader>
           <TaskForm onSave={addTask} isEdit={false} />
         </DialogContent>
       </Dialog>
 
-      {/* Edit Task Dialog */}
-      <Dialog open={showEdit} onOpenChange={(open) => { setShowEdit(open); if (!open) setEditingTask(null); }}>
-        <DialogContent className="bg-slate-900 border-slate-700 max-w-sm" data-testid="edit-task-dialog">
+      {/* Edit Dialog */}
+      <Dialog open={showEdit} onOpenChange={(o) => { setShowEdit(o); if (!o) setEditingTask(null); }}>
+        <DialogContent className="bg-white max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-white">Edytuj zadanie</DialogTitle>
+            <DialogTitle>Edytuj zadanie</DialogTitle>
           </DialogHeader>
           <TaskForm onSave={updateTask} isEdit={true} />
         </DialogContent>
