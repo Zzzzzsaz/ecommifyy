@@ -55,11 +55,8 @@ html, body {
 
 /* Desktop: sidebar + content */
 @media (min-width: 768px) {
-  .app-layout {
-    display: grid;
-    grid-template-columns: var(--sidebar-width) 1fr;
-  }
   .main-content {
+    margin-left: var(--sidebar-width);
     min-height: 100vh;
   }
 }
