@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import "@/App.css";
+import "@/index.css";
 import { Toaster } from "@/components/ui/sonner";
 import { api } from "@/lib/api";
 import LoginScreen from "@/components/LoginScreen";
@@ -71,14 +71,14 @@ function App() {
   };
 
   return (
-    <div className="app-container">
+    <div className="app-layout">
       <Sidebar 
         activeTab={activeTab} 
         onTabChange={setActiveTab} 
         user={user}
         onLogout={handleLogout}
       />
-      <main className="content-area">
+      <main className="main-content">
         {renderContent()}
       </main>
       <Toaster position="top-center" richColors />
