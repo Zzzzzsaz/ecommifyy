@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import "@/App.css";
 import { Toaster } from "@/components/ui/sonner";
 import { api } from "@/lib/api";
@@ -11,8 +11,7 @@ import Ideas from "@/components/Ideas";
 import CalendarPage from "@/components/CalendarPage";
 import Stores from "@/components/Stores";
 import Settings from "@/components/Settings";
-import BottomNav from "@/components/BottomNav";
-import AiAssistant from "@/components/AiAssistant";
+import Sidebar from "@/components/Sidebar";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -48,12 +47,6 @@ function App() {
     setActiveTab("dashboard");
   }, []);
 
-  const handleAiDataChange = useCallback(() => {
-    // Trigger refresh of current view when AI makes changes
-    setRefreshKey(k => k + 1);
-    refreshShops();
-  }, [refreshShops]);
-
   if (!user) {
     return (
       <>
@@ -79,11 +72,15 @@ function App() {
 
   return (
     <div className="app-container">
-      <div className="content-area">
+      <Sidebar 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+        user={user}
+        onLogout={handleLogout}
+      />
+      <main className="content-area">
         {renderContent()}
-      </div>
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
-      <AiAssistant onDataChange={handleAiDataChange} />
+      </main>
       <Toaster position="top-center" richColors />
     </div>
   );
