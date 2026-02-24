@@ -12,13 +12,14 @@ import CalendarPage from "@/components/CalendarPage";
 import Stores from "@/components/Stores";
 import Settings from "@/components/Settings";
 import Sidebar from "@/components/Sidebar";
+import BottomNav from "@/components/BottomNav";
 
 function App() {
   const [user, setUser] = useState(null);
   const [shops, setShops] = useState([]);
   const [appSettings, setAppSettings] = useState({});
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogin = useCallback((data) => {
     setUser(data.user);
@@ -27,17 +28,11 @@ function App() {
   }, []);
 
   const refreshShops = useCallback(async () => {
-    try {
-      const r = await api.getShops();
-      setShops(r.data);
-    } catch {}
+    try { const r = await api.getShops(); setShops(r.data); } catch {}
   }, []);
 
   const refreshSettings = useCallback(async () => {
-    try {
-      const r = await api.getAppSettings();
-      setAppSettings(r.data);
-    } catch {}
+    try { const r = await api.getAppSettings(); setAppSettings(r.data); } catch {}
   }, []);
 
   const handleLogout = useCallback(() => {
@@ -58,15 +53,15 @@ function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case "dashboard": return <Dashboard key={refreshKey} user={user} shops={shops} appSettings={appSettings} onNavigate={setActiveTab} onLogout={handleLogout} />;
-      case "wyniki": return <Wyniki key={refreshKey} user={user} shops={shops} appSettings={appSettings} />;
-      case "orders": return <Orders key={refreshKey} user={user} shops={shops} />;
+      case "dashboard": return <Dashboard user={user} shops={shops} appSettings={appSettings} onNavigate={setActiveTab} />;
+      case "wyniki": return <Wyniki user={user} shops={shops} appSettings={appSettings} />;
+      case "orders": return <Orders user={user} shops={shops} />;
       case "tasks": return <Tasks user={user} />;
       case "ideas": return <Ideas user={user} />;
       case "calendar": return <CalendarPage user={user} />;
       case "stores": return <Stores shops={shops} onShopsChange={refreshShops} />;
       case "settings": return <Settings user={user} shops={shops} appSettings={appSettings} onSettingsChange={refreshSettings} onShopsChange={refreshShops} onLogout={handleLogout} />;
-      default: return <Dashboard key={refreshKey} user={user} shops={shops} appSettings={appSettings} onNavigate={setActiveTab} onLogout={handleLogout} />;
+      default: return <Dashboard user={user} shops={shops} appSettings={appSettings} onNavigate={setActiveTab} />;
     }
   };
 
@@ -77,10 +72,17 @@ function App() {
         onTabChange={setActiveTab} 
         user={user}
         onLogout={handleLogout}
+        mobileOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
       />
       <main className="main-content">
         {renderContent()}
       </main>
+      <BottomNav 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab}
+        onMenuClick={() => setMobileMenuOpen(true)}
+      />
       <Toaster position="top-center" richColors />
     </div>
   );
