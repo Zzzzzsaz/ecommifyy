@@ -8,20 +8,8 @@ import { toast } from "sonner";
 import { 
   Save, LogOut, Loader2, Building2, Target, Users, Percent, DollarSign, 
   Settings2, Shield, Crown, ShoppingBag, KeyRound, Plus, Trash2, Eye, EyeOff,
-  Copy, ExternalLink, Edit2
+  Copy, Edit2, Globe, Mail, Lock
 } from "lucide-react";
-
-const CREDENTIAL_TYPES = [
-  { id: "shopify", label: "Shopify", icon: "🛒", color: "#96bf48" },
-  { id: "tiktok", label: "TikTok", icon: "🎵", color: "#000000" },
-  { id: "tiktok_ads", label: "TikTok Ads", icon: "📢", color: "#ff0050" },
-  { id: "facebook", label: "Facebook/Meta", icon: "📘", color: "#1877f2" },
-  { id: "google", label: "Google Ads", icon: "🔍", color: "#4285f4" },
-  { id: "stripe", label: "Stripe", icon: "💳", color: "#635bff" },
-  { id: "paypal", label: "PayPal", icon: "💰", color: "#003087" },
-  { id: "allegro", label: "Allegro", icon: "🛍️", color: "#ff5a00" },
-  { id: "inne", label: "Inne", icon: "🔑", color: "#6b7280" },
-];
 
 export default function Settings({ user, shops = [], appSettings = {}, onSettingsChange, onShopsChange, onLogout }) {
   const [company, setCompany] = useState({ name: "", nip: "", address: "", postal_code: "", city: "", bank_name: "", bank_account: "", email: "", phone: "" });
@@ -32,7 +20,7 @@ export default function Settings({ user, shops = [], appSettings = {}, onSetting
   const [savingSettings, setSavingSettings] = useState(false);
   const [showAddCred, setShowAddCred] = useState(false);
   const [showEditCred, setShowEditCred] = useState(null);
-  const [credForm, setCredForm] = useState({ type: "shopify", name: "", login: "", password: "", api_key: "", api_secret: "", notes: "" });
+  const [credForm, setCredForm] = useState({ name: "", url: "", email: "", password: "", notes: "" });
   const [savingCred, setSavingCred] = useState(false);
   const [visiblePasswords, setVisiblePasswords] = useState({});
 
@@ -79,7 +67,7 @@ export default function Settings({ user, shops = [], appSettings = {}, onSetting
     finally { setSavingSettings(false); }
   };
 
-  const resetCredForm = () => setCredForm({ type: "shopify", name: "", login: "", password: "", api_key: "", api_secret: "", notes: "" });
+  const resetCredForm = () => setCredForm({ name: "", url: "", email: "", password: "", notes: "" });
 
   const fetchCredentials = async () => {
     try {
@@ -132,8 +120,6 @@ export default function Settings({ user, shops = [], appSettings = {}, onSetting
     setVisiblePasswords(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const getTypeInfo = (type) => CREDENTIAL_TYPES.find(t => t.id === type) || CREDENTIAL_TYPES[CREDENTIAL_TYPES.length - 1];
-
   if (loading) {
     return <div className="page-container flex justify-center py-12"><Loader2 className="animate-spin text-slate-400" size={28} /></div>;
   }
@@ -154,89 +140,68 @@ export default function Settings({ user, shops = [], appSettings = {}, onSetting
             <KeyRound size={18} className="text-violet-500" /> Sejf haseł
           </h2>
           <Button onClick={() => { resetCredForm(); setShowAddCred(true); }} size="sm" className="bg-violet-600 hover:bg-violet-700 h-8" data-testid="add-cred-btn">
-            <Plus size={14} className="mr-1" /> Dodaj
+            <Plus size={14} className="mr-1" /> Dodaj konto
           </Button>
         </div>
 
         {credentials.length > 0 ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="space-y-2">
             {credentials.map(cred => {
-              const typeInfo = getTypeInfo(cred.type);
               const isVisible = visiblePasswords[cred.id];
               
               return (
-                <div key={cred.id} className="p-3 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50" data-testid={`cred-${cred.id}`}>
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{typeInfo.icon}</span>
-                      <div>
-                        <p className="font-medium text-slate-900 text-sm">{cred.name}</p>
-                        <p className="text-xs text-slate-400">{typeInfo.label}</p>
-                      </div>
+                <div key={cred.id} className="p-3 rounded-lg border border-slate-200 hover:border-slate-300 bg-slate-50 flex items-center gap-4" data-testid={`cred-${cred.id}`}>
+                  {/* Icon/Name */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium text-slate-900">{cred.name}</span>
+                      {cred.url && (
+                        <a href={cred.url.startsWith("http") ? cred.url : `https://${cred.url}`} target="_blank" rel="noopener noreferrer" 
+                          className="text-xs text-slate-400 hover:text-blue-500 flex items-center gap-0.5">
+                          <Globe size={10} /> {cred.url.replace(/https?:\/\//, "").split("/")[0]}
+                        </a>
+                      )}
                     </div>
-                    <div className="flex gap-1">
-                      <button onClick={() => { setCredForm({ type: cred.type, name: cred.name, login: cred.login || "", password: cred.password || "", api_key: cred.api_key || "", api_secret: cred.api_secret || "", notes: cred.notes || "" }); setShowEditCred(cred); }}
-                        className="p-1.5 text-slate-400 hover:text-blue-600 rounded hover:bg-white">
-                        <Edit2 size={14} />
-                      </button>
-                      <button onClick={() => deleteCredential(cred.id)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 rounded hover:bg-white">
-                        <Trash2 size={14} />
-                      </button>
+                    
+                    <div className="flex items-center gap-4 text-sm">
+                      {cred.email && (
+                        <div className="flex items-center gap-1.5 text-slate-600">
+                          <Mail size={12} className="text-slate-400" />
+                          <span className="font-mono text-xs">{cred.email}</span>
+                          <button onClick={() => copyToClipboard(cred.email, "email")} className="p-0.5 text-slate-400 hover:text-slate-600">
+                            <Copy size={10} />
+                          </button>
+                        </div>
+                      )}
+                      {cred.password && (
+                        <div className="flex items-center gap-1.5 text-slate-600">
+                          <Lock size={12} className="text-slate-400" />
+                          <span className="font-mono text-xs">{isVisible ? cred.password : "••••••••"}</span>
+                          <button onClick={() => togglePasswordVisibility(cred.id)} className="p-0.5 text-slate-400 hover:text-slate-600">
+                            {isVisible ? <EyeOff size={10} /> : <Eye size={10} />}
+                          </button>
+                          <button onClick={() => copyToClipboard(cred.password, "hasło")} className="p-0.5 text-slate-400 hover:text-slate-600">
+                            <Copy size={10} />
+                          </button>
+                        </div>
+                      )}
                     </div>
+                    
+                    {cred.notes && (
+                      <p className="text-xs text-slate-400 mt-1 line-clamp-1">{cred.notes}</p>
+                    )}
                   </div>
                   
-                  <div className="space-y-1.5 text-xs">
-                    {cred.login && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Login:</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-mono text-slate-700">{cred.login}</span>
-                          <button onClick={() => copyToClipboard(cred.login, "login")} className="p-1 text-slate-400 hover:text-slate-600">
-                            <Copy size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {cred.password && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Hasło:</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-mono text-slate-700">{isVisible ? cred.password : "••••••••"}</span>
-                          <button onClick={() => togglePasswordVisibility(cred.id)} className="p-1 text-slate-400 hover:text-slate-600">
-                            {isVisible ? <EyeOff size={12} /> : <Eye size={12} />}
-                          </button>
-                          <button onClick={() => copyToClipboard(cred.password, "hasło")} className="p-1 text-slate-400 hover:text-slate-600">
-                            <Copy size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {cred.api_key && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">API Key:</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-mono text-slate-700 truncate max-w-[120px]">{isVisible ? cred.api_key : "••••••••"}</span>
-                          <button onClick={() => copyToClipboard(cred.api_key, "API Key")} className="p-1 text-slate-400 hover:text-slate-600">
-                            <Copy size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {cred.api_secret && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">API Secret:</span>
-                        <div className="flex items-center gap-1">
-                          <span className="font-mono text-slate-700 truncate max-w-[120px]">{isVisible ? cred.api_secret : "••••••••"}</span>
-                          <button onClick={() => copyToClipboard(cred.api_secret, "API Secret")} className="p-1 text-slate-400 hover:text-slate-600">
-                            <Copy size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {cred.notes && (
-                      <p className="text-slate-400 pt-1 border-t border-slate-200 mt-2 line-clamp-2">{cred.notes}</p>
-                    )}
+                  {/* Actions */}
+                  <div className="flex gap-1 shrink-0">
+                    <button onClick={() => { setCredForm({ name: cred.name, url: cred.url || "", email: cred.email || "", password: cred.password || "", notes: cred.notes || "" }); setShowEditCred(cred); }}
+                      className="p-2 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-white">
+                      <Edit2 size={16} />
+                    </button>
+                    <button onClick={() => deleteCredential(cred.id)}
+                      className="p-2 text-slate-400 hover:text-red-600 rounded-lg hover:bg-white">
+                      <Trash2 size={16} />
+                    </button>
                   </div>
                 </div>
               );
@@ -246,7 +211,7 @@ export default function Settings({ user, shops = [], appSettings = {}, onSetting
           <div className="text-center py-8 text-slate-400">
             <KeyRound size={32} className="mx-auto mb-2 opacity-30" />
             <p className="text-sm">Brak zapisanych haseł</p>
-            <p className="text-xs">Dodaj dane logowania do Shopify, TikTok i innych platform</p>
+            <p className="text-xs">Dodaj dane logowania do kont firmowych</p>
           </div>
         )}
       </div>
@@ -404,53 +369,32 @@ export default function Settings({ user, shops = [], appSettings = {}, onSetting
       {/* Add Credential Dialog */}
       <Dialog open={showAddCred} onOpenChange={setShowAddCred}>
         <DialogContent className="bg-white max-w-md">
-          <DialogHeader><DialogTitle>Dodaj dane logowania</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Dodaj konto</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
             <div>
-              <label className="text-sm text-slate-600 mb-1 block">Typ</label>
-              <div className="grid grid-cols-3 gap-2">
-                {CREDENTIAL_TYPES.map(t => (
-                  <button key={t.id} onClick={() => setCredForm(f => ({ ...f, type: t.id }))}
-                    className={`p-2 rounded-lg border text-sm flex items-center gap-2 ${credForm.type === t.id ? "border-violet-500 bg-violet-50" : "border-slate-200"}`}>
-                    <span>{t.icon}</span>
-                    <span className="truncate">{t.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-sm text-slate-600 mb-1 block">Nazwa (np. Sklep główny)</label>
+              <label className="text-sm text-slate-600 mb-1 block">Nazwa serwisu</label>
               <Input value={credForm.name} onChange={e => setCredForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Nazwa do identyfikacji" data-testid="cred-name-input" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm text-slate-600 mb-1 block">Login / Email</label>
-                <Input value={credForm.login} onChange={e => setCredForm(f => ({ ...f, login: e.target.value }))}
-                  placeholder="user@email.com" data-testid="cred-login-input" />
-              </div>
-              <div>
-                <label className="text-sm text-slate-600 mb-1 block">Hasło</label>
-                <Input type="password" value={credForm.password} onChange={e => setCredForm(f => ({ ...f, password: e.target.value }))}
-                  placeholder="••••••••" data-testid="cred-password-input" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm text-slate-600 mb-1 block">API Key</label>
-                <Input value={credForm.api_key} onChange={e => setCredForm(f => ({ ...f, api_key: e.target.value }))}
-                  placeholder="shpat_..." data-testid="cred-apikey-input" />
-              </div>
-              <div>
-                <label className="text-sm text-slate-600 mb-1 block">API Secret</label>
-                <Input type="password" value={credForm.api_secret} onChange={e => setCredForm(f => ({ ...f, api_secret: e.target.value }))}
-                  placeholder="••••••••" data-testid="cred-apisecret-input" />
-              </div>
+                placeholder="np. Shopify, TikTok Ads, Bank" data-testid="cred-name-input" />
             </div>
             <div>
-              <label className="text-sm text-slate-600 mb-1 block">Notatki</label>
+              <label className="text-sm text-slate-600 mb-1 block">Adres strony (opcjonalnie)</label>
+              <Input value={credForm.url} onChange={e => setCredForm(f => ({ ...f, url: e.target.value }))}
+                placeholder="np. shopify.com" data-testid="cred-url-input" />
+            </div>
+            <div>
+              <label className="text-sm text-slate-600 mb-1 block">Email / Login</label>
+              <Input value={credForm.email} onChange={e => setCredForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="user@firma.pl" data-testid="cred-email-input" />
+            </div>
+            <div>
+              <label className="text-sm text-slate-600 mb-1 block">Hasło</label>
+              <Input type="password" value={credForm.password} onChange={e => setCredForm(f => ({ ...f, password: e.target.value }))}
+                placeholder="••••••••" data-testid="cred-password-input" />
+            </div>
+            <div>
+              <label className="text-sm text-slate-600 mb-1 block">Notatki (opcjonalnie)</label>
               <Textarea value={credForm.notes} onChange={e => setCredForm(f => ({ ...f, notes: e.target.value }))}
-                placeholder="Dodatkowe informacje..." rows={2} data-testid="cred-notes-input" />
+                placeholder="Dodatkowe informacje, np. 2FA, pytanie bezpieczeństwa..." rows={2} data-testid="cred-notes-input" />
             </div>
             <Button onClick={addCredential} disabled={savingCred} className="w-full bg-violet-600 hover:bg-violet-700" data-testid="cred-submit-btn">
               {savingCred && <Loader2 className="animate-spin mr-2" size={16} />}
@@ -463,43 +407,23 @@ export default function Settings({ user, shops = [], appSettings = {}, onSetting
       {/* Edit Credential Dialog */}
       <Dialog open={!!showEditCred} onOpenChange={o => { if (!o) setShowEditCred(null); }}>
         <DialogContent className="bg-white max-w-md">
-          <DialogHeader><DialogTitle>Edytuj dane logowania</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Edytuj konto</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
             <div>
-              <label className="text-sm text-slate-600 mb-1 block">Typ</label>
-              <div className="grid grid-cols-3 gap-2">
-                {CREDENTIAL_TYPES.map(t => (
-                  <button key={t.id} onClick={() => setCredForm(f => ({ ...f, type: t.id }))}
-                    className={`p-2 rounded-lg border text-sm flex items-center gap-2 ${credForm.type === t.id ? "border-violet-500 bg-violet-50" : "border-slate-200"}`}>
-                    <span>{t.icon}</span>
-                    <span className="truncate">{t.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="text-sm text-slate-600 mb-1 block">Nazwa</label>
+              <label className="text-sm text-slate-600 mb-1 block">Nazwa serwisu</label>
               <Input value={credForm.name} onChange={e => setCredForm(f => ({ ...f, name: e.target.value }))} data-testid="cred-edit-name-input" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm text-slate-600 mb-1 block">Login / Email</label>
-                <Input value={credForm.login} onChange={e => setCredForm(f => ({ ...f, login: e.target.value }))} data-testid="cred-edit-login-input" />
-              </div>
-              <div>
-                <label className="text-sm text-slate-600 mb-1 block">Hasło</label>
-                <Input type="password" value={credForm.password} onChange={e => setCredForm(f => ({ ...f, password: e.target.value }))} data-testid="cred-edit-password-input" />
-              </div>
+            <div>
+              <label className="text-sm text-slate-600 mb-1 block">Adres strony</label>
+              <Input value={credForm.url} onChange={e => setCredForm(f => ({ ...f, url: e.target.value }))} data-testid="cred-edit-url-input" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm text-slate-600 mb-1 block">API Key</label>
-                <Input value={credForm.api_key} onChange={e => setCredForm(f => ({ ...f, api_key: e.target.value }))} data-testid="cred-edit-apikey-input" />
-              </div>
-              <div>
-                <label className="text-sm text-slate-600 mb-1 block">API Secret</label>
-                <Input type="password" value={credForm.api_secret} onChange={e => setCredForm(f => ({ ...f, api_secret: e.target.value }))} data-testid="cred-edit-apisecret-input" />
-              </div>
+            <div>
+              <label className="text-sm text-slate-600 mb-1 block">Email / Login</label>
+              <Input value={credForm.email} onChange={e => setCredForm(f => ({ ...f, email: e.target.value }))} data-testid="cred-edit-email-input" />
+            </div>
+            <div>
+              <label className="text-sm text-slate-600 mb-1 block">Hasło</label>
+              <Input type="password" value={credForm.password} onChange={e => setCredForm(f => ({ ...f, password: e.target.value }))} data-testid="cred-edit-password-input" />
             </div>
             <div>
               <label className="text-sm text-slate-600 mb-1 block">Notatki</label>
