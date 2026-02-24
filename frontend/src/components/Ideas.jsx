@@ -90,36 +90,12 @@ export default function Ideas({ user }) {
   const getCatColor = (c) => CATS.find(x => x.id === c)?.color || "#f59e0b";
   const getCatLabel = (c) => CATS.find(x => x.id === c)?.label || "Inne";
 
-  const IdeaForm = ({ onSave, isEdit }) => (
-    <div className="space-y-3 mt-2">
-      <Input placeholder="Tytuł" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
-      <Textarea placeholder="Opis (opcjonalnie)" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} />
-      <Input placeholder="Link (opcjonalnie)" value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} />
-      <div className="flex gap-2">
-        <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
-          <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {CATS.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Button type="button" variant={form.priority ? "default" : "outline"} onClick={() => setForm(f => ({ ...f, priority: !f.priority }))} 
-          className={`w-10 ${form.priority ? "bg-amber-500 hover:bg-amber-400" : ""}`}>
-          <Star size={16} className={form.priority ? "fill-current" : ""} />
-        </Button>
-      </div>
-      <Button onClick={onSave} disabled={saving} className="w-full bg-slate-900 hover:bg-slate-800">
-        {saving && <Loader2 className="animate-spin mr-2" size={16} />}
-        {isEdit ? "Zapisz" : "Dodaj"}
-      </Button>
-    </div>
-  );
-
   return (
     <div className="page-container" data-testid="ideas-page">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold text-slate-900">Pomysły</h1>
-        <Button onClick={() => { resetForm(); setShowAdd(true); }} className="bg-slate-900 hover:bg-slate-800 h-9">
+        <Button onClick={() => { resetForm(); setShowAdd(true); }} className="bg-slate-900 hover:bg-slate-800 h-9" data-testid="add-idea-btn">
           <Plus size={16} className="mr-1" /> Nowy
         </Button>
       </div>
@@ -177,18 +153,101 @@ export default function Ideas({ user }) {
         </div>
       )}
 
-      {/* Dialogs */}
+      {/* Add Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent className="bg-white max-w-md">
           <DialogHeader><DialogTitle>Nowy pomysł</DialogTitle></DialogHeader>
-          <IdeaForm onSave={addIdea} isEdit={false} />
+          <div className="space-y-3 mt-2">
+            <Input 
+              placeholder="Tytuł" 
+              value={form.title} 
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              data-testid="idea-title-input"
+            />
+            <Textarea 
+              placeholder="Opis (opcjonalnie)" 
+              value={form.description} 
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))} 
+              rows={3}
+              data-testid="idea-desc-input"
+            />
+            <Input 
+              placeholder="Link (opcjonalnie)" 
+              value={form.link} 
+              onChange={e => setForm(f => ({ ...f, link: e.target.value }))}
+              data-testid="idea-link-input"
+            />
+            <div className="flex gap-2">
+              <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
+                <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATS.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button 
+                type="button" 
+                variant={form.priority ? "default" : "outline"} 
+                onClick={() => setForm(f => ({ ...f, priority: !f.priority }))} 
+                className={`w-10 ${form.priority ? "bg-amber-500 hover:bg-amber-400" : ""}`}
+                data-testid="idea-priority-btn"
+              >
+                <Star size={16} className={form.priority ? "fill-current" : ""} />
+              </Button>
+            </div>
+            <Button onClick={addIdea} disabled={saving} className="w-full bg-slate-900 hover:bg-slate-800" data-testid="idea-submit-btn">
+              {saving && <Loader2 className="animate-spin mr-2" size={16} />}
+              Dodaj
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
+      {/* Edit Dialog */}
       <Dialog open={showEdit} onOpenChange={o => { setShowEdit(o); if (!o) setEditingIdea(null); }}>
         <DialogContent className="bg-white max-w-md">
           <DialogHeader><DialogTitle>Edytuj pomysł</DialogTitle></DialogHeader>
-          <IdeaForm onSave={updateIdea} isEdit={true} />
+          <div className="space-y-3 mt-2">
+            <Input 
+              placeholder="Tytuł" 
+              value={form.title} 
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              data-testid="idea-edit-title-input"
+            />
+            <Textarea 
+              placeholder="Opis (opcjonalnie)" 
+              value={form.description} 
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))} 
+              rows={3}
+              data-testid="idea-edit-desc-input"
+            />
+            <Input 
+              placeholder="Link (opcjonalnie)" 
+              value={form.link} 
+              onChange={e => setForm(f => ({ ...f, link: e.target.value }))}
+              data-testid="idea-edit-link-input"
+            />
+            <div className="flex gap-2">
+              <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
+                <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CATS.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Button 
+                type="button" 
+                variant={form.priority ? "default" : "outline"} 
+                onClick={() => setForm(f => ({ ...f, priority: !f.priority }))} 
+                className={`w-10 ${form.priority ? "bg-amber-500 hover:bg-amber-400" : ""}`}
+                data-testid="idea-edit-priority-btn"
+              >
+                <Star size={16} className={form.priority ? "fill-current" : ""} />
+              </Button>
+            </div>
+            <Button onClick={updateIdea} disabled={saving} className="w-full bg-slate-900 hover:bg-slate-800" data-testid="idea-edit-submit-btn">
+              {saving && <Loader2 className="animate-spin mr-2" size={16} />}
+              Zapisz
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

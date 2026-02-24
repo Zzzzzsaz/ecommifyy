@@ -115,32 +115,6 @@ export default function Tasks({ user }) {
     return (po[a.priority] || 1) - (po[b.priority] || 1);
   });
 
-  const TaskForm = ({ onSave, isEdit }) => (
-    <div className="space-y-3 mt-2">
-      <Input placeholder="Tytuł" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
-      <Textarea placeholder="Opis (opcjonalnie)" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2} />
-      <div className="grid grid-cols-2 gap-3">
-        <Select value={form.priority} onValueChange={v => setForm(f => ({ ...f, priority: v }))}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {PRIORITIES.map(p => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={form.assigned_to} onValueChange={v => setForm(f => ({ ...f, assigned_to: v }))}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {ASSIGNEES.map(a => <SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-      <Input type="date" placeholder="Termin" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} />
-      <Button onClick={onSave} disabled={saving} className="w-full bg-slate-900 hover:bg-slate-800">
-        {saving && <Loader2 className="animate-spin mr-2" size={16} />}
-        {isEdit ? "Zapisz" : "Dodaj"}
-      </Button>
-    </div>
-  );
-
   return (
     <div className="page-container" data-testid="tasks-page">
       {/* Header */}
@@ -238,18 +212,97 @@ export default function Tasks({ user }) {
         </div>
       )}
 
-      {/* Dialogs */}
+      {/* Add Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent className="bg-white max-w-md">
           <DialogHeader><DialogTitle>Nowe zadanie</DialogTitle></DialogHeader>
-          <TaskForm onSave={addTask} isEdit={false} />
+          <div className="space-y-3 mt-2">
+            <Input 
+              placeholder="Tytuł" 
+              value={form.title} 
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              data-testid="task-title-input"
+            />
+            <Textarea 
+              placeholder="Opis (opcjonalnie)" 
+              value={form.description} 
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))} 
+              rows={2}
+              data-testid="task-desc-input"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Select value={form.priority} onValueChange={v => setForm(f => ({ ...f, priority: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PRIORITIES.map(p => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={form.assigned_to} onValueChange={v => setForm(f => ({ ...f, assigned_to: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ASSIGNEES.map(a => <SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Input 
+              type="date" 
+              placeholder="Termin" 
+              value={form.due_date} 
+              onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
+              data-testid="task-date-input"
+            />
+            <Button onClick={addTask} disabled={saving} className="w-full bg-slate-900 hover:bg-slate-800" data-testid="task-submit-btn">
+              {saving && <Loader2 className="animate-spin mr-2" size={16} />}
+              Dodaj
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
+      {/* Edit Dialog */}
       <Dialog open={showEdit} onOpenChange={o => { setShowEdit(o); if (!o) setEditingTask(null); }}>
         <DialogContent className="bg-white max-w-md">
           <DialogHeader><DialogTitle>Edytuj zadanie</DialogTitle></DialogHeader>
-          <TaskForm onSave={updateTask} isEdit={true} />
+          <div className="space-y-3 mt-2">
+            <Input 
+              placeholder="Tytuł" 
+              value={form.title} 
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              data-testid="task-edit-title-input"
+            />
+            <Textarea 
+              placeholder="Opis (opcjonalnie)" 
+              value={form.description} 
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))} 
+              rows={2}
+              data-testid="task-edit-desc-input"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Select value={form.priority} onValueChange={v => setForm(f => ({ ...f, priority: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PRIORITIES.map(p => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={form.assigned_to} onValueChange={v => setForm(f => ({ ...f, assigned_to: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ASSIGNEES.map(a => <SelectItem key={a.id} value={a.id}>{a.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Input 
+              type="date" 
+              placeholder="Termin" 
+              value={form.due_date} 
+              onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
+              data-testid="task-edit-date-input"
+            />
+            <Button onClick={updateTask} disabled={saving} className="w-full bg-slate-900 hover:bg-slate-800" data-testid="task-edit-submit-btn">
+              {saving && <Loader2 className="animate-spin mr-2" size={16} />}
+              Zapisz
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
