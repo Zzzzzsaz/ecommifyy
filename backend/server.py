@@ -1777,6 +1777,48 @@ async def income_details(shop_id: int = Query(...), date: str = Query(...)):
 async def expense_details(shop_id: int = Query(...), date: str = Query(...)):
     return await db.expenses.find({"shop_id": shop_id, "date": date}, {"_id": 0}).to_list(1000)
 
+# ===== SPREADSHEETS (EXCEL-LIKE) =====
+class SpreadsheetCreate(BaseModel):
+    name: str
+    data: List[List[str]] = []
+    created_by: str = "Admin"
+
+class SpreadsheetUpdate(BaseModel):
+    name: Optional[str] = None
+    data: Optional[List[List[str]]] = None
+
+@api_router.get("/spreadsheets")
+async def get_spreadsheets():
+    return await db.spreadsheets.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
+
+@api_router.post("/spreadsheets")
+async def create_spreadsheet(s: SpreadsheetCreate):
+    doc = {
+        "id": str(uuid.uuid4()),
+        "name": s.name,
+        "data": s.data,
+        "created_by": s.created_by,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.spreadsheets.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/spreadsheets/{sid}")
+async def update_spreadsheet(sid: str, update: SpreadsheetUpdate):
+    ud = {k: v for k, v in update.model_dump().items() if v is not None}
+    ud["updated_at"] = datetime.now(timezone.utc).isoformat()
+    result = await db.spreadsheets.update_one({"id": sid}, {"$set": ud})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Nie znaleziono")
+    return await db.spreadsheets.find_one({"id": sid}, {"_id": 0})
+
+@api_router.delete("/spreadsheets/{sid}")
+async def delete_spreadsheet(sid: str):
+    await db.spreadsheets.delete_one({"id": sid})
+    return {"status": "ok"}
+
 # ===== SETUP =====
 app.include_router(api_router)
 
