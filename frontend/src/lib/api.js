@@ -124,4 +124,10 @@ export const api = {
   createCustomColumn: (data) => axios.post(`${API}/custom-columns`, data),
   updateCustomColumn: (id, data) => axios.put(`${API}/custom-columns/${id}`, data),
   deleteCustomColumn: (id) => axios.delete(`${API}/custom-columns/${id}`),
+
+  // Spreadsheets (Excel-like)
+  getSpreadsheets: () => axios.get(`${API}/spreadsheets`),
+  createSpreadsheet: (data) => axios.post(`${API}/spreadsheets`, data),
+  updateSpreadsheet: (id, data) => axios.put(`${API}/spreadsheets/${id}`, data),
+  deleteSpreadsheet: (id) => axios.delete(`${API}/spreadsheets/${id}`),
 };
