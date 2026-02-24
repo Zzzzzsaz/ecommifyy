@@ -1,99 +1,99 @@
 <analysis>**original_problem_statement:**
-The user's core objective is to build a comprehensive dashboard for managing their e-commerce business, which involves pre-sales.
+The user's core objective is to build a comprehensive, professional, and highly intuitive dashboard for managing their e-commerce business.
 
 PRODUCT REQUIREMENTS:
-1.  **Sales Records (Ewidencja Sprzedaży):** Automatically create sales records from incoming orders and allow manual creation. Generate PDF reports.
-2.  **Order Fulfillment Pipeline (Realizacja Zamówień):** A multi-stage pipeline to manage pre-sale orders, with automated status changes and reminders.
-3.  **Product & Top-up Management:** A Products page to manage a product list, sync from Shopify, and set a custom top-up amount ().
-4.  **Dynamic Store and Settings Management:** Dynamically add, edit, and delete Shopify stores.
-5.  **Returns Management (Zwroty):** A sub-page to track returns.
-6.  **AI Assistant:** A floating AI chat bubble. (This has been disabled to simplify deployment).
-7.  **Customizable Financial Results (Wyniki):** An enhanced Results page with a detailed daily breakdown of income and costs, custom columns, and direct, spreadsheet-like data entry.
-8.  **Task Management (Zadania):** A page to track tasks with status, priority, and assignments.
-9.  **Idea Management (Pomysły):** A notepad-like page to capture, categorize, and track business ideas.
+1.  **Sales Records & Order Fulfillment (Ewidencja Sprzedaży / Realizacja Zamówień):** Manage pre-sale orders, with automated status changes.
+2.  **Product & Top-up Management:** Manage a product list and set custom top-up amounts ().
+3.  **Dynamic Store Management (Sklepy):** Dynamically add, edit, and delete Shopify stores.
+4.  **Financial Results (Wyniki):** An enhanced Results page with a detailed daily breakdown of income and costs, custom columns, and direct data entry. It should feature a date-range picker.
+5.  **Task Management (Zadania):** A page to track tasks with status (Active, Completed, Deleted), priority, and assignments.
+6.  **Idea Management (Pomysły):** A notepad-like page to capture, categorize, and track business ideas.
+7.  **Calendar (Kalendarz):** A calendar view for events or deadlines.
+8.  **Settings (Ustawienia):** A page for application settings.
+9.  **Excel-like Page:** A completely new page that functions as a fully-featured spreadsheet, allowing for ad-hoc data entry and manipulation, 1:1 with Microsoft Excel's functionality.
+10. **UI/UX:** The entire application must be perfectly polished, professional, intuitive, and highly functional, with a light theme. It needs a sidebar for desktop and a bottom navigation bar for mobile.
 
 **User's preferred language**: Polish. The next agent MUST respond in Polish.
 
 **what currently exists?**
-A full-stack application with a FastAPI backend and a React frontend. The application has been deployed to **Railway.app** and uses an external **MongoDB Atlas** database for persistence.
-
-The application features several pages:
--   **Wyniki (Results):** A page for financial tracking, which is responsive (cards on mobile, table on desktop). It calculates gross/net income, ad costs, and profit.
--   **Zadania (Tasks):** A page for task management presented as a simple list with editing capabilities.
--   **Pomysły (Ideas):** A new page for brainstorming and saving ideas in a grid layout.
-
-The user has gone through a very difficult and frustrating deployment process, trying Dokploy and ultimately succeeding with Railway. The AI assistant feature was removed to resolve deployment blockers. The user is now focused on refining the UI/UX and fixing bugs on the live application.
+The application is a full-stack React/FastAPI app deployed on Railway with a MongoDB Atlas database. It has undergone a massive UI/UX overhaul, transitioning to a professional, light-themed design. Key pages like the Dashboard, Results (Wyniki), Tasks (Zadania), and Ideas (Pomysły) have been redesigned. The new layout includes a sidebar for desktop navigation and a bottom navigation bar for a better mobile experience. Most of the gamified elements have been removed.
 
 **Last working item**:
--   **Last item agent was working:** The user reported two major issues: 1. A bug where adding new Ideas fails. 2. A request for a significant UI/UX overhaul across the entire application to make it more consistent, intuitive, and readable, with a specific focus on improving the store selection mechanism on the Results page. The agent was acknowledging the request and about to investigate the bug.
+-   **Last item agent was working:** The agent was addressing a large set of new user requirements. The user reported a bug with adding Ideas (which the agent found to be working), and then requested a complete overhaul of several pages (, , , , ), the removal of a billing feature, and the creation of a brand new Excel-like page. The immediate issue the agent started to tackle was that the current page's title was invisible (white text on a white background) because some pages still used an old, inconsistent theme. The agent's last action was viewing  to begin the redesign process.
 -   **Status:** IN PROGRESS
 -   **Agent Testing Done:** N
 -   **Which testing method agent to use?** both
 -   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
--   **Issue 1:** Cannot add new entries on the Pomysły (Ideas) page (Priority: P0)
--   **Issue 2:** Inconsistent and unintuitive UI/UX across the application (Priority: P1)
+-   **Issue 1:** UI Inconsistency & Visibility Bug (Priority: P0)
+-   **Issue 2:** Ideas page bug reported by user (Priority: P1)
 
 **Issues Detail:**
 -   **Issue 1:**
-    -   **Description:** The user reported nie da sie dodac pomyslow jest blad (you can't add ideas, there's an error). The core functionality of the newly created Ideas page is broken.
-    -   **Attempted fixes:** None. The agent had just finished creating the feature.
+    -   **Description:** The page title in the header is invisible (white text on white background) because some pages (, etc.) have not been updated to the new light theme, causing a global style conflict. This is part of a larger problem where several pages are not consistent with the new design.
+    -   **Attempted fixes:** The agent has identified the root cause is inconsistent styling across pages.
     -   **Next debug checklist:**
-        1.  Open the deployed frontend on Railway, open the developer console (F12), and try to add an idea. Observe for any network errors or console logs.
-        2.  Check the backend logs on Railway for the  service immediately after attempting to add an idea. Look for errors related to the  endpoint.
-        3.  Review  at the  endpoint to ensure the logic correctly handles the request and interacts with the database.
-        4.  Review  and  to verify the  function is sending the correct payload to the backend.
-    -   **Why fix this issue?** A core feature of the last implemented page is broken, blocking the user.
+        1.  Modify the main layout ( or a header component) to ensure the page title has a dark color that is visible on the light background.
+        2.  Systematically refactor all remaining pages (, , , ) to use the new professional, light-themed design and shared components.
+    -   **Why fix this issue?** It makes the app unusable as the user cannot see which page they are on. It's a critical usability flaw.
     -   **Status:** IN PROGRESS
-    -   **Is recurring issue?** N
-    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Is recurring issue?** Y
+    -   **Should Test frontend/backend/both after fix?** Frontend
     -   **Blocked on other issue:** None
 
 -   **Issue 2:**
-    -   **Description:** The user wants a major UI/UX overhaul. Their request: ulatw wszystko na stronie zeby spojnie bylo wszystko ale mega latwy inwerfejs i czytelny bardzo (make everything on the site easier so it's all consistent, but a super easy and very readable interface). They also specifically requested to popraw wyglad strony zeby latwiej bylo wybrac sklep (improve the look of the page to make it easier to select the store).
-    -   **Attempted fixes:** The agent has refactored individual pages (, ) multiple times, but this has resulted in an inconsistent user experience (e.g.,  has cards/table,  has a grid,  has a list).
+    -   **Description:** User reported nie da sie dodawac znowu nic do pomysłów (can't add anything to ideas again).
+    -   **Attempted fixes:** The agent investigated by testing the API directly () and then using the UI via screenshots. In both cases, adding an idea worked successfully.
     -   **Next debug checklist:**
-        1.  Propose a unified design system to the user. Should all pages use tables? Cards? A consistent modal style?
-        2.  Focus on the  component and design a new, more intuitive way to switch between store views, as requested.
-        3.  Plan a refactoring of , , and  to use shared components and styles for a consistent look and feel.
-    -   **Why fix this issue?** The user is finding the app's interface fragmented and hard to use. A consistency pass is required for better usability.
-    -   **Status:** NOT STARTED
-    -   **Is recurring issue?** Y (User has repeatedly requested UI/UX improvements).
+        1.  Once the main UI refactoring is complete, re-test this functionality thoroughly.
+        2.  If the issue persists, add more detailed console logging around the  API call in  to capture any potential network errors or malformed payloads.
+    -   **Why fix this issue?** Although the agent could not reproduce it, the user reported it. It needs to be definitively resolved to ensure core functionality is reliable.
+    -   **Status:** USER VERIFICATION PENDING
+    -   **Is recurring issue?** Y
     -   **Should Test frontend/backend/both after fix?** Frontend
     -   **Blocked on other issue:** None
 
 **In progress Task List**:
--   None. The work is captured in the issue list above.
+-   **Task 1:** Complete Massive UI & Feature Overhaul (Priority: P0)
+
+**Task Detail:**
+-   **Task 1:**
+    -   **Where to resume:** Start by rewriting  to align with the new light theme and professional design. Then, proceed to the other pages mentioned by the user.
+    -   **What will be achieved with this?** A fully functional, consistent, and visually polished application that meets all the user's latest requirements.
+    -   **Status:** IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?** Both
+    -   **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 -   **Upcoming Tasks:**
-    -   (P1) Shopify Product Sync: Implement the logic to synchronize products from a connected Shopify store. (Files: , new frontend component).
+    -   (P0) **Page Overhauls:** Refactor the following pages to the new light theme and functionality requirements:
+        -    (Orders): Keep order fulfillment logic, remove billing.
+        -    (Tasks): Ensure Deleted tab is working perfectly.
+        -    (Calendar): Create/design this page from scratch.
+        -    (Stores): Create/design this page from scratch.
+        -    (Settings): Create/design this page from scratch.
+    -   (P1) **Remove Rozliczenia (Billing):** Go through the codebase and remove all functionality related to generating invoices and receipts.
 -   **Future Tasks:**
-    -   (P2) Re-enable AI Assistant: The feature was removed for deployment. It could be re-added behind a feature flag or once a stable API key solution is found.
-    -   (P2) Automated Reminder Sending: The system should automatically send payment reminders for pre-sale top-ups.
+    -   (P1) **Create Excel-like Page:** This is a major feature. The next agent needs to clarify the exact requirements with the user. What features of Excel are essential (e.g., formulas, cell references, formatting, charts)? A phased approach is recommended, starting with a simple editable grid.
+    -   (P2) **Shopify Product Sync:** Implement logic to synchronize products from a connected Shopify store.
+    -   (P2) **Re-enable AI Assistant:** This feature was removed for deployment and is a low priority.
 
 **Completed work in this session**
--   **Successful Deployment to Railway.app:**
-    -   Guided the user through an arduous deployment process, abandoning a failed attempt with Dokploy and succeeding with Railway.
-    -   Created and configured , , and build scripts in  to enable a production build for both frontend and backend.
-    -   Resolved numerous build/runtime errors related to dependencies (, ), environment variables, and build commands.
--   **Database Migration to MongoDB Atlas:**
-    -   Guided the user to set up a free MongoDB Atlas cluster.
-    -   Integrated the  into the backend configuration, making the application's data persistent.
--   **Wyniki Page Overhaul:**
-    -   Fixed a critical usability bug where users couldn't add entries.
-    -   Redesigned the page to be fully responsive (cards on mobile, table on desktop).
-    -   Added new calculated columns: Przychód Netto (Net Income), Koszty Ads, Dochód (Profit), and Dochód na łeb (Profit per Head).
-    -   Added a Synchronizuj (Sync) button and ensured all monetary values are formatted correctly (e.g., ).
--   **Zadania (Tasks) Page Refactor:**
-    -   Restored the Zadania tab to the navigation.
-    -   Converted the UI from a Kanban board to a simpler, more readable list view.
-    -   Implemented functionality to edit tasks by clicking on them, which opens a details modal.
--   **New Pomysły (Ideas) Page:**
-    -   Created a full-stack feature for a notepad of ideas.
-    -   **Backend:** Added a new  model and full CRUD API endpoints in .
-    -   **Frontend:** Created the  page with a grid layout, filtering by category, and modals for adding/editing ideas.
+-   **Massive UI/UX Redesign (Professional Light Theme):**
+    -   Completely redesigned the application from a dark, gamified look to a clean, professional, light theme.
+    -   **Login Page:** Redesigned for clarity, fixing overlapping PIN pad numbers.
+    -   **Layout:** Implemented a new persistent  for desktop and a new  for mobile.
+    -   **Dashboard:** Rewritten to be a professional hub with KPI cards, a date picker, and quick navigation, removing cringe gaming elements like ranks and the unneeded Products section.
+    -   **Wyniki (Results):** Improved the layout for both desktop (table) and mobile (cards). Added Zysk and Zysk na głowę to the main view.
+    -   **Zadania (Tasks):** Added a Usunięte (Deleted) tab as requested.
+    -   **Pomysły (Ideas):** Refactored to match the new UI.
+-   **Bug Fixes & UX Improvements:**
+    -   **Fixed Add Idea Bug:** Resolved an issue where the frontend was sending an unnecessary  field.
+    -   **Improved Store Selection:** Replaced buttons with a more intuitive dropdown menu on the Wyniki page.
+    -   **Improved Icons/Buttons:** Centered icons and improved button consistency.
+-   **Testing:** Successfully used the testing agent multiple times to confirm the stability of the new design and bug fixes.
+-   **Code Cleanup:** Deleted the unused  file.
 
 **Earlier issues found/mentioned but not fixed**
 -   **Issue 1: Monolithic Backend:**
@@ -103,131 +103,82 @@ The user has gone through a very difficult and frustrating deployment process, t
     -   **Is recurring issue?** N
 
 **Known issue recurrence from previous fork**
--   **Issue recurrence in previous fork:** The user has repeatedly expressed frustration with the UI/UX of the Results page, leading to multiple redesigns. This indicates a need to establish a clear and user-approved design direction.
--   **Recurrence count:** 3+
--   **Status:** IN PROGRESS (The user has once again requested a UI overhaul).
+-   **Issue recurrence in previous fork:** User's continuous requests for major UI/UX overhauls. The agent has now performed two complete redesigns in this session alone. This indicates the user has very high standards for the UI and the next agent should be prepared for further detailed feedback.
+-   **Recurrence count:** 4+
+-   **Status:** IN PROGRESS (The user's latest message is another such request).
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
--   **Backend:** FastAPI, Python, **Motor** (for async MongoDB).
--   **Frontend:** React, JavaScript, Craco, Material-UI.
--   **Database:** **MongoDB Atlas** (external, persistent).
--   **Deployment:** **Railway.app** (using Nixpacks & Procfiles).
+-   **Backend:** FastAPI, Python, Motor (for async MongoDB).
+-   **Frontend:** React, JavaScript,  for icons, Shadcn UI components.
+-   **Database:** MongoDB Atlas (external, persistent).
+-   **Deployment:** Railway.app.
 
 **key DB schema**
 -   **Cost:** 
--   **CustomColumn:** 
 -   **Income:** 
 -   **Task:** 
--   **Idea (New):** 
+-   **Idea:** 
 
 **changes in tech stack**
--   **Database:** Switched from a transient in-memory/SQLite database in the preview environment to a persistent **MongoDB Atlas** database for the deployed application.
--   **AI Integration:**  and the standard usage: openai [-h] [-v] [-b API_BASE] [-k API_KEY] [-p PROXY [PROXY ...]]
-              [-o ORGANIZATION] [-t {openai,azure}]
-              [--api-version API_VERSION] [--azure-endpoint AZURE_ENDPOINT]
-              [--azure-ad-token AZURE_AD_TOKEN] [-V]
-              {api,tools,migrate,grit} ...
-
-positional arguments:
-  {api,tools,migrate,grit}
-    api                 Direct API calls
-    tools               Client side tools for convenience
-
-options:
-  -h, --help            show this help message and exit
-  -v, --verbose         Set verbosity.
-  -b API_BASE, --api-base API_BASE
-                        What API base url to use.
-  -k API_KEY, --api-key API_KEY
-                        What API key to use.
-  -p PROXY [PROXY ...], --proxy PROXY [PROXY ...]
-                        What proxy to use.
-  -o ORGANIZATION, --organization ORGANIZATION
-                        Which organization to run as (will use your default
-                        organization if not specified)
-  -t {openai,azure}, --api-type {openai,azure}
-                        The backend API to call, must be `openai` or `azure`
-  --api-version API_VERSION
-                        The Azure API version, e.g.
-                        'https://learn.microsoft.com/en-us/azure/ai-
-                        services/openai/reference#rest-api-versioning'
-  --azure-endpoint AZURE_ENDPOINT
-                        The Azure endpoint, e.g.
-                        'https://endpoint.openai.azure.com'
-  --azure-ad-token AZURE_AD_TOKEN
-                        A token from Azure Active Directory,
-                        https://www.microsoft.com/en-
-                        us/security/business/identity-access/microsoft-entra-
-                        id
-  -V, --version         show program's version number and exit library were **completely removed** from the codebase to simplify deployment. The AI Assistant feature is currently disabled.
--   **Deployment:** Moved from a self-contained preview environment to a production-like setup on **Railway.app**.
+-   No fundamental changes. The frontend has been heavily refactored to use a consistent design system based on a light theme, with  for icons.
 
 **All files of reference**
--   ****: Heavily modified to add the Ideas API and remove the OpenAI integration.
--   ****: Completely overhauled for responsiveness and new features.
--   ****: New page for the Ideas feature.
--   ****: Refactored page for the Tasks feature.
--   ****: Updated with API calls for the Ideas feature.
--   ****: Scripts updated for production deployment on Railway ( and ).
--   **, , **: New files created to manage the deployment process on Railway.
+-   **Created:** , 
+-   **Heavily Updated/Rewritten:** , , , , , , , .
+-   **Needs Immediate Update:** .
+-   **Backend:**  (No recent changes, but remains a monolith).
 
 **Areas that need refactoring**:
--   The backend in  is a large monolith and should be split into modules for routes, models, and services.
--   The frontend needs a global UI/UX refactoring to ensure consistency across the , , and  pages, as requested by the user.
+-   **Backend Monolith:**  urgently needs to be broken down into modules (routers, models, services) for maintainability.
+-   **Frontend Pages:**  and the placeholders for , , and  need to be created/rewritten to match the new application design.
 
 **key api endpoints**
+-    (GET, POST, PUT, DELETE)
+-    (GET, POST, PUT, DELETE)
 -    (GET)
 -    (POST, DELETE)
 -    (POST, DELETE)
--    (GET, POST, PUT, DELETE)
--    (GET, POST, PUT, DELETE) **(New)**
--    (POST)
 
 **Critical Info for New Agent**
--   **The user is very frustrated.** The deployment was a long and difficult process. Be direct, efficient, and prioritize getting the deployed application into a stable, usable state.
--   **The application is live on Railway.** Development should target this environment. The Emergent preview environment may have a different configuration and is not the source of truth.
--   **The bug on the Ideas page is the highest priority.** After that, the UI/UX consistency pass is the next most important task.
--   The AI Assistant is **disabled**. Do not attempt to work on it unless the user explicitly asks to restore it and is willing to provide an OpenAI API key.
+-   **The user has very high expectations for UI/UX.** Be prepared to receive and act on very direct, critical feedback. The goal is a perfectly polished application.
+-   **The immediate task is a large-scale feature build and refactor.** Follow the user's latest request list, starting with the invisible page title bug and then systematically overhauling the specified pages.
+-   **The Excel-like page is a huge, undefined feature.** You MUST clarify the scope and specific required functionalities with the user before starting implementation. Propose a minimal version first.
+-   **Always test on both desktop and mobile views.** The user values the mobile experience and has provided specific feedback on it.
 
 **documents and test reports created in this job**
--    (Updated)
--    (From testing the Wyniki page fix)
--   Deployment files created: , , , . Docker-related files also exist but are likely obsolete.
+-    (Updated multiple times)
+-   Test reports from  are available in .
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (LATEST):** nie da sie dodac pomyslow jest blad i wez w wyniki popraw wyglad strony zeby latwiej bylo wybrac sklep ktory chce sie dopisac i wez ulatw wszystko na stronie zeby spojnie bylo wszystko ale mega latwy inwerfejs i czytelny bardzo (Can't add ideas, bugged. Improve 'Wyniki' page to make store selection easier. Make the whole app consistent, simple, and readable). **Status: NOT STARTED**
-2.  **User:** dodaj jeszcze strone pomysly... (Add an 'Ideas' page...). **Status: DONE (but buggy)**
-3.  **User:** popraw strone wynikow zeby pokazywalo ladnie w tabelce... (Improve the 'Wyniki' page to show a nice Excel-like table...). **Status: DONE**
-4.  **User:** moja domena nie dziala zbytnio xd (my domain isn't really working lol). **Status: ADDRESSED**
-5.  **User:** popraw zeby dalo sie dac synchronizacje wynikow... i popraw cala tabele wyniki bo na mobile wersji rozjezdza sie wszystko / w zadaniach daj mozliwosc klikniecia w zadanie i edycje go (add sync to results / fix results table on mobile, it's breaking / in tasks, allow clicking a task to edit it). **Status: DONE**
-6.  **User:** daj w wynikach z groszami wszystko a w zadaniach wez lepiej zrob te strone zeby latwiej dzialalo to (show everything with cents in results, and for tasks, make the page work more easily). **Status: DONE**
-7.  **User:** dalem save to github i blad tera (I clicked save to github and now there's an error). **Status: ADDRESSED**
-8.  **User:** popraw strone wynikow zeby pokazywalo ladnie w tabelce jak w excelu... (Improve results page to show a nice table like in excel...). **Status: DONE**
-9.  **User:** jaki port dac (what port to give?). **Status: ADDRESSED**
-10. **User:** domene se dodam ale to juz se poradze chyba (I'll add the domain myself, I think I can handle it). **Status: ADDRESSED**
+1.  **User (LATEST):** Cant add ideas again - fix the orders, tasks, calendar, stores, and settings pages - cant see the page name because its white on white / get rid of billing, but keep order fulfillment / add a new page that is a 1:1 copy of excel with full functionality." **Status: IN PROGRESS**
+2.  **User:** "Make a nice bottom menu for mobile... fix login screen pin numbers overlapping... on main menu, make stats (revenue, profit, ads) have a date picker like Shopify... remove the products section... simplify everything... in results, show profit and profit per head... rework tables to be more readable... fix icon/button alignment... make the app more intuitive and simple... add a deleted section in tasks." **Status: DONE**
+3.  **User:** "Redo the design completely. Make it a white page, clean, clear. Change everything and adapt for efficiency. Remove the ranks, its cringe. Make a professional, awesome business management panel. **Status: DONE**
+4.  **User:** Provided feedback that tests passed but minor UI issues remain. **Status: ADDRESSED**
+5.  **User:** Provided feedback after a UI refresh, happy with the direction. **Status: ADDRESSED**
+6.  **User:** Reported the Add Idea bug and requested a major UI overhaul for consistency and readability. **Status: ADDRESSED**
 
 **Project Health Check:**
--   **Broken:** The Add Idea functionality is not working. The overall UI is inconsistent across different pages.
+-   **Broken:**
+    -   Page titles are invisible on a white background.
+    -   Several key pages (, , etc.) are non-existent or use an outdated, inconsistent UI.
 -   **Mocked:** None.
 
 **3rd Party Integrations**
--   **Shopify:** For fetching order data. Requires a User API Key for full functionality.
--   **MongoDB Atlas:** The primary database. Requires a  connection string provided by the user.
--   **Railway.app:** The deployment platform for both frontend and backend.
--   **OpenAI:** **REMOVED**. The integration was removed to simplify deployment.
+-   **Shopify:** For fetching order data. Requires a User API Key.
+-   **MongoDB Atlas:** The primary database.
+-   **Railway.app:** The deployment platform.
 
 **Testing status**
--   **Testing agent used after significant changes:** YES, after the initial fix for the  page.
+-   **Testing agent used after significant changes:** YES, used multiple times successfully after major UI overhauls.
 -   **Troubleshoot agent used after agent stuck in loop:** NO
--   **Test files created:** None in this session.
--   **Known regressions:** The newly created Ideas page has a critical bug preventing a core action.
+-   **Test files created:** None.
+-   **Known regressions:** The user has reported the add idea bug again, though it was not reproducible by the agent. The UI consistency was broken by the rapid redesign.
 
 **Credentials to test flow:**
 -   **PIN:** 
 
 **What agent forgot to execute**
--   The agent did not test the Ideas page after creating it, allowing a critical bug to reach the user.
--   The long-standing task to refactor the monolithic  file has still not been addressed.</analysis>
+-   The agent was in the process of a large user request. The main task that has not been scoped or planned is the Excel-like page, which is a significant engineering effort requiring user clarification. The monolithic backend refactor remains an unaddressed piece of technical debt.</analysis>
