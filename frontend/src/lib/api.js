@@ -130,4 +130,10 @@ export const api = {
   createSpreadsheet: (data) => axios.post(`${API}/spreadsheets`, data),
   updateSpreadsheet: (id, data) => axios.put(`${API}/spreadsheets/${id}`, data),
   deleteSpreadsheet: (id) => axios.delete(`${API}/spreadsheets/${id}`),
+
+  // Credentials (Password Vault)
+  getCredentials: () => axios.get(`${API}/credentials`),
+  createCredential: (data) => axios.post(`${API}/credentials`, data),
+  updateCredential: (id, data) => axios.put(`${API}/credentials/${id}`, data),
+  deleteCredential: (id) => axios.delete(`${API}/credentials/${id}`),
 };
