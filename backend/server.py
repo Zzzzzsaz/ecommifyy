@@ -6,7 +6,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Any
 import uuid
 from datetime import datetime, timezone, timedelta
 import httpx
@@ -1780,12 +1780,12 @@ async def expense_details(shop_id: int = Query(...), date: str = Query(...)):
 # ===== SPREADSHEETS (EXCEL-LIKE) =====
 class SpreadsheetCreate(BaseModel):
     name: str
-    data: List[List[str]] = []
+    data: List[List[Any]] = []
     created_by: str = "Admin"
 
 class SpreadsheetUpdate(BaseModel):
     name: Optional[str] = None
-    data: Optional[List[List[str]]] = None
+    data: Optional[List[List[Any]]] = None
 
 @api_router.get("/spreadsheets")
 async def get_spreadsheets():
