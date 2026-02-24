@@ -1819,6 +1819,57 @@ async def delete_spreadsheet(sid: str):
     await db.spreadsheets.delete_one({"id": sid})
     return {"status": "ok"}
 
+# ===== CREDENTIALS (Password Vault) =====
+class CredentialCreate(BaseModel):
+    name: str
+    url: Optional[str] = ""
+    email: Optional[str] = ""
+    password: Optional[str] = ""
+    notes: Optional[str] = ""
+    created_by: str = "Admin"
+
+class CredentialUpdate(BaseModel):
+    name: Optional[str] = None
+    url: Optional[str] = None
+    email: Optional[str] = None
+    password: Optional[str] = None
+    notes: Optional[str] = None
+
+@api_router.get("/credentials")
+async def get_credentials():
+    return await db.credentials.find({}, {"_id": 0}).sort("name", 1).to_list(500)
+
+@api_router.post("/credentials")
+async def create_credential(c: CredentialCreate):
+    doc = {
+        "id": str(uuid.uuid4()),
+        "name": c.name,
+        "url": c.url,
+        "email": c.email,
+        "password": c.password,
+        "notes": c.notes,
+        "created_by": c.created_by,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.credentials.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api_router.put("/credentials/{cid}")
+async def update_credential(cid: str, update: CredentialUpdate):
+    ud = {k: v for k, v in update.model_dump().items() if v is not None}
+    if not ud:
+        return await db.credentials.find_one({"id": cid}, {"_id": 0})
+    result = await db.credentials.update_one({"id": cid}, {"$set": ud})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Nie znaleziono")
+    return await db.credentials.find_one({"id": cid}, {"_id": 0})
+
+@api_router.delete("/credentials/{cid}")
+async def delete_credential(cid: str):
+    await db.credentials.delete_one({"id": cid})
+    return {"status": "ok"}
+
 # ===== SETUP =====
 app.include_router(api_router)
 
