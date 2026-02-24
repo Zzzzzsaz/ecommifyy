@@ -67,6 +67,7 @@ export default function LoginScreen({ onLogin }) {
                 key={d}
                 onClick={() => handleDigit(String(d))}
                 disabled={loading}
+                data-testid={`pin-button-${d}`}
                 className="h-14 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-lg font-semibold text-slate-900 transition-colors disabled:opacity-50"
               >
                 {d}
@@ -76,6 +77,7 @@ export default function LoginScreen({ onLogin }) {
             <button
               onClick={() => handleDigit("0")}
               disabled={loading}
+              data-testid="pin-button-0"
               className="h-14 rounded-xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-lg font-semibold text-slate-900 transition-colors disabled:opacity-50"
             >
               {loading ? <Loader2 size={18} className="animate-spin mx-auto" /> : "0"}
