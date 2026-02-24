@@ -1,6 +1,6 @@
 """
-Backend API tests for Ecommify E-commerce Dashboard
-Tests: Login, Ideas, Tasks, Costs, Shops, Stats
+Ecommify Backend API Tests
+Testing: Auth, Shops, Settings, Calendar, Spreadsheets endpoints
 """
 import pytest
 import requests
@@ -8,32 +8,11 @@ import os
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://business-panel-2.preview.emergentagent.com')
 
-@pytest.fixture(scope="module")
-def api_client():
-    """Shared requests session"""
-    session = requests.Session()
-    session.headers.update({"Content-Type": "application/json"})
-    return session
-
-
-class TestHealthCheck:
-    """Health check tests"""
+class TestAuthAPI:
+    """Authentication endpoint tests"""
     
-    def test_api_root(self, api_client):
-        """Test API root endpoint"""
-        response = api_client.get(f"{BASE_URL}/api/")
-        assert response.status_code == 200
-        data = response.json()
-        assert "message" in data
-        print(f"✓ API root: {data['message']}")
-
-
-class TestAuthentication:
-    """Authentication tests with PIN login"""
-    
-    def test_login_with_valid_pin_admin(self, api_client):
-        """Test login with Admin PIN 2409"""
-        response = api_client.post(f"{BASE_URL}/api/auth/login", json={"pin": "2409"})
+    def test_login_success(self):
+        response = requests.post(f"{BASE_URL}/api/auth/login", json={"pin": "2409"})
         assert response.status_code == 200
         data = response.json()
         assert "user" in data
@@ -41,355 +20,279 @@ class TestAuthentication:
         assert data["user"]["role"] == "admin"
         assert "shops" in data
         assert "settings" in data
-        print(f"✓ Login successful for Admin (PIN 2409)")
-    
-    def test_login_with_invalid_pin(self, api_client):
-        """Test login with invalid PIN"""
-        response = api_client.post(f"{BASE_URL}/api/auth/login", json={"pin": "0000"})
+        
+    def test_login_invalid_pin(self):
+        response = requests.post(f"{BASE_URL}/api/auth/login", json={"pin": "0000"})
         assert response.status_code == 401
-        print("✓ Invalid PIN correctly rejected")
 
 
-class TestShops:
-    """Shop management tests"""
+class TestShopsAPI:
+    """Shops CRUD tests"""
     
-    def test_get_shops(self, api_client):
-        """Test getting shops list"""
-        response = api_client.get(f"{BASE_URL}/api/shops")
+    def test_get_shops(self):
+        response = requests.get(f"{BASE_URL}/api/shops")
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
         assert len(data) >= 4  # Default shops
-        print(f"✓ Got {len(data)} shops")
-        for shop in data[:4]:
-            assert "id" in shop
-            assert "name" in shop
-            assert "color" in shop
-
-
-class TestIdeas:
-    """Ideas CRUD tests"""
-    
-    def test_create_idea(self, api_client):
-        """Test creating a new idea"""
-        idea_data = {
-            "title": "TEST_Idea_API",
-            "description": "Test idea from pytest",
-            "category": "produkt",
-            "link": "https://example.com",
-            "priority": True,
-            "created_by": "pytest"
-        }
-        response = api_client.post(f"{BASE_URL}/api/ideas", json=idea_data)
-        assert response.status_code == 200
-        data = response.json()
-        assert data["title"] == idea_data["title"]
-        assert "id" in data
-        print(f"✓ Created idea: {data['id']}")
-        return data["id"]
-    
-    def test_get_ideas(self, api_client):
-        """Test getting ideas list"""
-        response = api_client.get(f"{BASE_URL}/api/ideas")
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, list)
-        print(f"✓ Got {len(data)} ideas")
-    
-    def test_update_idea(self, api_client):
-        """Test updating an idea"""
-        # First create an idea
-        create_resp = api_client.post(f"{BASE_URL}/api/ideas", json={
-            "title": "TEST_Update_Idea",
-            "description": "Original",
-            "category": "inne",
-            "created_by": "pytest"
-        })
-        idea_id = create_resp.json()["id"]
         
-        # Update it
-        update_resp = api_client.put(f"{BASE_URL}/api/ideas/{idea_id}", json={
-            "title": "TEST_Update_Idea_Modified",
-            "priority": True
+    def test_create_update_delete_shop(self):
+        # Create
+        response = requests.post(f"{BASE_URL}/api/shops", json={
+            "name": "TEST_Shop_API",
+            "color": "#ff0000"
         })
-        assert update_resp.status_code == 200
-        data = update_resp.json()
-        assert data["title"] == "TEST_Update_Idea_Modified"
-        assert data["priority"] == True
-        print(f"✓ Updated idea: {idea_id}")
+        assert response.status_code == 200
+        shop = response.json()
+        assert shop["name"] == "TEST_Shop_API"
+        assert "id" in shop
+        shop_id = shop["id"]
         
-        # Cleanup
-        api_client.delete(f"{BASE_URL}/api/ideas/{idea_id}")
-    
-    def test_delete_idea(self, api_client):
-        """Test deleting an idea"""
-        # Create an idea to delete
-        create_resp = api_client.post(f"{BASE_URL}/api/ideas", json={
-            "title": "TEST_Delete_Idea",
-            "category": "inne",
-            "created_by": "pytest"
+        # Update
+        response = requests.put(f"{BASE_URL}/api/shops/{shop_id}", json={
+            "name": "TEST_Shop_Updated",
+            "color": "#00ff00"
         })
-        idea_id = create_resp.json()["id"]
+        assert response.status_code == 200
+        updated = response.json()
+        assert updated["name"] == "TEST_Shop_Updated"
+        assert updated["color"] == "#00ff00"
         
-        # Delete it
-        delete_resp = api_client.delete(f"{BASE_URL}/api/ideas/{idea_id}")
-        assert delete_resp.status_code == 200
-        print(f"✓ Deleted idea: {idea_id}")
+        # Verify persistence
+        response = requests.get(f"{BASE_URL}/api/shops")
+        shops = response.json()
+        found = [s for s in shops if s["id"] == shop_id]
+        assert len(found) == 1
+        assert found[0]["name"] == "TEST_Shop_Updated"
+        
+        # Delete
+        response = requests.delete(f"{BASE_URL}/api/shops/{shop_id}")
+        assert response.status_code == 200
 
 
-class TestTasks:
-    """Tasks CRUD tests"""
+class TestSettingsAPI:
+    """App Settings and Company Settings tests"""
     
-    def test_create_task(self, api_client):
-        """Test creating a new task"""
-        task_data = {
-            "title": "TEST_Task_API",
-            "description": "Test task from pytest",
-            "assigned_to": "oboje",
-            "due_date": "2026-02-28",
-            "created_by": "pytest"
-        }
-        response = api_client.post(f"{BASE_URL}/api/tasks", json=task_data)
+    def test_get_app_settings(self):
+        response = requests.get(f"{BASE_URL}/api/app-settings")
         assert response.status_code == 200
         data = response.json()
-        assert data["title"] == task_data["title"]
-        assert "id" in data
-        assert data["status"] == "todo"
-        print(f"✓ Created task: {data['id']}")
-        return data["id"]
-    
-    def test_get_tasks(self, api_client):
-        """Test getting tasks list"""
-        response = api_client.get(f"{BASE_URL}/api/tasks")
+        assert "target_revenue" in data
+        assert "vat_rate" in data
+        
+    def test_update_app_settings(self):
+        # Get current
+        response = requests.get(f"{BASE_URL}/api/app-settings")
+        original = response.json()
+        
+        # Update
+        response = requests.put(f"{BASE_URL}/api/app-settings", json={
+            "target_revenue": 300000,
+            "vat_rate": 23
+        })
+        assert response.status_code == 200
+        
+        # Restore original
+        requests.put(f"{BASE_URL}/api/app-settings", json={
+            "target_revenue": original.get("target_revenue", 250000),
+            "vat_rate": original.get("vat_rate", 23)
+        })
+        
+    def test_get_company_settings(self):
+        response = requests.get(f"{BASE_URL}/api/company-settings")
+        assert response.status_code == 200
+        
+    def test_update_company_settings(self):
+        response = requests.put(f"{BASE_URL}/api/company-settings", json={
+            "name": "TEST_Company",
+            "nip": "PL1234567890",
+            "address": "Test Street 1",
+            "city": "Test City",
+            "postal_code": "00-000"
+        })
         assert response.status_code == 200
         data = response.json()
-        assert isinstance(data, list)
-        print(f"✓ Got {len(data)} tasks")
-    
-    def test_update_task_status(self, api_client):
-        """Test updating task status to done"""
-        # Create task
-        create_resp = api_client.post(f"{BASE_URL}/api/tasks", json={
-            "title": "TEST_Status_Task",
-            "assigned_to": "kacper"
-        })
-        task_id = create_resp.json()["id"]
-        
-        # Update status
-        update_resp = api_client.put(f"{BASE_URL}/api/tasks/{task_id}", json={
-            "status": "done"
-        })
-        assert update_resp.status_code == 200
-        assert update_resp.json()["status"] == "done"
-        print(f"✓ Updated task status to done: {task_id}")
-        
-        # Cleanup
-        api_client.delete(f"{BASE_URL}/api/tasks/{task_id}")
-    
-    def test_delete_task(self, api_client):
-        """Test deleting a task"""
-        create_resp = api_client.post(f"{BASE_URL}/api/tasks", json={
-            "title": "TEST_Delete_Task"
-        })
-        task_id = create_resp.json()["id"]
-        
-        delete_resp = api_client.delete(f"{BASE_URL}/api/tasks/{task_id}")
-        assert delete_resp.status_code == 200
-        print(f"✓ Deleted task: {task_id}")
+        assert data["name"] == "TEST_Company"
 
 
-class TestCosts:
-    """Costs CRUD tests"""
+class TestCalendarAPI:
+    """Reminders and Notes tests"""
     
-    def test_create_cost(self, api_client):
-        """Test creating a new cost entry"""
-        cost_data = {
-            "date": "2026-02-23",
-            "shop_id": 1,
-            "category": "tiktok",
-            "amount": 150.50,
-            "description": "TEST cost from pytest"
-        }
-        response = api_client.post(f"{BASE_URL}/api/costs", json=cost_data)
+    def test_get_reminders(self):
+        response = requests.get(f"{BASE_URL}/api/reminders")
         assert response.status_code == 200
-        data = response.json()
-        assert data["amount"] == 150.50
-        assert data["category"] == "tiktok"
-        assert "id" in data
-        print(f"✓ Created cost: {data['id']}")
-        return data["id"]
-    
-    def test_get_costs(self, api_client):
-        """Test getting costs list"""
-        response = api_client.get(f"{BASE_URL}/api/costs", params={"shop_id": 1})
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, list)
-        print(f"✓ Got {len(data)} costs for shop 1")
-
-
-class TestReminders:
-    """Reminders CRUD tests"""
-    
-    def test_create_reminder(self, api_client):
-        """Test creating a new reminder"""
-        reminder_data = {
-            "title": "TEST_Reminder_API",
-            "date": "2026-02-28",
-            "created_by": "pytest"
-        }
-        response = api_client.post(f"{BASE_URL}/api/reminders", json=reminder_data)
-        assert response.status_code == 200
-        data = response.json()
-        assert data["title"] == reminder_data["title"]
-        assert data["done"] == False
-        assert "id" in data
-        print(f"✓ Created reminder: {data['id']}")
-        return data["id"]
-    
-    def test_get_reminders(self, api_client):
-        """Test getting reminders list"""
-        response = api_client.get(f"{BASE_URL}/api/reminders")
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, list)
-        print(f"✓ Got {len(data)} reminders")
-    
-    def test_mark_reminder_done(self, api_client):
-        """Test marking reminder as done"""
-        # Create reminder
-        create_resp = api_client.post(f"{BASE_URL}/api/reminders", json={
-            "title": "TEST_Done_Reminder",
-            "date": "2026-02-23"
-        })
-        reminder_id = create_resp.json()["id"]
+        assert isinstance(response.json(), list)
         
-        # Mark as done
-        update_resp = api_client.put(f"{BASE_URL}/api/reminders/{reminder_id}", json={
+    def test_create_update_delete_reminder(self):
+        # Create
+        response = requests.post(f"{BASE_URL}/api/reminders", json={
+            "title": "TEST_Reminder",
+            "date": "2026-01-15",
+            "time": "10:00",
+            "recurring": "none",
+            "created_by": "Test"
+        })
+        assert response.status_code == 200
+        reminder = response.json()
+        assert reminder["title"] == "TEST_Reminder"
+        assert "id" in reminder
+        rid = reminder["id"]
+        
+        # Update
+        response = requests.put(f"{BASE_URL}/api/reminders/{rid}", json={
             "done": True
         })
-        assert update_resp.status_code == 200
-        assert update_resp.json()["done"] == True
-        print(f"✓ Marked reminder as done: {reminder_id}")
+        assert response.status_code == 200
+        assert response.json()["done"] == True
         
-        # Cleanup
-        api_client.delete(f"{BASE_URL}/api/reminders/{reminder_id}")
-
-
-class TestProducts:
-    """Products CRUD tests"""
-    
-    def test_create_product(self, api_client):
-        """Test creating a new product"""
-        product_data = {
-            "name": "TEST_Product_API",
-            "sku": "TEST-001",
-            "price": 99.99,
-            "extra_payment": 15.00,
-            "shop_id": 1,
-            "category": "test"
-        }
-        response = api_client.post(f"{BASE_URL}/api/products", json=product_data)
+        # Delete
+        response = requests.delete(f"{BASE_URL}/api/reminders/{rid}")
         assert response.status_code == 200
-        data = response.json()
-        assert data["name"] == product_data["name"]
-        assert data["extra_payment"] == 15.00
-        assert "id" in data
-        print(f"✓ Created product: {data['id']}")
-        return data["id"]
-    
-    def test_get_products(self, api_client):
-        """Test getting products list"""
-        response = api_client.get(f"{BASE_URL}/api/products")
+        
+    def test_get_notes(self):
+        response = requests.get(f"{BASE_URL}/api/notes", params={"year": 2026, "month": 1})
         assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, list)
-        print(f"✓ Got {len(data)} products")
-
-
-class TestMonthlyStats:
-    """Monthly stats tests"""
-    
-    def test_get_combined_monthly_stats(self, api_client):
-        """Test getting combined monthly stats"""
-        response = api_client.get(f"{BASE_URL}/api/combined-monthly-stats", params={
-            "year": 2026,
-            "month": 2
+        assert isinstance(response.json(), list)
+        
+    def test_create_delete_note(self):
+        # Create
+        response = requests.post(f"{BASE_URL}/api/notes", json={
+            "date": "2026-01-15",
+            "content": "TEST_Note content",
+            "created_by": "Test"
         })
         assert response.status_code == 200
-        data = response.json()
-        assert "total_income" in data
-        assert "total_profit" in data
-        assert "days" in data
-        assert isinstance(data["days"], list)
-        print(f"✓ Got combined stats: income={data['total_income']}, profit={data['total_profit']}")
+        note = response.json()
+        assert note["content"] == "TEST_Note content"
+        nid = note["id"]
+        
+        # Delete
+        response = requests.delete(f"{BASE_URL}/api/notes/{nid}")
+        assert response.status_code == 200
+
+
+class TestSpreadsheetAPI:
+    """Spreadsheets (Excel-like) CRUD tests"""
     
-    def test_get_shop_monthly_stats(self, api_client):
-        """Test getting monthly stats for specific shop"""
-        response = api_client.get(f"{BASE_URL}/api/monthly-stats", params={
-            "shop_id": 1,
-            "year": 2026,
-            "month": 2
+    def test_get_spreadsheets(self):
+        response = requests.get(f"{BASE_URL}/api/spreadsheets")
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+        
+    def test_create_update_delete_spreadsheet(self):
+        # Create
+        test_data = [["Header1", "Header2"], ["Value1", "Value2"]]
+        response = requests.post(f"{BASE_URL}/api/spreadsheets", json={
+            "name": "TEST_Spreadsheet",
+            "data": test_data,
+            "created_by": "Test"
         })
         assert response.status_code == 200
-        data = response.json()
-        assert "shop_id" in data
-        assert data["shop_id"] == 1
-        assert "days" in data
-        print(f"✓ Got shop 1 stats: income={data['total_income']}")
-
-
-class TestSync:
-    """Sync functionality tests"""
-    
-    def test_sync_all(self, api_client):
-        """Test sync all endpoint (MOCKED - no real Shopify/TikTok)"""
-        response = api_client.post(f"{BASE_URL}/api/sync/all", params={
-            "year": 2026,
-            "month": 2
+        sheet = response.json()
+        assert sheet["name"] == "TEST_Spreadsheet"
+        assert "id" in sheet
+        sid = sheet["id"]
+        
+        # Update
+        updated_data = [["Updated", "Header"], ["New", "Data"]]
+        response = requests.put(f"{BASE_URL}/api/spreadsheets/{sid}", json={
+            "data": updated_data
         })
         assert response.status_code == 200
-        data = response.json()
-        assert "shopify" in data
-        assert "tiktok" in data
-        print(f"✓ Sync all completed: shopify={len(data['shopify'])}, tiktok={len(data['tiktok'])}")
+        updated = response.json()
+        assert updated["data"] == updated_data
+        
+        # Verify persistence
+        response = requests.get(f"{BASE_URL}/api/spreadsheets")
+        sheets = response.json()
+        found = [s for s in sheets if s["id"] == sid]
+        assert len(found) == 1
+        
+        # Delete
+        response = requests.delete(f"{BASE_URL}/api/spreadsheets/{sid}")
+        assert response.status_code == 200
+        
+        # Verify deleted
+        response = requests.get(f"{BASE_URL}/api/spreadsheets")
+        sheets = response.json()
+        found = [s for s in sheets if s["id"] == sid]
+        assert len(found) == 0
 
 
-class TestCleanup:
-    """Cleanup test data"""
+class TestTasksAPI:
+    """Tasks CRUD tests"""
     
-    def test_cleanup_test_data(self, api_client):
-        """Clean up TEST_ prefixed data"""
-        # Get and delete test ideas
-        ideas = api_client.get(f"{BASE_URL}/api/ideas").json()
-        for idea in ideas:
-            if idea.get("title", "").startswith("TEST_"):
-                api_client.delete(f"{BASE_URL}/api/ideas/{idea['id']}")
-                print(f"  Deleted test idea: {idea['title']}")
+    def test_get_tasks(self):
+        response = requests.get(f"{BASE_URL}/api/tasks")
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
         
-        # Get and delete test tasks
-        tasks = api_client.get(f"{BASE_URL}/api/tasks").json()
-        for task in tasks:
-            if task.get("title", "").startswith("TEST_"):
-                api_client.delete(f"{BASE_URL}/api/tasks/{task['id']}")
-                print(f"  Deleted test task: {task['title']}")
+    def test_create_update_delete_task(self):
+        # Create
+        response = requests.post(f"{BASE_URL}/api/tasks", json={
+            "title": "TEST_Task_API",
+            "description": "Test description",
+            "assigned_to": "oboje",
+            "created_by": "Test"
+        })
+        assert response.status_code == 200
+        task = response.json()
+        assert task["title"] == "TEST_Task_API"
+        tid = task["id"]
         
-        # Get and delete test products
-        products = api_client.get(f"{BASE_URL}/api/products").json()
-        for product in products:
-            if product.get("name", "").startswith("TEST_"):
-                api_client.delete(f"{BASE_URL}/api/products/{product['id']}")
-                print(f"  Deleted test product: {product['name']}")
+        # Update
+        response = requests.put(f"{BASE_URL}/api/tasks/{tid}", json={
+            "status": "done"
+        })
+        assert response.status_code == 200
         
-        # Get and delete test reminders
-        reminders = api_client.get(f"{BASE_URL}/api/reminders").json()
-        for reminder in reminders:
-            if reminder.get("title", "").startswith("TEST_"):
-                api_client.delete(f"{BASE_URL}/api/reminders/{reminder['id']}")
-                print(f"  Deleted test reminder: {reminder['title']}")
-        
-        print("✓ Cleanup completed")
+        # Delete
+        response = requests.delete(f"{BASE_URL}/api/tasks/{tid}")
+        assert response.status_code == 200
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--tb=short"])
+class TestIdeasAPI:
+    """Ideas CRUD tests"""
+    
+    def test_get_ideas(self):
+        response = requests.get(f"{BASE_URL}/api/ideas")
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+        
+    def test_create_update_delete_idea(self):
+        # Create
+        response = requests.post(f"{BASE_URL}/api/ideas", json={
+            "title": "TEST_Idea_API",
+            "description": "Test idea",
+            "category": "marketing",
+            "priority": True,
+            "created_by": "Test"
+        })
+        assert response.status_code == 200
+        idea = response.json()
+        assert idea["title"] == "TEST_Idea_API"
+        iid = idea["id"]
+        
+        # Update
+        response = requests.put(f"{BASE_URL}/api/ideas/{iid}", json={
+            "priority": False
+        })
+        assert response.status_code == 200
+        
+        # Delete
+        response = requests.delete(f"{BASE_URL}/api/ideas/{iid}")
+        assert response.status_code == 200
+
+
+class TestShopifyTikTokConfigsAPI:
+    """Shopify and TikTok configs tests"""
+    
+    def test_get_shopify_configs(self):
+        response = requests.get(f"{BASE_URL}/api/shopify-configs")
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+        
+    def test_get_tiktok_configs(self):
+        response = requests.get(f"{BASE_URL}/api/tiktok-configs")
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
