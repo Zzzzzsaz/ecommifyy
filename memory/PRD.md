@@ -1,6 +1,6 @@
 # Ecommify - Panel E-Commerce Dashboard
 
-## Wersja 2.2 (Feb 24, 2026)
+## Wersja 2.3 (Feb 24, 2026)
 
 ## Original Problem Statement
 Kompleksowy, profesjonalny dashboard do zarządzania biznesem e-commerce z:
@@ -11,7 +11,7 @@ Kompleksowy, profesjonalny dashboard do zarządzania biznesem e-commerce z:
 - Zarządzaniem zadaniami i pomysłami
 - Kalendarzem wydarzeń
 - Ustawieniami aplikacji
-- Nową stroną arkuszy kalkulacyjnych (Excel-like)
+- Stroną arkuszy kalkulacyjnych (Excel-like) z formułami
 
 ## Current State - STABLE
 
@@ -27,90 +27,67 @@ Kompleksowy, profesjonalny dashboard do zarządzania biznesem e-commerce z:
 - Date picker (Dzisiaj, Wczoraj, Ten tydzień, Ten miesiąc, Poprzedni miesiąc)
 - Karty KPI: Przychód, Koszty reklam, Zysk, Na osobę
 - Cel miesięczny z progress bar
-- Sekcja przypomnień
 
 #### Wyniki
 - Szczegółowe finanse dzienne
-- Kolumny: Dzień, Przychód, Koszty, Zysk, Na osobę
 - Filtrowanie po sklepach
 
 #### Zamówienia
 - Lista nowych zamówień
-- Pipeline realizacji (Oczekujące, Przypomnienie, Sprawdzenie, Wysyłka, Nieopłacone, Archiwum)
-- Dodawanie ręczne zamówień
+- Pipeline realizacji
 
 #### Zadania
 - Zakładki: Aktywne, Ukończone, Usunięte
 - Priorytet, przypisanie, termin
-- Soft delete z restore
 
 #### Pomysły
 - Lista z kategoriami
 - Gwiazdka ważności
-- Filtry
 
-#### Arkusze (NEW)
-- Edytowalna siatka jak notatnik/Excel
-- Tworzenie wielu arkuszy
-- Edycja komórek z nawigacją Tab/Enter
+#### Arkusze (Excel-like) - NOWE FUNKCJE
+- Edytowalna siatka jak Excel
+- **Formuły**: =SUMA(A1:A5), =ŚREDNIA(), =MIN(), =MAX(), =ILE()
+- **Formatowanie**: Bold, Italic
+- **Wyrównanie**: Do lewej, Wyśrodkuj, Do prawej
+- **Kolory tła**: 8 kolorów (żółty, zielony, niebieski, czerwony, fioletowy, pomarańczowy, szary)
+- **Kolory tekstu**: 6 kolorów
+- **Pasek formuł**: Pokazuje aktualną komórkę i wartość
 - Eksport do CSV
-- Dodawanie kolumn/wierszy
-- Zapis do bazy danych
 
 #### Kalendarz
 - Widok miesięczny z nawigacją
 - Przypomnienia (jednorazowe, dzienne, tygodniowe, miesięczne)
 - Notatki na wybrany dzień
-- Wskaźniki na dniach z zawartością
 
 #### Sklepy
 - Lista sklepów z kolorami
-- Rozwijana konfiguracja Shopify (API)
-- Sekcja TikTok Ads
-- Dodawanie/edycja/usuwanie sklepów
+- Konfiguracja Shopify API
+- TikTok Ads
 
 #### Ustawienia
-- Ustawienia aplikacji (cel przychodu, podział zysku, VAT, waluta, nazwa)
-- Dane firmy (nazwa, NIP, adres, bank, kontakt)
-- Przegląd sklepów
+- Ustawienia aplikacji
+- Dane firmy
 - Wylogowanie
-
-## Technical Stack
-- **Frontend**: React 18 + Tailwind CSS + Shadcn/UI
-- **Backend**: FastAPI (Python) + Motor (async MongoDB)
-- **Database**: MongoDB Atlas
-- **Deployment**: Railway.app
 
 ## Test Credentials
 - Admin: PIN 2409
-- Kacper: PIN 2609
-- Szymon: PIN 2509
 
 ## API Endpoints
-- `/api/auth/login` - logowanie PIN
-- `/api/shops` - CRUD sklepów
-- `/api/tasks` - CRUD zadań
-- `/api/ideas` - CRUD pomysłów
-- `/api/reminders` - CRUD przypomnień
-- `/api/notes` - CRUD notatek
-- `/api/spreadsheets` - CRUD arkuszy (NEW)
-- `/api/orders` - zamówienia
-- `/api/fulfillment` - realizacja
-- `/api/app-settings` - ustawienia
-- `/api/company-settings` - dane firmy
+- `/api/spreadsheets` - CRUD arkuszy (List[List[Any]] format)
 
-## Completed in v2.2
-- [x] Przebudowa CalendarPage na jasny motyw
-- [x] Przebudowa Stores na jasny motyw
-- [x] Przebudowa Settings na jasny motyw
-- [x] Nowa strona Arkusze (Excel-like) z pełnym CRUD
-- [x] Backend API dla spreadsheets
-- [x] Dodanie nawigacji do Arkuszy w sidebar
-- [x] Testy: 100% backend, 100% frontend
+## Completed in v2.3
+- [x] Naprawiono bug z formularzami Tasks/Ideas (utrata focusa)
+- [x] Dodano formuły do arkuszy (SUMA, ŚREDNIA, MIN, MAX, ILE)
+- [x] Dodano formatowanie tekstu (Bold, Italic)
+- [x] Dodano wyrównanie tekstu (left, center, right)
+- [x] Dodano kolory tła komórek (8 kolorów)
+- [x] Dodano kolory tekstu (6 kolorów)
+- [x] Dodano pasek formuł
+- [x] Zaktualizowano backend na List[List[Any]]
 
 ## Backlog / Future Tasks
 - [ ] Synchronizacja produktów ze Shopify
 - [ ] Reaktywacja AI Assistant
 - [ ] Refaktoryzacja backendu (monolith -> moduły)
-- [ ] Formuły w arkuszach (SUMA, ŚREDNIA)
 - [ ] Import CSV do arkuszy
+- [ ] Więcej formuł (IF, CONCAT, etc.)
