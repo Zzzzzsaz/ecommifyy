@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +12,7 @@ import {
 } from "lucide-react";
 
 const DAYS_PL = ["Pon", "Wt", "Sr", "Czw", "Pt", "Sob", "Nd"];
-const MONTHS_PL = ["Styczen","Luty","Marzec","Kwiecien","Maj","Czerwiec","Lipiec","Sierpien","Wrzesien","Pazdziernik","Listopad","Grudzien"];
+const MONTHS_PL = ["Styczen", "Luty", "Marzec", "Kwiecien", "Maj", "Czerwiec", "Lipiec", "Sierpien", "Wrzesien", "Pazdziernik", "Listopad", "Grudzien"];
 const RECURRING_OPTIONS = [
   { value: "none", label: "Jednorazowe" },
   { value: "daily", label: "Codziennie" },
@@ -30,7 +28,7 @@ function getDaysInMonth(year, month) {
 
 function getFirstDayOfMonth(year, month) {
   const d = new Date(year, month - 1, 1).getDay();
-  return d === 0 ? 6 : d - 1; // Monday = 0
+  return d === 0 ? 6 : d - 1;
 }
 
 function isReminderOnDate(reminder, dateStr) {
@@ -40,12 +38,8 @@ function isReminderOnDate(reminder, dateStr) {
   const checkDate = new Date(dateStr);
   if (checkDate < remDate) return false;
   if (reminder.recurring === "daily") return true;
-  if (reminder.recurring === "weekly") {
-    return remDate.getDay() === checkDate.getDay();
-  }
-  if (reminder.recurring === "monthly") {
-    return remDate.getDate() === checkDate.getDate();
-  }
+  if (reminder.recurring === "weekly") return remDate.getDay() === checkDate.getDay();
+  if (reminder.recurring === "monthly") return remDate.getDate() === checkDate.getDate();
   return false;
 }
 
@@ -63,7 +57,7 @@ export default function CalendarPage({ user }) {
   const [noteForm, setNoteForm] = useState({ content: "", date: "" });
   const [saving, setSaving] = useState(false);
 
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -112,235 +106,208 @@ export default function CalendarPage({ user }) {
   const deleteReminder = async (id) => { await api.deleteReminder(id); fetchData(); toast.success("Usunieto"); };
   const deleteNote = async (id) => { await api.deleteNote(id); fetchData(); toast.success("Usunieto"); };
 
-  // Build calendar grid
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
   const cells = [];
   for (let i = 0; i < firstDay; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
-  // Get reminders for a date
   const getRemindersForDate = (dateStr) => reminders.filter(r => isReminderOnDate(r, dateStr));
   const getNotesForDate = (dateStr) => notes.filter(n => n.date === dateStr);
 
-  // Selected date content
   const selDateStr = selectedDate || todayStr;
   const selReminders = getRemindersForDate(selDateStr);
   const selNotes = getNotesForDate(selDateStr);
-
-  // Upcoming overdue
   const overdueReminders = reminders.filter(r => !r.done && r.date < todayStr && r.recurring === "none");
 
   return (
-    <div className="p-4 pb-24 animate-fade-in" data-testid="calendar-page">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="font-heading text-2xl font-bold text-white">KALENDARZ</h1>
-        <div className="flex gap-1.5">
-          <Button size="sm" onClick={() => { setRemForm(f => ({ ...f, date: selDateStr })); setShowAddReminder(true); }}
-            className="bg-ecom-primary hover:bg-ecom-primary/80" data-testid="add-reminder-btn">
-            <Bell size={13} className="mr-1" />Przypomnienie
-          </Button>
-        </div>
+    <div className="page-container" data-testid="calendar-page">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="page-title">Kalendarz</h1>
+        <Button onClick={() => { setRemForm(f => ({ ...f, date: selDateStr })); setShowAddReminder(true); }} className="bg-slate-900 hover:bg-slate-800 h-9" data-testid="add-reminder-btn">
+          <Bell size={14} className="mr-1" /> Przypomnienie
+        </Button>
       </div>
 
-      {/* Calendar */}
-      <Card className="bg-ecom-card border-ecom-border mb-4" data-testid="calendar-widget">
-        <CardContent className="p-3">
-          {/* Month nav */}
-          <div className="flex items-center justify-between mb-3">
-            <Button variant="ghost" size="icon" onClick={prevMonth} className="text-ecom-muted hover:text-white h-7 w-7">
-              <ChevronLeft size={16} />
-            </Button>
-            <span className="font-heading text-base font-semibold text-white">{MONTHS_PL[month - 1]} {year}</span>
-            <Button variant="ghost" size="icon" onClick={nextMonth} className="text-ecom-muted hover:text-white h-7 w-7">
-              <ChevronRight size={16} />
-            </Button>
-          </div>
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-slate-400" size={28} /></div>
+      ) : (
+        <div className="grid md:grid-cols-[1fr,320px] gap-6">
+          {/* Calendar Widget */}
+          <div className="bg-white rounded-xl border border-slate-200 p-4" data-testid="calendar-widget">
+            <div className="flex items-center justify-between mb-4">
+              <button onClick={prevMonth} className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600">
+                <ChevronLeft size={16} />
+              </button>
+              <span className="font-semibold text-slate-900">{MONTHS_PL[month - 1]} {year}</span>
+              <button onClick={nextMonth} className="w-8 h-8 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600">
+                <ChevronRight size={16} />
+              </button>
+            </div>
 
-          {/* Day headers */}
-          <div className="grid grid-cols-7 gap-0.5 mb-1">
-            {DAYS_PL.map(d => (
-              <div key={d} className="text-center text-[10px] text-ecom-muted font-semibold py-1">{d}</div>
-            ))}
-          </div>
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {DAYS_PL.map(d => (
+                <div key={d} className="text-center text-xs font-medium text-slate-400 py-2">{d}</div>
+              ))}
+            </div>
 
-          {/* Calendar grid */}
-          <div className="grid grid-cols-7 gap-0.5">
-            {cells.map((day, i) => {
-              if (!day) return <div key={`empty-${i}`} className="h-10" />;
-              const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-              const isToday = dateStr === todayStr;
-              const isSelected = dateStr === selDateStr;
-              const dayReminders = getRemindersForDate(dateStr);
-              const dayNotes = getNotesForDate(dateStr);
-              const hasContent = dayReminders.length > 0 || dayNotes.length > 0;
-              const hasOverdue = dayReminders.some(r => !r.done && dateStr < todayStr && r.recurring === "none");
+            <div className="grid grid-cols-7 gap-1">
+              {cells.map((day, i) => {
+                if (!day) return <div key={`empty-${i}`} className="h-10" />;
+                const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                const isToday = dateStr === todayStr;
+                const isSelected = dateStr === selDateStr;
+                const dayReminders = getRemindersForDate(dateStr);
+                const dayNotes = getNotesForDate(dateStr);
+                const hasContent = dayReminders.length > 0 || dayNotes.length > 0;
+                const hasOverdue = dayReminders.some(r => !r.done && dateStr < todayStr && r.recurring === "none");
 
-              return (
-                <button key={day} onClick={() => setSelectedDate(dateStr)}
-                  className={`h-10 rounded-lg flex flex-col items-center justify-center relative transition-all ${
-                    isSelected ? "bg-ecom-primary/20 border border-ecom-primary" :
-                    isToday ? "bg-ecom-border/40 border border-ecom-primary/30" :
-                    "hover:bg-ecom-border/30"
-                  }`}
-                  data-testid={`cal-day-${day}`}>
-                  <span className={`text-xs font-medium ${
-                    isSelected ? "text-ecom-primary" :
-                    isToday ? "text-white" :
-                    "text-ecom-muted"
-                  }`}>{day}</span>
-                  {hasContent && (
-                    <div className="flex gap-0.5 mt-0.5">
-                      {dayReminders.length > 0 && (
-                        <div className={`w-1 h-1 rounded-full ${hasOverdue ? "bg-ecom-danger" : "bg-ecom-primary"}`} />
-                      )}
-                      {dayNotes.length > 0 && <div className="w-1 h-1 rounded-full bg-ecom-warning" />}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Legend */}
-          <div className="flex items-center gap-4 mt-2 px-1">
-            <div className="flex items-center gap-1 text-[9px] text-ecom-muted"><div className="w-1.5 h-1.5 rounded-full bg-ecom-primary" />Przypomnienie</div>
-            <div className="flex items-center gap-1 text-[9px] text-ecom-muted"><div className="w-1.5 h-1.5 rounded-full bg-ecom-warning" />Notatka</div>
-            <div className="flex items-center gap-1 text-[9px] text-ecom-muted"><div className="w-1.5 h-1.5 rounded-full bg-ecom-danger" />Zaległe</div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Overdue */}
-      {overdueReminders.length > 0 && (
-        <Card className="bg-ecom-danger/5 border-ecom-danger/30 mb-3" data-testid="overdue-section">
-          <CardContent className="p-3">
-            <p className="text-ecom-danger text-[10px] uppercase font-semibold mb-2 flex items-center gap-1">
-              <Bell size={12} />Zaległe ({overdueReminders.length})
-            </p>
-            {overdueReminders.map(r => (
-              <div key={r.id} className="flex items-center gap-2 py-1.5">
-                <button onClick={() => toggleReminder(r.id, r.done)} className="w-4 h-4 rounded border border-ecom-danger shrink-0 flex items-center justify-center">
-                  {r.done && <Check size={10} className="text-white" />}
-                </button>
-                <span className="text-xs text-ecom-danger flex-1 truncate">{r.title}</span>
-                <span className="text-[9px] text-ecom-danger">{r.date}</span>
-                <button onClick={() => deleteReminder(r.id)} className="text-ecom-muted hover:text-ecom-danger"><Trash2 size={11} /></button>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Selected date content */}
-      <div className="mb-3">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-white font-heading font-semibold text-sm flex items-center gap-1.5">
-            <CalendarDays size={14} className="text-ecom-primary" />
-            {selDateStr === todayStr ? "Dzisiaj" : selDateStr}
-          </p>
-          <div className="flex gap-1.5">
-            <Button size="sm" variant="outline" onClick={() => { setRemForm(f => ({ ...f, date: selDateStr })); setShowAddReminder(true); }}
-              className="border-ecom-border text-ecom-muted hover:text-white h-7 text-[10px]" data-testid="add-reminder-date-btn">
-              <Bell size={11} className="mr-0.5" />+
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => { setNoteForm({ content: "", date: selDateStr }); setShowAddNote(true); }}
-              className="border-ecom-border text-ecom-muted hover:text-white h-7 text-[10px]" data-testid="add-note-date-btn">
-              <StickyNote size={11} className="mr-0.5" />+
-            </Button>
-          </div>
-        </div>
-
-        {/* Reminders for selected date */}
-        {selReminders.length > 0 && (
-          <div className="space-y-1 mb-3">
-            {selReminders.map(r => (
-              <Card key={r.id} className={`border-l-[3px] ${r.done ? "bg-ecom-card/40 border-ecom-border" : "bg-ecom-card border-ecom-border"}`}
-                style={{ borderLeftColor: RECURRING_COLORS[r.recurring] || "#6366f1" }}>
-                <CardContent className="p-2.5 flex items-center gap-2">
-                  <button onClick={() => toggleReminder(r.id, r.done)}
-                    className={`w-5 h-5 rounded border shrink-0 flex items-center justify-center transition-colors ${r.done ? "bg-ecom-success border-ecom-success" : "border-ecom-border hover:border-ecom-primary"}`}
-                    data-testid={`toggle-reminder-${r.id}`}>
-                    {r.done && <Check size={12} className="text-white" />}
+                return (
+                  <button key={day} onClick={() => setSelectedDate(dateStr)}
+                    className={`h-10 rounded-lg flex flex-col items-center justify-center relative transition-all ${
+                      isSelected ? "bg-slate-900 text-white" :
+                      isToday ? "bg-slate-100 border border-slate-300" :
+                      "hover:bg-slate-50"
+                    }`}
+                    data-testid={`cal-day-${day}`}>
+                    <span className={`text-sm font-medium ${isSelected ? "text-white" : isToday ? "text-slate-900" : "text-slate-600"}`}>{day}</span>
+                    {hasContent && (
+                      <div className="flex gap-0.5 mt-0.5">
+                        {dayReminders.length > 0 && <div className={`w-1.5 h-1.5 rounded-full ${hasOverdue ? "bg-red-500" : isSelected ? "bg-white/70" : "bg-indigo-500"}`} />}
+                        {dayNotes.length > 0 && <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? "bg-white/70" : "bg-amber-500"}`} />}
+                      </div>
+                    )}
                   </button>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-xs ${r.done ? "line-through text-ecom-muted" : "text-white"}`}>{r.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {r.time && <span className="text-[9px] text-ecom-muted flex items-center gap-0.5"><Clock size={8} />{r.time}</span>}
-                      {r.recurring !== "none" && (
-                        <Badge variant="outline" className="text-[8px] h-4 px-1"
-                          style={{ borderColor: RECURRING_COLORS[r.recurring], color: RECURRING_COLORS[r.recurring] }}>
-                          <Repeat size={7} className="mr-0.5" />{RECURRING_LABELS[r.recurring]}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <button onClick={() => deleteReminder(r.id)} className="text-ecom-muted hover:text-ecom-danger shrink-0" data-testid={`del-reminder-${r.id}`}>
-                    <Trash2 size={12} />
-                  </button>
-                </CardContent>
-              </Card>
-            ))}
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-100">
+              <div className="flex items-center gap-1.5 text-xs text-slate-500"><div className="w-2 h-2 rounded-full bg-indigo-500" /> Przypomnienie</div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500"><div className="w-2 h-2 rounded-full bg-amber-500" /> Notatka</div>
+              <div className="flex items-center gap-1.5 text-xs text-slate-500"><div className="w-2 h-2 rounded-full bg-red-500" /> Zalegle</div>
+            </div>
           </div>
-        )}
 
-        {selReminders.length === 0 && (
-          <p className="text-ecom-muted text-[10px] mb-3 pl-1">Brak przypomnien na ten dzien</p>
-        )}
-      </div>
-
-      {/* Notes section */}
-      <div data-testid="notes-section">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-white font-heading font-semibold text-sm flex items-center gap-1.5">
-            <StickyNote size={14} className="text-ecom-warning" />Notatki
-          </p>
-          <Button size="sm" onClick={() => { setNoteForm({ content: "", date: selDateStr }); setShowAddNote(true); }}
-            className="bg-ecom-warning/20 hover:bg-ecom-warning/30 text-ecom-warning h-7 text-[10px]" data-testid="add-note-btn">
-            <Plus size={12} className="mr-0.5" />Notatka
-          </Button>
-        </div>
-        <div className="space-y-1.5">
-          {selNotes.length > 0 ? selNotes.map(n => (
-            <Card key={n.id} className="bg-ecom-card border-ecom-border border-l-[3px] border-l-ecom-warning/50">
-              <CardContent className="p-2.5 flex items-start gap-2">
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-xs whitespace-pre-wrap">{n.content}</p>
-                  <p className="text-[9px] text-ecom-muted mt-1">{n.created_by} - {n.date}</p>
+          {/* Right Panel - Selected Date */}
+          <div className="space-y-4">
+            {/* Overdue */}
+            {overdueReminders.length > 0 && (
+              <div className="bg-red-50 rounded-xl border border-red-200 p-4" data-testid="overdue-section">
+                <p className="text-red-700 text-xs font-semibold mb-3 flex items-center gap-1">
+                  <Bell size={12} /> Zalegle ({overdueReminders.length})
+                </p>
+                <div className="space-y-2">
+                  {overdueReminders.map(r => (
+                    <div key={r.id} className="flex items-center gap-2">
+                      <button onClick={() => toggleReminder(r.id, r.done)} className="w-4 h-4 rounded border border-red-400 shrink-0" />
+                      <span className="text-sm text-red-700 flex-1 truncate">{r.title}</span>
+                      <span className="text-xs text-red-500">{r.date}</span>
+                      <button onClick={() => deleteReminder(r.id)} className="text-red-400 hover:text-red-600"><Trash2 size={12} /></button>
+                    </div>
+                  ))}
                 </div>
-                <button onClick={() => deleteNote(n.id)} className="text-ecom-muted hover:text-ecom-danger shrink-0" data-testid={`del-note-${n.id}`}>
-                  <Trash2 size={12} />
-                </button>
-              </CardContent>
-            </Card>
-          )) : (
-            <p className="text-ecom-muted text-[10px] pl-1">Brak notatek na ten dzien</p>
-          )}
+              </div>
+            )}
+
+            {/* Selected Date */}
+            <div className="bg-white rounded-xl border border-slate-200 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="font-semibold text-slate-900 flex items-center gap-2">
+                  <CalendarDays size={16} className="text-indigo-500" />
+                  {selDateStr === todayStr ? "Dzisiaj" : selDateStr}
+                </p>
+                <div className="flex gap-1">
+                  <button onClick={() => { setRemForm(f => ({ ...f, date: selDateStr })); setShowAddReminder(true); }}
+                    className="w-7 h-7 rounded-lg bg-indigo-50 hover:bg-indigo-100 flex items-center justify-center text-indigo-600" data-testid="add-reminder-date-btn">
+                    <Bell size={12} />
+                  </button>
+                  <button onClick={() => { setNoteForm({ content: "", date: selDateStr }); setShowAddNote(true); }}
+                    className="w-7 h-7 rounded-lg bg-amber-50 hover:bg-amber-100 flex items-center justify-center text-amber-600" data-testid="add-note-date-btn">
+                    <StickyNote size={12} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Reminders */}
+              {selReminders.length > 0 ? (
+                <div className="space-y-2 mb-4">
+                  {selReminders.map(r => (
+                    <div key={r.id} className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 border-l-2" style={{ borderLeftColor: RECURRING_COLORS[r.recurring] }}>
+                      <button onClick={() => toggleReminder(r.id, r.done)}
+                        className={`w-4 h-4 rounded border shrink-0 flex items-center justify-center mt-0.5 ${r.done ? "bg-emerald-500 border-emerald-500" : "border-slate-300"}`}
+                        data-testid={`toggle-reminder-${r.id}`}>
+                        {r.done && <Check size={10} className="text-white" />}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm ${r.done ? "line-through text-slate-400" : "text-slate-700"}`}>{r.title}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {r.time && <span className="text-xs text-slate-400 flex items-center gap-0.5"><Clock size={10} />{r.time}</span>}
+                          {r.recurring !== "none" && (
+                            <span className="text-xs px-1.5 py-0.5 rounded" style={{ backgroundColor: RECURRING_COLORS[r.recurring] + "20", color: RECURRING_COLORS[r.recurring] }}>
+                              <Repeat size={8} className="inline mr-0.5" />{RECURRING_LABELS[r.recurring]}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button onClick={() => deleteReminder(r.id)} className="text-slate-400 hover:text-red-500" data-testid={`del-reminder-${r.id}`}>
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 mb-4">Brak przypomnien na ten dzien</p>
+              )}
+
+              {/* Notes */}
+              <div className="border-t border-slate-100 pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium text-slate-700 flex items-center gap-1"><StickyNote size={12} className="text-amber-500" /> Notatki</p>
+                  <button onClick={() => { setNoteForm({ content: "", date: selDateStr }); setShowAddNote(true); }}
+                    className="text-xs text-amber-600 hover:text-amber-700" data-testid="add-note-btn">
+                    <Plus size={12} className="inline" /> Dodaj
+                  </button>
+                </div>
+                {selNotes.length > 0 ? (
+                  <div className="space-y-2">
+                    {selNotes.map(n => (
+                      <div key={n.id} className="p-2 rounded-lg bg-amber-50 border-l-2 border-amber-400">
+                        <div className="flex items-start justify-between">
+                          <p className="text-sm text-slate-700 whitespace-pre-wrap flex-1">{n.content}</p>
+                          <button onClick={() => deleteNote(n.id)} className="text-slate-400 hover:text-red-500 ml-2" data-testid={`del-note-${n.id}`}>
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1">{n.created_by}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400">Brak notatek</p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ADD REMINDER DIALOG */}
       <Dialog open={showAddReminder} onOpenChange={setShowAddReminder}>
-        <DialogContent className="bg-ecom-card border-ecom-border max-w-sm" data-testid="add-reminder-dialog">
+        <DialogContent className="bg-white max-w-sm" data-testid="add-reminder-dialog">
           <DialogHeader>
-            <DialogTitle className="font-heading text-white">Nowe przypomnienie</DialogTitle>
-            <DialogDescription className="text-ecom-muted text-xs">Dodaj przypomnienie z opcja powtarzania</DialogDescription>
+            <DialogTitle>Nowe przypomnienie</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 mt-1">
+          <div className="space-y-3 mt-2">
             <Input placeholder="Tytul (np. Wyslac zamowienia)" value={remForm.title}
-              onChange={e => setRemForm(f => ({ ...f, title: e.target.value }))}
-              className="bg-ecom-bg border-ecom-border text-white" data-testid="reminder-title" />
+              onChange={e => setRemForm(f => ({ ...f, title: e.target.value }))} data-testid="reminder-title" />
             <div className="grid grid-cols-2 gap-2">
-              <Input type="date" value={remForm.date} onChange={e => setRemForm(f => ({ ...f, date: e.target.value }))}
-                className="bg-ecom-bg border-ecom-border text-white" data-testid="reminder-date" />
-              <Input type="time" value={remForm.time} onChange={e => setRemForm(f => ({ ...f, time: e.target.value }))}
-                placeholder="Godzina" className="bg-ecom-bg border-ecom-border text-white" data-testid="reminder-time" />
+              <Input type="date" value={remForm.date} onChange={e => setRemForm(f => ({ ...f, date: e.target.value }))} data-testid="reminder-date" />
+              <Input type="time" value={remForm.time} onChange={e => setRemForm(f => ({ ...f, time: e.target.value }))} placeholder="Godzina" data-testid="reminder-time" />
             </div>
             <Select value={remForm.recurring} onValueChange={v => setRemForm(f => ({ ...f, recurring: v }))}>
-              <SelectTrigger className="bg-ecom-bg border-ecom-border text-white" data-testid="reminder-recurring">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-ecom-card border-ecom-border">
+              <SelectTrigger data-testid="reminder-recurring"><SelectValue /></SelectTrigger>
+              <SelectContent>
                 {RECURRING_OPTIONS.map(o => (
                   <SelectItem key={o.value} value={o.value}>
                     <span className="flex items-center gap-1.5">
@@ -351,8 +318,8 @@ export default function CalendarPage({ user }) {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={addReminder} disabled={saving} className="w-full bg-ecom-primary hover:bg-ecom-primary/80" data-testid="reminder-save">
-              {saving ? <Loader2 className="animate-spin mr-2" size={16} /> : null}Dodaj przypomnienie
+            <Button onClick={addReminder} disabled={saving} className="w-full bg-slate-900 hover:bg-slate-800" data-testid="reminder-save">
+              {saving && <Loader2 className="animate-spin mr-2" size={16} />} Dodaj przypomnienie
             </Button>
           </div>
         </DialogContent>
@@ -360,20 +327,18 @@ export default function CalendarPage({ user }) {
 
       {/* ADD NOTE DIALOG */}
       <Dialog open={showAddNote} onOpenChange={setShowAddNote}>
-        <DialogContent className="bg-ecom-card border-ecom-border max-w-sm" data-testid="add-note-dialog">
+        <DialogContent className="bg-white max-w-sm" data-testid="add-note-dialog">
           <DialogHeader>
-            <DialogTitle className="font-heading text-white">Nowa notatka</DialogTitle>
-            <DialogDescription className="text-ecom-muted text-xs">Dodaj notatke na {noteForm.date || selDateStr}</DialogDescription>
+            <DialogTitle>Nowa notatka</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 mt-1">
+          <div className="space-y-3 mt-2">
             <Input type="date" value={noteForm.date || selDateStr}
-              onChange={e => setNoteForm(f => ({ ...f, date: e.target.value }))}
-              className="bg-ecom-bg border-ecom-border text-white" data-testid="note-date" />
+              onChange={e => setNoteForm(f => ({ ...f, date: e.target.value }))} data-testid="note-date" />
             <Textarea placeholder="Tresc notatki..." value={noteForm.content}
               onChange={e => setNoteForm(f => ({ ...f, content: e.target.value }))}
-              className="bg-ecom-bg border-ecom-border text-white resize-none" rows={4} data-testid="note-content" />
-            <Button onClick={addNote} disabled={saving} className="w-full bg-ecom-warning/80 hover:bg-ecom-warning/60 text-white" data-testid="note-save">
-              {saving ? <Loader2 className="animate-spin mr-2" size={16} /> : null}Dodaj notatke
+              className="resize-none" rows={4} data-testid="note-content" />
+            <Button onClick={addNote} disabled={saving} className="w-full bg-amber-500 hover:bg-amber-600" data-testid="note-save">
+              {saving && <Loader2 className="animate-spin mr-2" size={16} />} Dodaj notatke
             </Button>
           </div>
         </DialogContent>
