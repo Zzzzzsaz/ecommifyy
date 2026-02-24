@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Trash2, Loader2, Lightbulb, Link as LinkIcon, Star, Edit2, ExternalLink } from "lucide-react";
+import { Plus, Trash2, Loader2, Lightbulb, Star, Edit2 } from "lucide-react";
 
 const CATS = [
   { id: "produkt", label: "Produkt", color: "#6366f1" },
@@ -56,7 +56,7 @@ export default function Ideas({ user }) {
     setSaving(true);
     try {
       await api.updateIdea(editingIdea.id, form);
-      toast.success("Zaktualizowano");
+      toast.success("Zapisano");
       setShowEdit(false);
       setEditingIdea(null);
       resetForm();
@@ -92,28 +92,22 @@ export default function Ideas({ user }) {
 
   const IdeaForm = ({ onSave, isEdit }) => (
     <div className="space-y-3 mt-2">
-      <Input placeholder="Tytuł pomysłu" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} data-testid="idea-title-input" />
+      <Input placeholder="Tytuł" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} />
       <Textarea placeholder="Opis (opcjonalnie)" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={3} />
+      <Input placeholder="Link (opcjonalnie)" value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} />
       <div className="flex gap-2">
-        <Input placeholder="Link (opcjonalnie)" value={form.link} onChange={e => setForm(f => ({ ...f, link: e.target.value }))} className="flex-1" />
-        <Button type="button" variant={form.priority ? "default" : "outline"} onClick={() => setForm(f => ({ ...f, priority: !f.priority }))} className={form.priority ? "bg-amber-500 hover:bg-amber-400" : ""}>
+        <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
+          <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {CATS.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Button type="button" variant={form.priority ? "default" : "outline"} onClick={() => setForm(f => ({ ...f, priority: !f.priority }))} 
+          className={`w-10 ${form.priority ? "bg-amber-500 hover:bg-amber-400" : ""}`}>
           <Star size={16} className={form.priority ? "fill-current" : ""} />
         </Button>
       </div>
-      <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
-        <SelectTrigger><SelectValue /></SelectTrigger>
-        <SelectContent>
-          {CATS.map(c => (
-            <SelectItem key={c.id} value={c.id}>
-              <span className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
-                {c.label}
-              </span>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Button onClick={onSave} disabled={saving} className="w-full bg-slate-900 hover:bg-slate-800" data-testid="save-idea-btn">
+      <Button onClick={onSave} disabled={saving} className="w-full bg-slate-900 hover:bg-slate-800">
         {saving && <Loader2 className="animate-spin mr-2" size={16} />}
         {isEdit ? "Zapisz" : "Dodaj"}
       </Button>
@@ -122,12 +116,10 @@ export default function Ideas({ user }) {
 
   return (
     <div className="page-container" data-testid="ideas-page">
+      {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h1 className="page-title">Pomysły</h1>
-          <p className="text-sm text-slate-500">Twoje pomysły na rozwój</p>
-        </div>
-        <Button onClick={() => { resetForm(); setShowAdd(true); }} className="bg-slate-900 hover:bg-slate-800" data-testid="add-idea-btn">
+        <h1 className="text-xl font-bold text-slate-900">Pomysły</h1>
+        <Button onClick={() => { resetForm(); setShowAdd(true); }} className="bg-slate-900 hover:bg-slate-800 h-9">
           <Plus size={16} className="mr-1" /> Nowy
         </Button>
       </div>
@@ -135,10 +127,10 @@ export default function Ideas({ user }) {
       {/* Filters */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         <button onClick={() => setFilter("all")} className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap ${filter === "all" ? "bg-slate-900 text-white" : "bg-white border border-slate-200 text-slate-600"}`}>
-          Wszystkie ({ideas.length})
+          Wszystkie
         </button>
-        <button onClick={() => setFilter("priority")} className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap flex items-center gap-1 ${filter === "priority" ? "bg-amber-500 text-white" : "bg-white border border-slate-200 text-slate-600"}`}>
-          <Star size={12} /> Ważne
+        <button onClick={() => setFilter("priority")} className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap ${filter === "priority" ? "bg-amber-500 text-white" : "bg-white border border-slate-200 text-slate-600"}`}>
+          <Star size={12} className="inline mr-1" />Ważne
         </button>
         {CATS.map(c => (
           <button key={c.id} onClick={() => setFilter(c.id)} className={`px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap ${filter === c.id ? "text-white" : "bg-white border border-slate-200 text-slate-600"}`} style={filter === c.id ? { backgroundColor: c.color } : {}}>
@@ -147,44 +139,38 @@ export default function Ideas({ user }) {
         ))}
       </div>
 
-      {/* Grid */}
+      {/* List */}
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-slate-400" size={28} /></div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12">
+        <div className="text-center py-12 bg-white rounded-xl border border-slate-200">
           <Lightbulb size={40} className="mx-auto mb-2 text-slate-300" />
           <p className="text-slate-500">Brak pomysłów</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="space-y-2">
           {filtered.map(idea => (
             <div key={idea.id} onClick={() => { setEditingIdea(idea); setForm({ title: idea.title, description: idea.description || "", category: idea.category || "inne", link: idea.link || "", priority: idea.priority }); setShowEdit(true); }}
-              className={`card cursor-pointer hover:shadow-md transition-all ${idea.priority ? "ring-2 ring-amber-400" : ""}`}>
-              <div className="flex items-start justify-between mb-2">
-                <span className="px-2 py-0.5 rounded text-xs font-medium" style={{ backgroundColor: getCatColor(idea.category) + "15", color: getCatColor(idea.category) }}>
-                  {getCatLabel(idea.category)}
-                </span>
-                <div className="flex gap-1">
-                  <button onClick={e => togglePriority(e, idea)} className={`p-1 rounded ${idea.priority ? "text-amber-500" : "text-slate-400 hover:text-amber-500"}`}>
-                    <Star size={14} className={idea.priority ? "fill-current" : ""} />
+              className={`bg-white rounded-xl border border-slate-200 p-4 cursor-pointer hover:border-slate-300 ${idea.priority ? "ring-2 ring-amber-400" : ""}`}>
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-slate-900">{idea.title}</span>
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold" style={{ backgroundColor: getCatColor(idea.category) + "15", color: getCatColor(idea.category) }}>
+                      {getCatLabel(idea.category)}
+                    </span>
+                  </div>
+                  {idea.description && <p className="text-sm text-slate-500 mb-1 line-clamp-2">{idea.description}</p>}
+                  <p className="text-xs text-slate-400">{idea.created_by} • {new Date(idea.created_at).toLocaleDateString('pl-PL')}</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={e => togglePriority(e, idea)} className={`p-2 rounded-lg ${idea.priority ? "text-amber-500 bg-amber-50" : "text-slate-400 hover:bg-slate-100"}`}>
+                    <Star size={16} className={idea.priority ? "fill-current" : ""} />
                   </button>
-                  <button onClick={e => deleteIdea(e, idea.id)} className="p-1 text-slate-400 hover:text-red-500 rounded">
-                    <Trash2 size={14} />
+                  <button onClick={e => deleteIdea(e, idea.id)} className="p-2 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100">
+                    <Trash2 size={16} />
                   </button>
                 </div>
-              </div>
-              <h3 className="font-semibold text-slate-900 mb-1">{idea.title}</h3>
-              {idea.description && <p className="text-sm text-slate-500 mb-2 line-clamp-2">{idea.description}</p>}
-              {idea.link && (
-                <a href={idea.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="text-xs text-blue-600 flex items-center gap-1 mb-2">
-                  <LinkIcon size={10} />
-                  <span className="truncate max-w-[120px]">{idea.link.replace(/^https?:\/\//, '')}</span>
-                  <ExternalLink size={10} />
-                </a>
-              )}
-              <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-100">
-                <span>{idea.created_by}</span>
-                <span>{new Date(idea.created_at).toLocaleDateString('pl-PL')}</span>
               </div>
             </div>
           ))}
