@@ -11,6 +11,7 @@ import Ideas from "@/components/Ideas";
 import CalendarPage from "@/components/CalendarPage";
 import Stores from "@/components/Stores";
 import Settings from "@/components/Settings";
+import ExcelPage from "@/components/ExcelPage";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 
@@ -58,6 +59,7 @@ function App() {
       case "orders": return <Orders user={user} shops={shops} />;
       case "tasks": return <Tasks user={user} />;
       case "ideas": return <Ideas user={user} />;
+      case "excel": return <ExcelPage user={user} />;
       case "calendar": return <CalendarPage user={user} />;
       case "stores": return <Stores shops={shops} onShopsChange={refreshShops} />;
       case "settings": return <Settings user={user} shops={shops} appSettings={appSettings} onSettingsChange={refreshSettings} onShopsChange={refreshShops} onLogout={handleLogout} />;

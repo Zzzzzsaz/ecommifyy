@@ -1,6 +1,6 @@
 import { 
   LayoutDashboard, BarChart3, ShoppingCart, CheckSquare, 
-  Lightbulb, Calendar, Store, Settings, LogOut, X 
+  Lightbulb, Calendar, Store, Settings, LogOut, X, FileSpreadsheet 
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { id: "orders", label: "Zamówienia", icon: ShoppingCart },
   { id: "tasks", label: "Zadania", icon: CheckSquare },
   { id: "ideas", label: "Pomysły", icon: Lightbulb },
+  { id: "excel", label: "Arkusze", icon: FileSpreadsheet },
   { id: "calendar", label: "Kalendarz", icon: Calendar },
   { id: "stores", label: "Sklepy", icon: Store },
   { id: "settings", label: "Ustawienia", icon: Settings },
