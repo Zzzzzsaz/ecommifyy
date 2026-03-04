@@ -13,6 +13,7 @@ import Stores from "@/components/Stores";
 import Settings from "@/components/Settings";
 import ExcelPage from "@/components/ExcelPage";
 import PasswordVault from "@/components/PasswordVault";
+import Notepad from "@/components/Notepad";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 
@@ -61,6 +62,7 @@ function App() {
       case "tasks": return <Tasks user={user} />;
       case "ideas": return <Ideas user={user} />;
       case "excel": return <ExcelPage user={user} />;
+      case "notepad": return <Notepad user={user} />;
       case "vault": return <PasswordVault user={user} />;
       case "calendar": return <CalendarPage user={user} />;
       case "stores": return <Stores shops={shops} onShopsChange={refreshShops} />;

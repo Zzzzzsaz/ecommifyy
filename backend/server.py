@@ -1497,21 +1497,51 @@ async def update_company(s: CompanySettings):
 
 # ===== NOTES =====
 class NoteCreate(BaseModel):
-    date: str
+    id: Optional[str] = None
+    date: Optional[str] = None
     shop_id: int = 0
-    content: str
+    content: str = ""
+    title: Optional[str] = None
+    type: Optional[str] = None
+    pinned: bool = False
     created_by: str = "Admin"
+    updated_at: Optional[str] = None
 
 @api_router.get("/notes")
-async def get_notes(date: Optional[str] = None, year: Optional[int] = None, month: Optional[int] = None):
+async def get_notes(date: Optional[str] = None, year: Optional[int] = None, month: Optional[int] = None, type: Optional[str] = None):
     q = {}
     if date: q["date"] = date
     elif year and month: q["date"] = {"$regex": f"^{year}-{month:02d}"}
+    if type: q["type"] = type
     return await db.notes.find(q, {"_id": 0}).to_list(1000)
 
 @api_router.post("/notes")
 async def create_note(note: NoteCreate):
-    doc = {"id": str(uuid.uuid4()), "date": note.date, "shop_id": note.shop_id, "content": note.content, "created_by": note.created_by, "created_at": datetime.now(timezone.utc).isoformat()}
+    # If id is provided, update existing note
+    if note.id:
+        upd = {
+            "content": note.content,
+            "title": note.title,
+            "pinned": note.pinned,
+            "updated_at": note.updated_at or datetime.now(timezone.utc).isoformat()
+        }
+        await db.notes.update_one({"id": note.id}, {"$set": upd})
+        doc = await db.notes.find_one({"id": note.id}, {"_id": 0})
+        return doc
+    
+    # Create new note
+    doc = {
+        "id": str(uuid.uuid4()),
+        "date": note.date or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "shop_id": note.shop_id,
+        "content": note.content,
+        "title": note.title,
+        "type": note.type,
+        "pinned": note.pinned,
+        "created_by": note.created_by,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
     await db.notes.insert_one(doc)
     doc.pop("_id", None)
     return doc

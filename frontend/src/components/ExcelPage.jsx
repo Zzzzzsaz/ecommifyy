@@ -7,11 +7,13 @@ import { toast } from "sonner";
 import { 
   Plus, Trash2, Loader2, Save, Table, FileSpreadsheet, Download, 
   Columns, Rows, Bold, Italic, AlignLeft, AlignCenter, AlignRight,
-  Palette, Type
+  Palette, Type, Copy, Clipboard, MoreHorizontal, ArrowUp, ArrowDown,
+  ArrowLeft, ArrowRight, Undo, Redo
 } from "lucide-react";
 
-const DEFAULT_ROWS = 25;
-const DEFAULT_COLS = 10;
+const DEFAULT_ROWS = 30;
+const DEFAULT_COLS = 15;
+const DEFAULT_COL_WIDTH = 100;
 
 const COLORS = [
   { id: "none", color: "transparent", label: "Brak" },
@@ -33,17 +35,12 @@ const TEXT_COLORS = [
   { id: "purple", color: "#9333ea", label: "Fioletowy" },
 ];
 
+function createEmptyCell() {
+  return { value: "", bold: false, italic: false, align: "left", bgColor: "transparent", textColor: "#000000" };
+}
+
 function generateEmptyGrid(rows, cols) {
-  return Array(rows).fill(null).map(() => 
-    Array(cols).fill(null).map(() => ({ 
-      value: "", 
-      bold: false, 
-      italic: false, 
-      align: "left", 
-      bgColor: "transparent",
-      textColor: "#000000"
-    }))
-  );
+  return Array(rows).fill(null).map(() => Array(cols).fill(null).map(() => createEmptyCell()));
 }
 
 function getColumnLabel(index) {
@@ -55,7 +52,6 @@ function getColumnLabel(index) {
   return label;
 }
 
-// Parse cell reference like A1, B2, etc.
 function parseCellRef(ref) {
   const match = ref.match(/^([A-Z]+)(\d+)$/i);
   if (!match) return null;
@@ -66,7 +62,6 @@ function parseCellRef(ref) {
   return { row: parseInt(match[2]) - 1, col: col - 1 };
 }
 
-// Parse range like A1:B5
 function parseRange(range) {
   const parts = range.split(":");
   if (parts.length !== 2) return null;
@@ -76,7 +71,6 @@ function parseRange(range) {
   return { start, end };
 }
 
-// Get numeric values from range
 function getValuesFromRange(grid, range) {
   const parsed = parseRange(range);
   if (!parsed) return [];
@@ -92,39 +86,33 @@ function getValuesFromRange(grid, range) {
   return values;
 }
 
-// Evaluate formula
 function evaluateFormula(formula, grid) {
   const upperFormula = formula.toUpperCase().trim();
   
-  // SUMA / SUM
   let match = upperFormula.match(/^=?(?:SUMA|SUM)\(([A-Z]+\d+:[A-Z]+\d+)\)$/i);
   if (match) {
     const values = getValuesFromRange(grid, match[1]);
     return values.reduce((a, b) => a + b, 0);
   }
   
-  // ŚREDNIA / AVERAGE
   match = upperFormula.match(/^=?(?:ŚREDNIA|SREDNIA|AVERAGE|AVG)\(([A-Z]+\d+:[A-Z]+\d+)\)$/i);
   if (match) {
     const values = getValuesFromRange(grid, match[1]);
     return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
   }
   
-  // MIN
   match = upperFormula.match(/^=?MIN\(([A-Z]+\d+:[A-Z]+\d+)\)$/i);
   if (match) {
     const values = getValuesFromRange(grid, match[1]);
     return values.length > 0 ? Math.min(...values) : 0;
   }
   
-  // MAX
   match = upperFormula.match(/^=?MAX\(([A-Z]+\d+:[A-Z]+\d+)\)$/i);
   if (match) {
     const values = getValuesFromRange(grid, match[1]);
     return values.length > 0 ? Math.max(...values) : 0;
   }
   
-  // ILE / COUNT
   match = upperFormula.match(/^=?(?:ILE|COUNT)\(([A-Z]+\d+:[A-Z]+\d+)\)$/i);
   if (match) {
     const values = getValuesFromRange(grid, match[1]);
@@ -149,16 +137,25 @@ export default function ExcelPage({ user }) {
   const [sheets, setSheets] = useState([]);
   const [activeSheet, setActiveSheet] = useState(null);
   const [gridData, setGridData] = useState(generateEmptyGrid(DEFAULT_ROWS, DEFAULT_COLS));
+  const [colWidths, setColWidths] = useState(Array(DEFAULT_COLS).fill(DEFAULT_COL_WIDTH));
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showNewSheet, setShowNewSheet] = useState(false);
   const [newSheetName, setNewSheetName] = useState("");
   const [selectedCell, setSelectedCell] = useState(null);
+  const [selectionRange, setSelectionRange] = useState(null);
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState("");
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showTextColorPicker, setShowTextColorPicker] = useState(false);
-  const inputRef = useRef(null);
+  const [clipboard, setClipboard] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectionStart, setSelectionStart] = useState(null);
+  const [resizingCol, setResizingCol] = useState(null);
+  const [contextMenu, setContextMenu] = useState(null);
+  const tableRef = useRef(null);
 
   const fetchSheets = useCallback(async () => {
     setLoading(true);
@@ -174,38 +171,61 @@ export default function ExcelPage({ user }) {
 
   useEffect(() => { fetchSheets(); }, [fetchSheets]);
 
+  const saveToHistory = (data) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(JSON.stringify(data));
+    if (newHistory.length > 50) newHistory.shift();
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  const undo = () => {
+    if (historyIndex > 0) {
+      setHistoryIndex(historyIndex - 1);
+      setGridData(JSON.parse(history[historyIndex - 1]));
+    }
+  };
+
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+      setHistoryIndex(historyIndex + 1);
+      setGridData(JSON.parse(history[historyIndex + 1]));
+    }
+  };
+
   const loadSheet = async (sheet) => {
     setActiveSheet(sheet);
     if (sheet.data && Array.isArray(sheet.data)) {
-      const rows = sheet.data.length;
+      const rows = Math.max(sheet.data.length, DEFAULT_ROWS);
       const cols = Math.max(...sheet.data.map(r => Array.isArray(r) ? r.length : 0), DEFAULT_COLS);
       
-      const normalizedData = sheet.data.map(row => {
-        if (!Array.isArray(row)) return Array(cols).fill(null).map(() => ({ value: "", bold: false, italic: false, align: "left", bgColor: "transparent", textColor: "#000000" }));
-        const newRow = row.map(cell => {
+      const normalizedData = [];
+      for (let i = 0; i < rows; i++) {
+        const row = sheet.data[i] || [];
+        const newRow = [];
+        for (let j = 0; j < cols; j++) {
+          const cell = row[j];
           if (typeof cell === "string") {
-            return { value: cell, bold: false, italic: false, align: "left", bgColor: "transparent", textColor: "#000000" };
+            newRow.push({ ...createEmptyCell(), value: cell });
+          } else if (cell) {
+            newRow.push({ ...createEmptyCell(), ...cell });
+          } else {
+            newRow.push(createEmptyCell());
           }
-          return { 
-            value: cell?.value || "", 
-            bold: cell?.bold || false, 
-            italic: cell?.italic || false, 
-            align: cell?.align || "left",
-            bgColor: cell?.bgColor || "transparent",
-            textColor: cell?.textColor || "#000000"
-          };
-        });
-        while (newRow.length < cols) newRow.push({ value: "", bold: false, italic: false, align: "left", bgColor: "transparent", textColor: "#000000" });
-        return newRow;
-      });
-      while (normalizedData.length < DEFAULT_ROWS) {
-        normalizedData.push(Array(cols).fill(null).map(() => ({ value: "", bold: false, italic: false, align: "left", bgColor: "transparent", textColor: "#000000" })));
+        }
+        normalizedData.push(newRow);
       }
       setGridData(normalizedData);
+      setColWidths(sheet.colWidths || Array(cols).fill(DEFAULT_COL_WIDTH));
+      saveToHistory(normalizedData);
     } else {
-      setGridData(generateEmptyGrid(DEFAULT_ROWS, DEFAULT_COLS));
+      const newGrid = generateEmptyGrid(DEFAULT_ROWS, DEFAULT_COLS);
+      setGridData(newGrid);
+      setColWidths(Array(DEFAULT_COLS).fill(DEFAULT_COL_WIDTH));
+      saveToHistory(newGrid);
     }
     setSelectedCell(null);
+    setSelectionRange(null);
     setEditingCell(null);
   };
 
@@ -213,7 +233,12 @@ export default function ExcelPage({ user }) {
     if (!newSheetName.trim()) { toast.error("Wpisz nazwę"); return; }
     setSaving(true);
     try {
-      await api.createSpreadsheet({ name: newSheetName, data: generateEmptyGrid(DEFAULT_ROWS, DEFAULT_COLS), created_by: user.name });
+      await api.createSpreadsheet({ 
+        name: newSheetName, 
+        data: generateEmptyGrid(DEFAULT_ROWS, DEFAULT_COLS),
+        colWidths: Array(DEFAULT_COLS).fill(DEFAULT_COL_WIDTH),
+        created_by: user.name 
+      });
       toast.success("Arkusz utworzony!");
       setShowNewSheet(false);
       setNewSheetName("");
@@ -226,7 +251,7 @@ export default function ExcelPage({ user }) {
     if (!activeSheet) return;
     setSaving(true);
     try {
-      await api.updateSpreadsheet(activeSheet.id, { data: gridData });
+      await api.updateSpreadsheet(activeSheet.id, { data: gridData, colWidths });
       toast.success("Zapisano!");
     } catch { toast.error("Błąd zapisu"); }
     finally { setSaving(false); }
@@ -254,55 +279,91 @@ export default function ExcelPage({ user }) {
   };
 
   const updateCellStyle = (property, value) => {
-    if (!selectedCell) return;
+    if (!selectedCell && !selectionRange) return;
     setGridData(prev => {
       const newData = prev.map(row => row.map(cell => ({ ...cell })));
-      newData[selectedCell.row][selectedCell.col] = { 
-        ...newData[selectedCell.row][selectedCell.col], 
-        [property]: value 
-      };
+      
+      if (selectionRange) {
+        const { start, end } = selectionRange;
+        const minRow = Math.min(start.row, end.row);
+        const maxRow = Math.max(start.row, end.row);
+        const minCol = Math.min(start.col, end.col);
+        const maxCol = Math.max(start.col, end.col);
+        
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            if (newData[r] && newData[r][c]) {
+              newData[r][c] = { ...newData[r][c], [property]: value };
+            }
+          }
+        }
+      } else if (selectedCell) {
+        newData[selectedCell.row][selectedCell.col] = { 
+          ...newData[selectedCell.row][selectedCell.col], 
+          [property]: value 
+        };
+      }
+      
+      saveToHistory(newData);
       return newData;
     });
   };
 
   const toggleBold = () => {
-    if (!selectedCell) return;
-    const current = gridData[selectedCell.row][selectedCell.col].bold;
-    updateCellStyle("bold", !current);
+    const cell = selectedCell ? gridData[selectedCell.row]?.[selectedCell.col] : null;
+    updateCellStyle("bold", !cell?.bold);
   };
 
   const toggleItalic = () => {
-    if (!selectedCell) return;
-    const current = gridData[selectedCell.row][selectedCell.col].italic;
-    updateCellStyle("italic", !current);
+    const cell = selectedCell ? gridData[selectedCell.row]?.[selectedCell.col] : null;
+    updateCellStyle("italic", !cell?.italic);
   };
 
-  const setAlign = (align) => {
-    if (!selectedCell) return;
-    updateCellStyle("align", align);
+  const setAlign = (align) => updateCellStyle("align", align);
+  const setBgColor = (color) => { updateCellStyle("bgColor", color); setShowColorPicker(false); };
+  const setTextColor = (color) => { updateCellStyle("textColor", color); setShowTextColorPicker(false); };
+
+  const handleCellClick = (rowIdx, colIdx, e) => {
+    if (e.shiftKey && selectedCell) {
+      setSelectionRange({ start: selectedCell, end: { row: rowIdx, col: colIdx } });
+    } else {
+      setSelectedCell({ row: rowIdx, col: colIdx });
+      setSelectionRange(null);
+      setEditingCell({ row: rowIdx, col: colIdx });
+      setEditValue(gridData[rowIdx][colIdx]?.value || "");
+    }
   };
 
-  const setBgColor = (color) => {
-    if (!selectedCell) return;
-    updateCellStyle("bgColor", color);
-    setShowColorPicker(false);
-  };
-
-  const setTextColor = (color) => {
-    if (!selectedCell) return;
-    updateCellStyle("textColor", color);
-    setShowTextColorPicker(false);
-  };
-
-  const handleCellClick = (rowIdx, colIdx) => {
+  const handleMouseDown = (rowIdx, colIdx, e) => {
+    if (e.button !== 0) return;
+    setIsSelecting(true);
+    setSelectionStart({ row: rowIdx, col: colIdx });
     setSelectedCell({ row: rowIdx, col: colIdx });
-    setEditingCell({ row: rowIdx, col: colIdx });
-    setEditValue(gridData[rowIdx][colIdx]?.value || "");
+    setSelectionRange(null);
   };
+
+  const handleMouseMove = (rowIdx, colIdx) => {
+    if (!isSelecting || !selectionStart) return;
+    if (rowIdx !== selectionStart.row || colIdx !== selectionStart.col) {
+      setSelectionRange({ start: selectionStart, end: { row: rowIdx, col: colIdx } });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsSelecting(false);
+  };
+
+  useEffect(() => {
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => document.removeEventListener("mouseup", handleMouseUp);
+  }, []);
 
   const handleCellBlur = () => {
     if (editingCell) {
-      updateCell(editingCell.row, editingCell.col, editValue);
+      const newData = gridData.map(row => row.map(cell => ({ ...cell })));
+      newData[editingCell.row][editingCell.col].value = editValue;
+      setGridData(newData);
+      saveToHistory(newData);
     }
     setEditingCell(null);
   };
@@ -310,14 +371,14 @@ export default function ExcelPage({ user }) {
   const handleKeyDown = (e, rowIdx, colIdx) => {
     if (e.key === "Tab") {
       e.preventDefault();
-      updateCell(rowIdx, colIdx, editValue);
+      handleCellBlur();
       const newCol = e.shiftKey ? Math.max(0, colIdx - 1) : Math.min(gridData[0].length - 1, colIdx + 1);
       setSelectedCell({ row: rowIdx, col: newCol });
       setEditingCell({ row: rowIdx, col: newCol });
       setEditValue(gridData[rowIdx][newCol]?.value || "");
     } else if (e.key === "Enter") {
       e.preventDefault();
-      updateCell(rowIdx, colIdx, editValue);
+      handleCellBlur();
       const newRow = Math.min(gridData.length - 1, rowIdx + 1);
       setSelectedCell({ row: newRow, col: colIdx });
       setEditingCell({ row: newRow, col: colIdx });
@@ -328,13 +389,198 @@ export default function ExcelPage({ user }) {
     }
   };
 
-  const addRow = () => {
-    setGridData(prev => [...prev, Array(prev[0].length).fill(null).map(() => ({ value: "", bold: false, italic: false, align: "left", bgColor: "transparent", textColor: "#000000" }))]);
+  // Handle paste from Excel
+  const handlePaste = (e) => {
+    const pasteData = e.clipboardData?.getData("text");
+    if (!pasteData || !selectedCell) return;
+    
+    e.preventDefault();
+    
+    const rows = pasteData.split(/\r?\n/).filter(row => row.trim());
+    const parsedData = rows.map(row => row.split("\t"));
+    
+    if (parsedData.length === 0) return;
+    
+    setGridData(prev => {
+      const newData = prev.map(row => row.map(cell => ({ ...cell })));
+      const startRow = selectedCell.row;
+      const startCol = selectedCell.col;
+      
+      // Expand grid if needed
+      const neededRows = startRow + parsedData.length;
+      const neededCols = startCol + Math.max(...parsedData.map(r => r.length));
+      
+      while (newData.length < neededRows) {
+        newData.push(Array(newData[0]?.length || DEFAULT_COLS).fill(null).map(() => createEmptyCell()));
+      }
+      
+      for (let row of newData) {
+        while (row.length < neededCols) {
+          row.push(createEmptyCell());
+        }
+      }
+      
+      // Paste data
+      for (let r = 0; r < parsedData.length; r++) {
+        for (let c = 0; c < parsedData[r].length; c++) {
+          const targetRow = startRow + r;
+          const targetCol = startCol + c;
+          if (newData[targetRow] && newData[targetRow][targetCol]) {
+            newData[targetRow][targetCol] = { ...newData[targetRow][targetCol], value: parsedData[r][c] };
+          }
+        }
+      }
+      
+      // Update column widths if needed
+      if (neededCols > colWidths.length) {
+        setColWidths(prev => {
+          const newWidths = [...prev];
+          while (newWidths.length < neededCols) {
+            newWidths.push(DEFAULT_COL_WIDTH);
+          }
+          return newWidths;
+        });
+      }
+      
+      saveToHistory(newData);
+      toast.success(`Wklejono ${parsedData.length} wierszy`);
+      return newData;
+    });
   };
 
-  const addColumn = () => {
-    setGridData(prev => prev.map(row => [...row, { value: "", bold: false, italic: false, align: "left", bgColor: "transparent", textColor: "#000000" }]));
+  // Copy selection
+  const copySelection = () => {
+    if (!selectionRange && !selectedCell) return;
+    
+    let data = [];
+    if (selectionRange) {
+      const { start, end } = selectionRange;
+      const minRow = Math.min(start.row, end.row);
+      const maxRow = Math.max(start.row, end.row);
+      const minCol = Math.min(start.col, end.col);
+      const maxCol = Math.max(start.col, end.col);
+      
+      for (let r = minRow; r <= maxRow; r++) {
+        const row = [];
+        for (let c = minCol; c <= maxCol; c++) {
+          row.push(gridData[r]?.[c]?.value || "");
+        }
+        data.push(row.join("\t"));
+      }
+    } else if (selectedCell) {
+      data.push(gridData[selectedCell.row]?.[selectedCell.col]?.value || "");
+    }
+    
+    const text = data.join("\n");
+    navigator.clipboard.writeText(text);
+    setClipboard({ data: selectionRange || selectedCell, gridData: JSON.parse(JSON.stringify(gridData)) });
+    toast.success("Skopiowano");
   };
+
+  const addRow = (position = "end") => {
+    setGridData(prev => {
+      const cols = prev[0]?.length || DEFAULT_COLS;
+      const newRow = Array(cols).fill(null).map(() => createEmptyCell());
+      let newData;
+      
+      if (position === "above" && selectedCell) {
+        newData = [...prev.slice(0, selectedCell.row), newRow, ...prev.slice(selectedCell.row)];
+      } else if (position === "below" && selectedCell) {
+        newData = [...prev.slice(0, selectedCell.row + 1), newRow, ...prev.slice(selectedCell.row + 1)];
+      } else {
+        newData = [...prev, newRow];
+      }
+      
+      saveToHistory(newData);
+      return newData;
+    });
+  };
+
+  const addColumn = (position = "end") => {
+    setGridData(prev => {
+      const newData = prev.map((row, idx) => {
+        const newCell = createEmptyCell();
+        if (position === "left" && selectedCell) {
+          return [...row.slice(0, selectedCell.col), newCell, ...row.slice(selectedCell.col)];
+        } else if (position === "right" && selectedCell) {
+          return [...row.slice(0, selectedCell.col + 1), newCell, ...row.slice(selectedCell.col + 1)];
+        } else {
+          return [...row, newCell];
+        }
+      });
+      saveToHistory(newData);
+      return newData;
+    });
+    
+    setColWidths(prev => {
+      if (position === "left" && selectedCell) {
+        return [...prev.slice(0, selectedCell.col), DEFAULT_COL_WIDTH, ...prev.slice(selectedCell.col)];
+      } else if (position === "right" && selectedCell) {
+        return [...prev.slice(0, selectedCell.col + 1), DEFAULT_COL_WIDTH, ...prev.slice(selectedCell.col + 1)];
+      } else {
+        return [...prev, DEFAULT_COL_WIDTH];
+      }
+    });
+  };
+
+  const deleteRow = () => {
+    if (!selectedCell || gridData.length <= 1) return;
+    setGridData(prev => {
+      const newData = prev.filter((_, idx) => idx !== selectedCell.row);
+      saveToHistory(newData);
+      return newData;
+    });
+    setSelectedCell(null);
+  };
+
+  const deleteColumn = () => {
+    if (!selectedCell || gridData[0]?.length <= 1) return;
+    setGridData(prev => {
+      const newData = prev.map(row => row.filter((_, idx) => idx !== selectedCell.col));
+      saveToHistory(newData);
+      return newData;
+    });
+    setColWidths(prev => prev.filter((_, idx) => idx !== selectedCell.col));
+    setSelectedCell(null);
+  };
+
+  const handleColumnResize = (colIdx, e) => {
+    e.preventDefault();
+    setResizingCol(colIdx);
+    const startX = e.clientX;
+    const startWidth = colWidths[colIdx];
+    
+    const handleMove = (moveE) => {
+      const diff = moveE.clientX - startX;
+      setColWidths(prev => {
+        const newWidths = [...prev];
+        newWidths[colIdx] = Math.max(50, startWidth + diff);
+        return newWidths;
+      });
+    };
+    
+    const handleUp = () => {
+      setResizingCol(null);
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseup", handleUp);
+    };
+    
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup", handleUp);
+  };
+
+  const handleContextMenu = (e, rowIdx, colIdx) => {
+    e.preventDefault();
+    setSelectedCell({ row: rowIdx, col: colIdx });
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const closeContextMenu = () => setContextMenu(null);
+
+  useEffect(() => {
+    document.addEventListener("click", closeContextMenu);
+    return () => document.removeEventListener("click", closeContextMenu);
+  }, []);
 
   const exportCSV = () => {
     if (!activeSheet) return;
@@ -349,25 +595,41 @@ export default function ExcelPage({ user }) {
     toast.success("Eksportowano CSV");
   };
 
+  const isInSelection = (rowIdx, colIdx) => {
+    if (!selectionRange) return false;
+    const { start, end } = selectionRange;
+    const minRow = Math.min(start.row, end.row);
+    const maxRow = Math.max(start.row, end.row);
+    const minCol = Math.min(start.col, end.col);
+    const maxCol = Math.max(start.col, end.col);
+    return rowIdx >= minRow && rowIdx <= maxRow && colIdx >= minCol && colIdx <= maxCol;
+  };
+
   const selectedCellData = selectedCell ? gridData[selectedCell.row]?.[selectedCell.col] : null;
 
   return (
-    <div className="page-container" data-testid="excel-page">
+    <div className="page-container" data-testid="excel-page" onPaste={handlePaste}>
       <div className="flex items-center justify-between mb-4">
         <h1 className="page-title">Arkusze</h1>
         <div className="flex gap-2">
           {activeSheet && (
             <>
+              <Button onClick={undo} variant="outline" size="sm" className="h-9 w-9 p-0" disabled={historyIndex <= 0}>
+                <Undo size={14} />
+              </Button>
+              <Button onClick={redo} variant="outline" size="sm" className="h-9 w-9 p-0" disabled={historyIndex >= history.length - 1}>
+                <Redo size={14} />
+              </Button>
               <Button onClick={exportCSV} variant="outline" size="sm" className="h-9">
                 <Download size={14} className="mr-1.5" /> CSV
               </Button>
-              <Button onClick={saveSheet} disabled={saving} className="bg-slate-900 hover:bg-slate-800 h-9" data-testid="save-sheet-btn">
+              <Button onClick={saveSheet} disabled={saving} className="bg-slate-900 hover:bg-slate-800 h-9">
                 {saving ? <Loader2 className="animate-spin mr-1.5" size={14} /> : <Save size={14} className="mr-1.5" />}
                 Zapisz
               </Button>
             </>
           )}
-          <Button onClick={() => setShowNewSheet(true)} className="bg-indigo-600 hover:bg-indigo-700 h-9" data-testid="new-sheet-btn">
+          <Button onClick={() => setShowNewSheet(true)} className="bg-indigo-600 hover:bg-indigo-700 h-9">
             <Plus size={14} className="mr-1.5" /> Nowy arkusz
           </Button>
         </div>
@@ -384,8 +646,7 @@ export default function ExcelPage({ user }) {
               {sheets.map(s => (
                 <div key={s.id}
                   className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer group ${activeSheet?.id === s.id ? "bg-slate-900 text-white" : "bg-white border border-slate-200 hover:border-slate-300"}`}
-                  onClick={() => loadSheet(s)}
-                  data-testid={`sheet-${s.id}`}>
+                  onClick={() => loadSheet(s)}>
                   <FileSpreadsheet size={14} className={activeSheet?.id === s.id ? "text-white" : "text-slate-400"} />
                   <span className="text-sm flex-1 truncate">{s.name}</span>
                   <button onClick={(e) => { e.stopPropagation(); deleteSheet(s.id); }}
@@ -402,15 +663,24 @@ export default function ExcelPage({ user }) {
               )}
             </div>
             
-            {/* Formula help */}
             <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+              <p className="text-xs font-medium text-slate-700 mb-2">Wskazówki:</p>
+              <div className="space-y-1 text-[10px] text-slate-500">
+                <p>• Ctrl+C / Ctrl+V - kopiuj/wklej</p>
+                <p>• Shift+klik - zaznacz zakres</p>
+                <p>• Tab - następna komórka</p>
+                <p>• Enter - wiersz niżej</p>
+                <p>• Wklej z Excela - auto-rozdzieli</p>
+              </div>
+            </div>
+            
+            <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
               <p className="text-xs font-medium text-slate-700 mb-2">Formuły:</p>
               <div className="space-y-1 text-[10px] text-slate-500">
                 <p><code className="bg-slate-200 px-1 rounded">=SUMA(A1:A5)</code></p>
                 <p><code className="bg-slate-200 px-1 rounded">=ŚREDNIA(A1:B5)</code></p>
                 <p><code className="bg-slate-200 px-1 rounded">=MIN(A1:A10)</code></p>
                 <p><code className="bg-slate-200 px-1 rounded">=MAX(A1:A10)</code></p>
-                <p><code className="bg-slate-200 px-1 rounded">=ILE(A1:A10)</code></p>
               </div>
             </div>
           </div>
@@ -425,74 +695,35 @@ export default function ExcelPage({ user }) {
                   
                   <div className="h-6 w-px bg-slate-300 mx-1" />
                   
-                  {/* Text formatting */}
-                  <Button 
-                    onClick={toggleBold} 
-                    variant="ghost" 
-                    size="sm" 
-                    className={`h-8 w-8 p-0 ${selectedCellData?.bold ? "bg-slate-200" : ""}`}
-                    disabled={!selectedCell}
-                    title="Pogrubienie"
-                  >
+                  <Button onClick={copySelection} variant="ghost" size="sm" className="h-8 w-8 p-0" title="Kopiuj (Ctrl+C)">
+                    <Copy size={14} />
+                  </Button>
+                  
+                  <div className="h-6 w-px bg-slate-300 mx-1" />
+                  
+                  <Button onClick={toggleBold} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${selectedCellData?.bold ? "bg-slate-200" : ""}`} disabled={!selectedCell} title="Pogrubienie">
                     <Bold size={14} />
                   </Button>
-                  <Button 
-                    onClick={toggleItalic} 
-                    variant="ghost" 
-                    size="sm" 
-                    className={`h-8 w-8 p-0 ${selectedCellData?.italic ? "bg-slate-200" : ""}`}
-                    disabled={!selectedCell}
-                    title="Kursywa"
-                  >
+                  <Button onClick={toggleItalic} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${selectedCellData?.italic ? "bg-slate-200" : ""}`} disabled={!selectedCell} title="Kursywa">
                     <Italic size={14} />
                   </Button>
                   
                   <div className="h-6 w-px bg-slate-300 mx-1" />
                   
-                  {/* Alignment */}
-                  <Button 
-                    onClick={() => setAlign("left")} 
-                    variant="ghost" 
-                    size="sm" 
-                    className={`h-8 w-8 p-0 ${selectedCellData?.align === "left" ? "bg-slate-200" : ""}`}
-                    disabled={!selectedCell}
-                    title="Do lewej"
-                  >
+                  <Button onClick={() => setAlign("left")} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${selectedCellData?.align === "left" ? "bg-slate-200" : ""}`} disabled={!selectedCell}>
                     <AlignLeft size={14} />
                   </Button>
-                  <Button 
-                    onClick={() => setAlign("center")} 
-                    variant="ghost" 
-                    size="sm" 
-                    className={`h-8 w-8 p-0 ${selectedCellData?.align === "center" ? "bg-slate-200" : ""}`}
-                    disabled={!selectedCell}
-                    title="Wyśrodkuj"
-                  >
+                  <Button onClick={() => setAlign("center")} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${selectedCellData?.align === "center" ? "bg-slate-200" : ""}`} disabled={!selectedCell}>
                     <AlignCenter size={14} />
                   </Button>
-                  <Button 
-                    onClick={() => setAlign("right")} 
-                    variant="ghost" 
-                    size="sm" 
-                    className={`h-8 w-8 p-0 ${selectedCellData?.align === "right" ? "bg-slate-200" : ""}`}
-                    disabled={!selectedCell}
-                    title="Do prawej"
-                  >
+                  <Button onClick={() => setAlign("right")} variant="ghost" size="sm" className={`h-8 w-8 p-0 ${selectedCellData?.align === "right" ? "bg-slate-200" : ""}`} disabled={!selectedCell}>
                     <AlignRight size={14} />
                   </Button>
                   
                   <div className="h-6 w-px bg-slate-300 mx-1" />
                   
-                  {/* Colors */}
                   <div className="relative">
-                    <Button 
-                      onClick={() => setShowColorPicker(!showColorPicker)} 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 px-2 gap-1"
-                      disabled={!selectedCell}
-                      title="Kolor tła"
-                    >
+                    <Button onClick={() => setShowColorPicker(!showColorPicker)} variant="ghost" size="sm" className="h-8 px-2 gap-1" disabled={!selectedCell}>
                       <Palette size={14} />
                       <div className="w-4 h-3 rounded border border-slate-300" style={{ backgroundColor: selectedCellData?.bgColor || "transparent" }} />
                     </Button>
@@ -500,13 +731,7 @@ export default function ExcelPage({ user }) {
                       <div className="absolute top-full left-0 mt-1 p-2 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
                         <div className="grid grid-cols-4 gap-1">
                           {COLORS.map(c => (
-                            <button
-                              key={c.id}
-                              onClick={() => setBgColor(c.color)}
-                              className="w-6 h-6 rounded border border-slate-300 hover:scale-110 transition-transform"
-                              style={{ backgroundColor: c.color }}
-                              title={c.label}
-                            />
+                            <button key={c.id} onClick={() => setBgColor(c.color)} className="w-6 h-6 rounded border border-slate-300 hover:scale-110 transition-transform" style={{ backgroundColor: c.color }} title={c.label} />
                           ))}
                         </div>
                       </div>
@@ -514,14 +739,7 @@ export default function ExcelPage({ user }) {
                   </div>
                   
                   <div className="relative">
-                    <Button 
-                      onClick={() => setShowTextColorPicker(!showTextColorPicker)} 
-                      variant="ghost" 
-                      size="sm" 
-                      className="h-8 px-2 gap-1"
-                      disabled={!selectedCell}
-                      title="Kolor tekstu"
-                    >
+                    <Button onClick={() => setShowTextColorPicker(!showTextColorPicker)} variant="ghost" size="sm" className="h-8 px-2 gap-1" disabled={!selectedCell}>
                       <Type size={14} />
                       <div className="w-4 h-3 rounded border border-slate-300" style={{ backgroundColor: selectedCellData?.textColor || "#000000" }} />
                     </Button>
@@ -529,13 +747,7 @@ export default function ExcelPage({ user }) {
                       <div className="absolute top-full left-0 mt-1 p-2 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
                         <div className="grid grid-cols-3 gap-1">
                           {TEXT_COLORS.map(c => (
-                            <button
-                              key={c.id}
-                              onClick={() => setTextColor(c.color)}
-                              className="w-6 h-6 rounded border border-slate-300 hover:scale-110 transition-transform"
-                              style={{ backgroundColor: c.color }}
-                              title={c.label}
-                            />
+                            <button key={c.id} onClick={() => setTextColor(c.color)} className="w-6 h-6 rounded border border-slate-300 hover:scale-110 transition-transform" style={{ backgroundColor: c.color }} title={c.label} />
                           ))}
                         </div>
                       </div>
@@ -544,11 +756,11 @@ export default function ExcelPage({ user }) {
                   
                   <div className="flex-1" />
                   
-                  <Button onClick={addColumn} variant="ghost" size="sm" className="h-8 text-xs">
-                    <Columns size={12} className="mr-1" /> Kolumna
+                  <Button onClick={() => addColumn("right")} variant="ghost" size="sm" className="h-8 text-xs">
+                    <Columns size={12} className="mr-1" /> + Kolumna
                   </Button>
-                  <Button onClick={addRow} variant="ghost" size="sm" className="h-8 text-xs">
-                    <Rows size={12} className="mr-1" /> Wiersz
+                  <Button onClick={() => addRow("below")} variant="ghost" size="sm" className="h-8 text-xs">
+                    <Rows size={12} className="mr-1" /> + Wiersz
                   </Button>
                 </div>
 
@@ -559,21 +771,34 @@ export default function ExcelPage({ user }) {
                       {getColumnLabel(selectedCell.col)}{selectedCell.row + 1}
                     </span>
                     <span className="text-slate-300">|</span>
-                    <span className="text-sm text-slate-700 font-mono">
+                    <span className="text-sm text-slate-700 font-mono flex-1">
                       {gridData[selectedCell.row]?.[selectedCell.col]?.value || ""}
                     </span>
+                    {selectionRange && (
+                      <span className="text-xs text-indigo-500">
+                        Zaznaczenie: {Math.abs(selectionRange.end.row - selectionRange.start.row) + 1} × {Math.abs(selectionRange.end.col - selectionRange.start.col) + 1}
+                      </span>
+                    )}
                   </div>
                 )}
 
                 {/* Grid */}
-                <div className="overflow-auto max-h-[calc(100vh-300px)]">
-                  <table className="w-full border-collapse" data-testid="spreadsheet-grid">
+                <div className="overflow-auto max-h-[calc(100vh-320px)]" ref={tableRef}>
+                  <table className="border-collapse select-none" style={{ minWidth: "100%" }}>
                     <thead className="sticky top-0 z-10">
                       <tr>
                         <th className="w-10 bg-slate-100 border-b border-r border-slate-200 text-xs font-medium text-slate-500 p-1">#</th>
                         {gridData[0]?.map((_, colIdx) => (
-                          <th key={colIdx} className="min-w-[100px] bg-slate-100 border-b border-r border-slate-200 text-xs font-medium text-slate-500 p-1">
+                          <th 
+                            key={colIdx} 
+                            className="bg-slate-100 border-b border-r border-slate-200 text-xs font-medium text-slate-500 p-1 relative"
+                            style={{ width: colWidths[colIdx], minWidth: colWidths[colIdx] }}
+                          >
                             {getColumnLabel(colIdx)}
+                            <div
+                              className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-400"
+                              onMouseDown={(e) => handleColumnResize(colIdx, e)}
+                            />
                           </th>
                         ))}
                       </tr>
@@ -581,22 +806,27 @@ export default function ExcelPage({ user }) {
                     <tbody>
                       {gridData.map((row, rowIdx) => (
                         <tr key={rowIdx}>
-                          <td className="bg-slate-50 border-b border-r border-slate-200 text-xs text-slate-400 text-center p-1 select-none">
+                          <td className="bg-slate-50 border-b border-r border-slate-200 text-xs text-slate-400 text-center p-1 select-none sticky left-0">
                             {rowIdx + 1}
                           </td>
                           {row.map((cell, colIdx) => {
                             const isSelected = selectedCell?.row === rowIdx && selectedCell?.col === colIdx;
                             const isEditing = editingCell?.row === rowIdx && editingCell?.col === colIdx;
+                            const inSelection = isInSelection(rowIdx, colIdx);
                             const displayValue = getDisplayValue(cell, gridData);
                             
                             return (
-                              <td key={colIdx}
-                                className={`border-b border-r border-slate-200 p-0 ${isSelected ? "ring-2 ring-inset ring-indigo-500" : ""}`}
-                                style={{ backgroundColor: cell?.bgColor || "transparent" }}
-                                onClick={() => handleCellClick(rowIdx, colIdx)}>
+                              <td 
+                                key={colIdx}
+                                className={`border-b border-r border-slate-200 p-0 ${isSelected ? "ring-2 ring-inset ring-indigo-500" : ""} ${inSelection ? "bg-indigo-50" : ""}`}
+                                style={{ backgroundColor: inSelection ? undefined : (cell?.bgColor || "transparent"), width: colWidths[colIdx], minWidth: colWidths[colIdx] }}
+                                onClick={(e) => handleCellClick(rowIdx, colIdx, e)}
+                                onMouseDown={(e) => handleMouseDown(rowIdx, colIdx, e)}
+                                onMouseMove={() => handleMouseMove(rowIdx, colIdx)}
+                                onContextMenu={(e) => handleContextMenu(e, rowIdx, colIdx)}
+                              >
                                 {isEditing ? (
                                   <input
-                                    ref={inputRef}
                                     autoFocus
                                     type="text"
                                     value={editValue}
@@ -604,23 +834,12 @@ export default function ExcelPage({ user }) {
                                     onBlur={handleCellBlur}
                                     onKeyDown={(e) => handleKeyDown(e, rowIdx, colIdx)}
                                     className="w-full h-full px-2 py-1 text-sm outline-none bg-white"
-                                    style={{
-                                      fontWeight: cell?.bold ? "bold" : "normal",
-                                      fontStyle: cell?.italic ? "italic" : "normal",
-                                      textAlign: cell?.align || "left",
-                                      color: cell?.textColor || "#000000"
-                                    }}
-                                    data-testid={`cell-${rowIdx}-${colIdx}`}
+                                    style={{ fontWeight: cell?.bold ? "bold" : "normal", fontStyle: cell?.italic ? "italic" : "normal", textAlign: cell?.align || "left", color: cell?.textColor || "#000000" }}
                                   />
                                 ) : (
                                   <div 
                                     className="px-2 py-1 text-sm min-h-[28px] cursor-cell truncate"
-                                    style={{
-                                      fontWeight: cell?.bold ? "bold" : "normal",
-                                      fontStyle: cell?.italic ? "italic" : "normal",
-                                      textAlign: cell?.align || "left",
-                                      color: cell?.textColor || "#000000"
-                                    }}
+                                    style={{ fontWeight: cell?.bold ? "bold" : "normal", fontStyle: cell?.italic ? "italic" : "normal", textAlign: cell?.align || "left", color: cell?.textColor || "#000000" }}
                                   >
                                     {displayValue}
                                   </div>
@@ -633,6 +852,38 @@ export default function ExcelPage({ user }) {
                     </tbody>
                   </table>
                 </div>
+                
+                {/* Context Menu */}
+                {contextMenu && (
+                  <div 
+                    className="fixed bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50 min-w-[160px]"
+                    style={{ left: contextMenu.x, top: contextMenu.y }}
+                  >
+                    <button onClick={() => { copySelection(); closeContextMenu(); }} className="w-full px-3 py-1.5 text-left text-sm hover:bg-slate-100 flex items-center gap-2">
+                      <Copy size={14} /> Kopiuj
+                    </button>
+                    <hr className="my-1 border-slate-200" />
+                    <button onClick={() => { addRow("above"); closeContextMenu(); }} className="w-full px-3 py-1.5 text-left text-sm hover:bg-slate-100 flex items-center gap-2">
+                      <ArrowUp size={14} /> Wstaw wiersz powyżej
+                    </button>
+                    <button onClick={() => { addRow("below"); closeContextMenu(); }} className="w-full px-3 py-1.5 text-left text-sm hover:bg-slate-100 flex items-center gap-2">
+                      <ArrowDown size={14} /> Wstaw wiersz poniżej
+                    </button>
+                    <button onClick={() => { addColumn("left"); closeContextMenu(); }} className="w-full px-3 py-1.5 text-left text-sm hover:bg-slate-100 flex items-center gap-2">
+                      <ArrowLeft size={14} /> Wstaw kolumnę z lewej
+                    </button>
+                    <button onClick={() => { addColumn("right"); closeContextMenu(); }} className="w-full px-3 py-1.5 text-left text-sm hover:bg-slate-100 flex items-center gap-2">
+                      <ArrowRight size={14} /> Wstaw kolumnę z prawej
+                    </button>
+                    <hr className="my-1 border-slate-200" />
+                    <button onClick={() => { deleteRow(); closeContextMenu(); }} className="w-full px-3 py-1.5 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2">
+                      <Trash2 size={14} /> Usuń wiersz
+                    </button>
+                    <button onClick={() => { deleteColumn(); closeContextMenu(); }} className="w-full px-3 py-1.5 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2">
+                      <Trash2 size={14} /> Usuń kolumnę
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -645,18 +896,12 @@ export default function ExcelPage({ user }) {
         </div>
       )}
 
-      {/* New Sheet Dialog */}
       <Dialog open={showNewSheet} onOpenChange={setShowNewSheet}>
-        <DialogContent className="bg-white max-w-sm" data-testid="new-sheet-dialog">
+        <DialogContent className="bg-white max-w-sm">
           <DialogHeader><DialogTitle>Nowy arkusz</DialogTitle></DialogHeader>
           <div className="space-y-4 mt-2">
-            <Input 
-              placeholder="Nazwa arkusza (np. Budżet 2024)" 
-              value={newSheetName}
-              onChange={e => setNewSheetName(e.target.value)} 
-              data-testid="sheet-name-input" 
-            />
-            <Button onClick={createSheet} disabled={saving} className="w-full bg-slate-900 hover:bg-slate-800" data-testid="create-sheet-btn">
+            <Input placeholder="Nazwa arkusza (np. Budżet 2024)" value={newSheetName} onChange={e => setNewSheetName(e.target.value)} />
+            <Button onClick={createSheet} disabled={saving} className="w-full bg-slate-900 hover:bg-slate-800">
               {saving && <Loader2 className="animate-spin mr-2" size={16} />}
               <Plus size={14} className="mr-1" /> Utwórz arkusz
             </Button>
